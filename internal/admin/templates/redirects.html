@@ -1,0 +1,41 @@
+{{define "content"}}
+<div class="card">
+  <h1>Redirects</h1>
+  <p class="muted">Send visitors from an old address to a new one, so old links, bookmarks and search results keep working. When you change a page's or post's address the old one is redirected for you (marked “automatic”).</p>
+  {{if .Data.List}}
+  <table>
+    <tr><th>Old address</th><th>Goes to</th><th>Kind</th><th></th></tr>
+    {{range .Data.List}}
+    <tr>
+      <td><code>{{.From}}</code></td>
+      <td><code>{{.To}}</code></td>
+      <td>{{if .Permanent}}Permanent{{else}}Temporary{{end}}{{if .Auto}} <span class="badge">automatic</span>{{end}}</td>
+      <td>
+        <form method="post" action="/admin/redirects/{{.ID}}/delete" data-confirm="Remove this redirect?">
+          <input type="hidden" name="csrf" value="{{$.CSRF}}">
+          <button class="ghost danger">Remove</button>
+        </form>
+      </td>
+    </tr>
+    {{end}}
+  </table>
+  {{else}}<p class="muted">No redirects yet.</p>{{end}}
+</div>
+<div class="card" id="new">
+  <h2>New redirect</h2>
+  <form method="post" action="/admin/redirects">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label>Old address <span class="muted">(a path on this site)</span>
+      <input name="from" value="{{.Data.From}}" maxlength="300" placeholder="/old-page" required></label>
+    <label>Goes to <span class="muted">(a path on this site, or an https:// address)</span>
+      <input name="to" value="{{.Data.To}}" maxlength="2000" placeholder="/new-page" required></label>
+    <fieldset class="plainset">
+      <label class="check"><input type="radio" name="kind" value="permanent"{{if not .Data.Temp}} checked{{end}}> <span><strong>Permanent</strong> — the page has moved for good; search engines move to the new address</span></label>
+      <label class="check"><input type="radio" name="kind" value="temporary"{{if .Data.Temp}} checked{{end}}> <span><strong>Temporary</strong> — for a short while only; search engines keep the old address</span></label>
+    </fieldset>
+    <button>Add redirect</button>
+  </form>
+</div>
+{{end}}
+
+{{define "actions"}}<a class="btn sm" href="#new"><svg class="ic" aria-hidden="true"><use href="#i-plus"></use></svg>New redirect</a>{{end}}

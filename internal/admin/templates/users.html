@@ -1,0 +1,47 @@
+{{define "content"}}
+<div class="card">
+  <h1>Team</h1>
+  <table>
+    <tr><th>Email</th><th>Role</th><th>Joined</th><th></th></tr>
+    {{range .Data.Users}}
+    <tr>
+      <td>{{.Email}}{{if eq .ID $.User.UserID}} <span class="muted">(you)</span>{{end}}</td><td>{{.Role}}</td><td>{{.CreatedAt.Format "2006-01-02"}}</td>
+      <td>{{if ne .ID $.User.UserID}}
+        <form method="post" action="/admin/users/{{.ID}}/delete" class="inline" data-confirm="Remove {{.Email}}? They will be signed out and can no longer log in.">
+          <input type="hidden" name="csrf" value="{{$.CSRF}}">
+          <button class="ghost danger">Remove</button>
+        </form>{{end}}
+        <form method="post" action="/admin/users/{{.ID}}/reset" class="inline" data-confirm="Make a one-time link that lets {{.Email}} choose a new password? Any earlier link stops working.">
+          <input type="hidden" name="csrf" value="{{$.CSRF}}">
+          <button class="ghost">Reset password</button>
+        </form></td>
+    </tr>
+    {{end}}
+  </table>
+</div>
+{{if .Data.ResetLink}}
+<div class="card">
+  <h1>Password reset link</h1>
+  <p>Send this one-time link to <strong>{{.Data.ResetFor}}</strong> (valid for an hour). It will not be shown again, and it lets them choose a new password without knowing the old one, so pass it on privately:</p>
+  <p><code>{{.Data.ResetLink}}</code></p>
+</div>
+{{end}}
+<div class="card">
+  <h1>Invite someone</h1>
+  {{if .Data.InviteLink}}
+  <p>Send this one-time link (valid 7 days). It won't be shown again:</p>
+  <p><code>{{.Data.InviteLink}}</code></p>
+  {{end}}
+  <form method="post" action="/admin/users/invite">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label for="email">Email</label>
+    <input id="email" name="email" type="email" required>
+    <label for="role">Role</label>
+    <select id="role" name="role">
+      <option value="editor">Editor</option>
+      <option value="admin">Admin</option>
+    </select>
+    <button>Create invite link</button>
+  </form>
+</div>
+{{end}}

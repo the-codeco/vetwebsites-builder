@@ -1,0 +1,38 @@
+{{define "content"}}
+<div class="card">
+  <h1>Inbox</h1>
+  {{if .Data.Messages}}
+  <p class="muted">{{if .Data.Unread}}{{.Data.Unread}} unread{{else}}All read{{end}} · {{len .Data.Messages}} message{{if ne (len .Data.Messages) 1}}s{{end}}</p>
+  <table class="inbox">
+    <tr><th>From</th><th>Message</th><th>Received</th></tr>
+    {{range .Data.Messages}}
+    <tr class="{{if not .Read}}unread{{end}}">
+      <td><a href="/admin/messages/{{.ID}}">{{if not .Read}}<span class="dot" title="Unread"></span>{{end}}<strong>{{.Name}}</strong></a><br><span class="muted">{{.Email}}</span></td>
+      <td class="snip">{{if .Subject}}<strong>{{.Subject}}</strong> — {{end}}{{.Body}}</td>
+      <td class="muted nowrap">{{.CreatedAt.Format "2 Jan 2006, 15:04"}}</td>
+    </tr>
+    {{end}}
+  </table>
+  {{else}}
+  <p class="muted">No messages yet. Add a <strong>Contact form</strong> block to a page (for example a “Contact” page) and anything visitors send will appear here.</p>
+  {{end}}
+</div>
+
+<div class="card">
+  <h2>Email notifications</h2>
+  {{if .Data.MailReady}}
+  <p class="muted">Email is set up on this server. Messages are always kept in the inbox; you can also get a copy by email.</p>
+  {{else}}
+  <p class="muted">Email isn't set up on this server, so messages only appear here. To get copies by email, add your email provider's SMTP settings (<code>SMTP_HOST</code>, <code>SMTP_FROM</code> and so on, see <code>.env.example</code>) and restart.</p>
+  {{end}}
+  {{if .Data.IsAdmin}}
+  <form method="post" action="/admin/messages/settings">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label>Send a copy of each message to
+      <input type="email" name="notify_email" value="{{.Data.NotifyEmail}}" maxlength="254" placeholder="you@example.com"></label>
+    <span class="hint">Leave empty to turn email off. Replying to the email goes straight to the visitor.</span>
+    <button>Save</button>
+  </form>
+  {{else if .Data.NotifyEmail}}<p>Copies go to <strong>{{.Data.NotifyEmail}}</strong>.</p>{{end}}
+</div>
+{{end}}

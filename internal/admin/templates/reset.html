@@ -1,0 +1,20 @@
+{{define "content"}}
+<div class="card">
+  {{if .Data.Invalid}}
+  <h1>This link has expired</h1>
+  <p>A password reset link works once, for an hour. Ask for a new one.</p>
+  <p><a class="btn" href="/admin/forgot">Send me a new link</a></p>
+  {{else}}
+  <h1>Choose a new password</h1>
+  <p>For the account <strong>{{.Data.Email}}</strong>. You will be signed out everywhere else.</p>
+  <form method="post">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label for="password">New password (10+ characters)</label>
+    <input id="password" name="password" type="password" autocomplete="new-password" minlength="10" required autofocus>
+    <label for="confirm">Confirm password</label>
+    <input id="confirm" name="confirm" type="password" autocomplete="new-password" minlength="10" required>
+    <button>Change password and log in</button>
+  </form>
+  {{end}}
+</div>
+{{end}}

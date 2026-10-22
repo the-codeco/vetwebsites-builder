@@ -1,0 +1,52 @@
+{{define "content"}}
+<div class="card">
+  <h1>Backup</h1>
+  <p class="hint">A backup is one .zip file holding your pages, posts, categories, menus, appearance and SEO settings, and every uploaded image. Keep copies somewhere other than this server.</p>
+  <form method="post" action="/admin/backup/download">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label class="check"><input type="checkbox" name="personal" value="1"> Also include the subscriber list and contact messages <span class="muted">(personal data: keep the file private)</span></label>
+    <button>Download a backup</button>
+  </form>
+  <p class="hint">Not included, on purpose: user accounts (their password hashes would travel with the file), the site's domain, email settings, analytics and sent newsletters. For a copy of the whole database, see the README.</p>
+</div>
+
+<div class="card">
+  <h2>Saved on this server</h2>
+  <p class="hint">{{if .Data.KeepAuto}}A backup is made automatically about once a day, and the newest {{.Data.KeepAuto}} are kept{{if .Data.Personal}} (they include subscribers and messages){{end}}{{if .Data.LastAuto}}. The last one was {{.Data.LastAuto.Format "2 Jan 2006, 15:04"}} UTC{{end}}.{{else}}Automatic backups are switched off (<code>BACKUP_KEEP=0</code>).{{end}} These files live on the same server as the site, so they protect against mistakes, not against losing the server: download copies too.</p>
+  {{if .Data.Files}}
+  <table>
+    <tr><th>File</th><th>Kind</th><th>Made (UTC)</th><th>Size</th><th></th></tr>
+    {{range .Data.Files}}
+    <tr>
+      <td><code>{{.Name}}</code></td>
+      <td><span class="badge">{{.Kind}}</span></td>
+      <td class="muted nowrap">{{.Created.Format "2 Jan 2006, 15:04"}}</td>
+      <td class="muted nowrap">{{.SizeLabel}}</td>
+      <td class="nowrap">
+        <a href="/admin/backup/files/{{.Name}}" download>Download</a>
+        <form method="post" action="/admin/backup/files/{{.Name}}/review" class="inline"><input type="hidden" name="csrf" value="{{$.CSRF}}"><button class="ghost">Restore…</button></form>
+        <form method="post" action="/admin/backup/files/{{.Name}}/delete" class="inline" data-confirm="Delete {{.Name}}?"><input type="hidden" name="csrf" value="{{$.CSRF}}"><button class="ghost danger">Delete</button></form>
+      </td>
+    </tr>
+    {{end}}
+  </table>
+  {{else}}
+  <p class="muted">Nothing saved yet.</p>
+  {{end}}
+  <form method="post" action="/admin/backup/save">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label class="check"><input type="checkbox" name="personal" value="1"> Include subscribers and messages</label>
+    <button class="ghost">Back up now</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Restore from a file</h2>
+  <p class="hint">Choose a backup .zip. You will see what is in it and what would change before anything happens, and the current site is saved first so you can go back.</p>
+  <form method="post" action="/admin/backup/upload" enctype="multipart/form-data">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label>Backup file <input type="file" name="backup" accept=".zip,application/zip" required></label>
+    <button>Check the file</button>
+  </form>
+</div>
+{{end}}

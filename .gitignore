@@ -1,0 +1,10 @@
+.env
+media/
+*.exe
+.env.*
+!.env.example
+data/
+backups/
+*.test
+*.out
+.mutate*.sh

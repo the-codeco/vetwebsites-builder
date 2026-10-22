@@ -1,0 +1,54 @@
+{{define "content"}}
+<div class="card">
+  <h1>Search &amp; sharing</h1>
+  <p class="muted">Defaults for the whole site. Each page and post can override them in its own <em>Search &amp; sharing</em> section.</p>
+  <form method="post" action="/admin/seo">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label>Site description <span class="count" data-count-for="seo_description"></span>
+      <textarea name="seo_description" rows="3" maxlength="300" placeholder="One or two sentences about what this site is.">{{.Data.SEO.Description}}</textarea>
+      <span class="hint">Used on pages and posts that don't have a description of their own. Aim for 70–160 characters.</span></label>
+    <label>Default sharing image
+      <span class="colorrow"><input type="text" name="seo_image" value="{{.Data.SEO.Image}}" maxlength="2000" placeholder="/media/photo.jpg"><button type="button" class="ghost" data-pick>Choose…</button></span>
+      <span class="hint">The picture shown when a link is shared and the page has no image of its own. About 1200 × 630 pixels works well.</span></label>
+    <label class="check"><input type="checkbox" name="seo_noindex"{{if .Data.SEO.NoIndex}} checked{{end}}> Ask search engines not to list this site at all</label>
+    <p class="hint">Use this while the site is being built. It adds a “noindex” tag to every page, turns off the sitemap and tells crawlers to stay away. It is a request, not a lock: well-behaved search engines respect it, but it doesn't keep the site private.</p>
+    <button>Save</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Sitemap and robots.txt</h2>
+  {{if .Data.SEO.NoIndex}}
+  <p class="muted">The site is hidden from search engines, so there is no sitemap and <code>robots.txt</code> asks crawlers to stay away.</p>
+  {{else}}
+  <p>These are created for you and update as you publish.</p>
+  <ul class="plain">
+    <li><a href="/sitemap.xml" target="_blank" rel="noopener">{{.Data.BaseURL}}/sitemap.xml</a> <span class="muted">— every published page and post, the blog and its categories</span></li>
+    <li><a href="/robots.txt" target="_blank" rel="noopener">{{.Data.BaseURL}}/robots.txt</a> <span class="muted">— keeps crawlers out of the admin and points them at the sitemap</span></li>
+  </ul>
+  <p class="hint">Submit the sitemap address in Google Search Console and Bing Webmaster Tools so new pages are found quickly.</p>
+  {{end}}
+  {{if not .Data.HasDomain}}<p class="hint">You haven't set a <a href="/admin/domain">custom domain</a> yet, so these addresses use the one you're visiting now. Set your domain first, so search engines see your real address.</p>{{end}}
+</div>
+
+<div class="card">
+  <h2>Check your pages</h2>
+  {{if .Data.Rows}}
+  <p class="muted">{{len .Data.Rows}} of {{.Data.Checked}} published page{{if ne .Data.Checked 1}}s and posts{{else}}{{end}} could look better in search results.{{if .Data.Hidden}} {{.Data.Hidden}} hidden on purpose.{{end}}</p>
+  <table>
+    <tr><th>Page</th><th>What to improve</th><th></th></tr>
+    {{range .Data.Rows}}
+    <tr>
+      <td><strong>{{.Title}}</strong><br><span class="muted">{{.Path}} · {{.Kind}}</span></td>
+      <td><ul class="plain">{{range .Issues}}<li data-issue="{{.Code}}">{{.Text}}</li>{{end}}</ul></td>
+      <td><a href="{{.EditURL}}">Edit</a></td>
+    </tr>
+    {{end}}
+  </table>
+  {{else if .Data.Checked}}
+  <p class="notice-inline">✓ All {{.Data.Checked}} published page{{if ne .Data.Checked 1}}s and posts{{end}} have a good title, a description and a sharing image.{{if .Data.Hidden}} {{.Data.Hidden}} hidden on purpose.{{end}}</p>
+  {{else}}<p class="muted">Nothing is published yet.</p>{{end}}
+  <p class="hint">These are suggestions, not rules. Pages that are drafts or hidden from search are skipped.</p>
+</div>
+{{template "pickerdialog"}}
+{{end}}

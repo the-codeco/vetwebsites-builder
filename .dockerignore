@@ -1,0 +1,12 @@
+# Keep secrets and local data out of the build context (and out of image layers).
+.env
+.env.*
+!.env.example
+.git
+.gitignore
+media/
+docs/
+*.md
+*.exe
+*.test
+*.out

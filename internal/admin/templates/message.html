@@ -1,0 +1,49 @@
+{{define "actions"}}<a class="btn secondary" href="/admin/messages">← Inbox</a>{{end}}
+
+{{define "content"}}
+<div class="card message">
+  {{with .Data.Message}}
+  <h1>{{if .Subject}}{{.Subject}}{{else}}Message from {{.Name}}{{end}}</h1>
+  <p class="muted"><strong>{{.Name}}</strong> &lt;{{.Email}}&gt; · {{.CreatedAt.Format "Monday 2 January 2006, 15:04"}}</p>
+  <div class="message-body">{{.Body}}</div>
+  {{end}}
+  <div class="message-actions">
+    <a class="btn secondary" href="{{.Data.Reply}}">Reply from your own mail program</a>
+    <form method="post" action="/admin/messages/{{.Data.Message.ID}}/unread">
+      <input type="hidden" name="csrf" value="{{.CSRF}}">
+      <button class="ghost">Mark as unread</button>
+    </form>
+    <form method="post" action="/admin/messages/{{.Data.Message.ID}}/delete" data-confirm="Delete this message? This cannot be undone.">
+      <input type="hidden" name="csrf" value="{{.CSRF}}">
+      <button class="ghost danger">Delete</button>
+    </form>
+  </div>
+</div>
+
+{{if .Data.Replies}}
+<div class="card">
+  <h2>Replies sent</h2>
+  {{range .Data.Replies}}
+  <div class="reply">
+    <p class="muted">{{.CreatedAt.Format "Monday 2 January 2006, 15:04"}}{{if .By}} · {{.By}}{{end}}</p>
+    <div class="message-body">{{.Body}}</div>
+  </div>
+  {{end}}
+</div>
+{{end}}
+
+<div class="card">
+  <h2>Reply</h2>
+  {{if .Data.MailReady}}
+  <form method="post" action="/admin/messages/{{.Data.Message.ID}}/reply">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label>To <input value="{{.Data.Message.Email}}" readonly></label>
+    <label>Your reply <textarea name="reply" rows="8" maxlength="5000" required>{{.Data.Text}}</textarea></label>
+    <p class="hint">Sent from the site's email address. If {{.Data.Message.Name}} answers, it comes to <strong>{{.Data.Me}}</strong>. Their original message is quoted underneath.</p>
+    <button>Send reply</button>
+  </form>
+  {{else}}
+  <p class="muted">The site can send replies itself once email is set up (<code>SMTP_HOST</code> and <code>SMTP_FROM</code>, see <code>.env.example</code>). Until then, use the button above to answer from your own mail program.</p>
+  {{end}}
+</div>
+{{end}}

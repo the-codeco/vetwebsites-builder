@@ -1,0 +1,9 @@
+{{define "block/postlist"}}
+{{with .Props.heading}}<h2>{{.}}</h2>{{end}}
+{{if .Extra}}
+<div class="postgrid">{{range .Extra}}{{template "postcard" .}}{{end}}</div>
+<p><a href="/blog">View all posts →</a></p>
+{{else}}
+<p class="muted">No posts published yet.</p>
+{{end}}
+{{end}}

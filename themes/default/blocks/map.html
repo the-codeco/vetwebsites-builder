@@ -1,0 +1,8 @@
+{{define "block/map"}}
+{{with mapfor (print $.Props.provider) (print $.Props.coordinates) (print $.Props.place) $.Props.zoom}}
+<figure class="map">
+  <iframe class="map-frame map-{{$.Props.height}}" src="{{.Src}}" title="{{or $.Props.title "Map"}}" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>
+  <figcaption>{{with or $.Props.address (and (eq (print $.Props.provider) "google") $.Props.place)}}{{.}} · {{end}}<a href="{{.Link}}" rel="noopener">View larger map</a></figcaption>
+</figure>
+{{end}}
+{{end}}

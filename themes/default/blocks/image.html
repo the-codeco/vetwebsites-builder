@@ -1,0 +1,6 @@
+{{define "block/image"}}
+{{if .Props.image}}<figure class="figure">
+  {{if .Props.link}}<a href="{{safeurl .Props.link}}"><img src="{{.Props.image}}" {{srcset .Props.image "(min-width: 1100px) 1100px, 100vw"}} alt="{{.Props.alt}}" loading="lazy"></a>{{else}}<img src="{{.Props.image}}" {{srcset .Props.image "(min-width: 1100px) 1100px, 100vw"}} alt="{{.Props.alt}}" loading="lazy">{{end}}
+  {{if .Props.caption}}<figcaption>{{.Props.caption}}</figcaption>{{end}}
+</figure>{{end}}
+{{end}}

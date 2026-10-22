@@ -1,0 +1,35 @@
+{{define "search/results"}}
+<section class="block pad-md width-normal"><div class="block-inner">
+  <h1>Search</h1>
+  <form class="search-form" role="search" action="/search" method="get">
+    <label class="sr-only" for="search-q">Search this site</label>
+    <input id="search-q" type="search" name="q" value="{{.Query}}" maxlength="100" placeholder="Search this site…">
+    <button class="btn btn-primary" type="submit">Search</button>
+  </form>
+  {{if .Limited}}
+  <p class="search-note">You've searched a lot in a short time. Please wait a minute and try again.</p>
+  {{else if not .Query}}
+  <p class="search-note">Type a word or phrase above to search pages and posts.</p>
+  {{else if .Items}}
+  <p class="search-note">{{.Total}} result{{if ne .Total 1}}s{{end}} for “{{.Query}}”</p>
+  <ol class="search-results">
+    {{range .Items}}
+    <li>
+      <a class="search-title" href="{{.Path}}">{{.Title}}</a> <span class="search-kind">{{if eq .Kind "post"}}Post{{else}}Page{{end}}</span>
+      <p class="search-url">{{.Path}}</p>
+      {{with .Snippet}}<p class="search-snippet">{{.}}</p>{{end}}
+    </li>
+    {{end}}
+  </ol>
+  {{if or .PrevURL .NextURL}}
+  <nav class="pager" aria-label="Search pages">
+    {{if .PrevURL}}<a href="{{.PrevURL}}" rel="prev">← Previous</a>{{end}}
+    <span>Page {{.Page}} of {{.Pages}}</span>
+    {{if .NextURL}}<a href="{{.NextURL}}" rel="next">Next →</a>{{end}}
+  </nav>
+  {{end}}
+  {{else}}
+  <p class="search-note">Nothing found for “{{.Query}}”. Try different words, or fewer of them.</p>
+  {{end}}
+</div></section>
+{{end}}

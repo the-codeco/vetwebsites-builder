@@ -1,0 +1,18 @@
+/* Midnight: layered on top of the default theme's stylesheet. */
+:root { color-scheme: dark; }
+a { text-underline-offset: 3px; }
+.site-footer { border-top-color: var(--color-surface); }
+.btn { font-weight: 700; }
+.btn-primary { box-shadow: 0 0 24px color-mix(in srgb, var(--color-primary) 35%, transparent); }
+.block-hero { border-bottom: 1px solid var(--color-surface); }
+.postcard { border: 1px solid var(--color-surface); }
+.postcard:hover { border-color: var(--color-primary); }
+.prose blockquote { background: var(--color-surface); border-radius: var(--radius); padding: var(--space); border-left-width: 4px; }
+
+/* a compact, full-width header with an underlined current page */
+.site-header { border-bottom: 1px solid var(--color-surface); }
+.site-header-inner { max-width: none; }
+.menu-item > a[aria-current] { border-bottom: 2px solid var(--color-primary); border-radius: 0; padding-bottom: calc(.5rem - 2px); }
+.menu-panel { box-shadow: 0 18px 44px rgba(0, 0, 0, .55); border-color: var(--color-surface); }
+.menu-topbar, .menu-footer { border-color: var(--color-surface); }
+.menu-footer { border-top: 1px solid var(--color-surface); }

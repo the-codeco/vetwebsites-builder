@@ -1,0 +1,12 @@
+{{define "block/tabs"}}
+{{with .Props.heading}}<h2>{{.}}</h2>{{end}}
+{{/* Without JavaScript every tab is a titled section, one after the other; the site script turns them into tabs. */}}
+<div class="tabs" data-tabs>
+{{range $i, $t := .Props.items}}{{if $t.title}}
+  <section class="tab-panel" id="tab-{{$.ID}}-{{$i}}" aria-labelledby="tab-{{$.ID}}-{{$i}}-title">
+    <h3 class="tab-title" id="tab-{{$.ID}}-{{$i}}-title">{{$t.title}}</h3>
+    <div class="prose">{{richtext $t.content}}</div>
+  </section>
+{{end}}{{end}}
+</div>
+{{end}}

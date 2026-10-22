@@ -1,0 +1,81 @@
+{{define "content"}}
+<section class="welcome">
+  <div>
+    <h1>Welcome back</h1>
+    <p class="muted">Signed in as <strong>{{.User.Email}}</strong>. Here's your site at a glance.</p>
+  </div>
+  <div class="welcome-actions">
+    <a class="btn" href="/admin/pages#new"><svg class="ic" aria-hidden="true"><use href="#i-plus"></use></svg>New page</a>
+    <a class="btn secondary" href="/admin/posts#new"><svg class="ic" aria-hidden="true"><use href="#i-plus"></use></svg>New post</a>
+    <a class="btn secondary" href="/admin/media#upload"><svg class="ic" aria-hidden="true"><use href="#i-media"></use></svg>Upload images</a>
+  </div>
+</section>
+
+<div class="stats">
+  <a class="stat" href="/admin/pages">
+    <span class="stat-icon"><svg class="ic" aria-hidden="true"><use href="#i-pages"></use></svg></span>
+    <span class="stat-num">{{.Data.PagesPublished}}</span>
+    <span class="stat-label">Published page{{if ne .Data.PagesPublished 1}}s{{end}}</span>
+    <span class="stat-sub">{{if .Data.PagesDraft}}{{.Data.PagesDraft}} draft{{if ne .Data.PagesDraft 1}}s{{end}} waiting{{else}}No drafts{{end}}</span>
+  </a>
+  <a class="stat" href="/admin/posts">
+    <span class="stat-icon"><svg class="ic" aria-hidden="true"><use href="#i-posts"></use></svg></span>
+    <span class="stat-num">{{.Data.PostsPublished}}</span>
+    <span class="stat-label">Published post{{if ne .Data.PostsPublished 1}}s{{end}}</span>
+    <span class="stat-sub">{{if .Data.PostsDraft}}{{.Data.PostsDraft}} draft{{if ne .Data.PostsDraft 1}}s{{end}} waiting{{else}}No drafts{{end}}</span>
+  </a>
+  <a class="stat" href="/admin/media">
+    <span class="stat-icon"><svg class="ic" aria-hidden="true"><use href="#i-media"></use></svg></span>
+    <span class="stat-num">{{.Data.Media}}</span>
+    <span class="stat-label">Image{{if ne .Data.Media 1}}s{{end}}</span>
+    <span class="stat-sub">In your media library</span>
+  </a>
+  {{if and (eq .User.Role "admin") (not .MultiTenant)}}
+  <a class="stat" href="/admin/users">
+    <span class="stat-icon"><svg class="ic" aria-hidden="true"><use href="#i-users"></use></svg></span>
+    <span class="stat-num">{{.Data.Users}}</span>
+    <span class="stat-label">Team member{{if ne .Data.Users 1}}s{{end}}</span>
+    <span class="stat-sub">Admins and editors</span>
+  </a>
+  {{end}}
+</div>
+
+<div class="two-col">
+  <div class="card">
+    <div class="card-head"><h2>Recently updated pages</h2><a href="/admin/pages">View all</a></div>
+    <ul class="recent">
+      {{range .Data.RecentPages}}
+      <li>
+        <a href="/admin/pages/{{.ID}}">{{.Title}}</a>
+        <span class="badge {{.Status}}">{{.Status}}</span>
+        <span class="when">{{.UpdatedAt.Format "2 Jan"}}</span>
+      </li>
+      {{else}}<li class="muted">No pages yet.</li>{{end}}
+    </ul>
+  </div>
+  <div class="card">
+    <div class="card-head"><h2>Recent posts</h2><a href="/admin/posts">View all</a></div>
+    <ul class="recent">
+      {{range .Data.RecentPosts}}
+      <li>
+        <a href="/admin/posts/{{.ID}}">{{.Title}}</a>
+        <span class="badge {{.Status}}">{{.Status}}</span>
+        <span class="when">{{.UpdatedAt.Format "2 Jan"}}</span>
+      </li>
+      {{else}}<li class="muted">No posts yet. <a href="/admin/posts#new">Write the first one</a>.</li>{{end}}
+    </ul>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Shortcuts</h2></div>
+  <div class="shortcuts">
+    <a href="/admin/menus"><svg class="ic" aria-hidden="true"><use href="#i-menus"></use></svg><span><strong>Menus</strong><small>Navigation, dropdowns and mega menus</small></span></a>
+    {{if eq .User.Role "admin"}}
+    <a href="/admin/appearance"><svg class="ic" aria-hidden="true"><use href="#i-appearance"></use></svg><span><strong>Appearance</strong><small>Themes, colours, fonts and custom CSS</small></span></a>
+    {{if not .MultiTenant}}<a href="/admin/domain"><svg class="ic" aria-hidden="true"><use href="#i-domain"></use></svg><span><strong>Domain</strong><small>Your own address with HTTPS</small></span></a>{{end}}
+    {{end}}
+    <a href="{{.PreviewBase}}/rss.xml" target="_blank" rel="noopener"><svg class="ic" aria-hidden="true"><use href="#i-rss"></use></svg><span><strong>RSS feed</strong><small>What readers subscribe to</small></span></a>
+  </div>
+</div>
+{{end}}

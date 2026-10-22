@@ -1,0 +1,86 @@
+{{define "actions"}}<a class="btn secondary" href="/admin/newsletters">← Newsletters</a>{{end}}
+
+{{define "progress"}}
+<div id="send-progress"{{if .Sending}} hx-get="/admin/newsletters/{{.ID}}/progress" hx-trigger="every 3s" hx-swap="outerHTML"{{end}} aria-live="polite">
+  <p><strong>{{.Done}} of {{.Total}}</strong> {{if .Sending}}sent so far{{else}}dealt with{{end}}{{if .Failed}} · <span class="danger-text">{{.Failed}} could not be delivered</span>{{end}}</p>
+  <progress max="{{.Total}}" value="{{.Done}}">{{.Done}} of {{.Total}}</progress>
+</div>
+{{end}}
+
+{{define "content"}}
+{{with .Data.Campaign}}
+<div class="card">
+  <h1>{{.Subject}} <span class="badge {{if eq .Status "sent"}}published{{else if eq .Status "draft"}}draft{{end}}">{{.Status}}</span></h1>
+
+  {{if .Draft}}
+  <form method="post" action="/admin/newsletters/{{.ID}}">
+    <input type="hidden" name="csrf" value="{{$.CSRF}}">
+    <label>Subject <input name="subject" value="{{.Subject}}" maxlength="150" required></label>
+    <label>Message <textarea name="body" rows="14" maxlength="20000" required>{{.Body}}</textarea></label>
+    <p class="hint">Plain text. This is added under your message in every email:</p>
+    <pre class="mono muted">{{$.Data.Footer}}</pre>
+    <button>Save draft</button>
+  </form>
+  {{else}}
+  <p class="muted">{{if .StartedAt}}Sending began {{.StartedAt.Format "Monday 2 January 2006, 15:04"}}.{{end}}{{if .FinishedAt}} {{if eq .Status "canceled"}}Stopped{{else}}Finished{{end}} {{.FinishedAt.Format "2 January 2006, 15:04"}}.{{end}}</p>
+  {{template "progress" .}}
+  <h2>What was sent</h2>
+  <pre class="message-body">{{.Body}}</pre>
+  {{end}}
+</div>
+
+{{if .Draft}}
+<div class="card">
+  <h2>Send</h2>
+  {{if not $.Data.MailReady}}
+  <div class="alert error" role="status"><div>Email isn't set up on this server (<code>SMTP_HOST</code> and <code>SMTP_FROM</code>, see <code>.env.example</code>), so nothing can be sent yet.</div></div>
+  {{else if not $.Data.HasDomain}}
+  <div class="alert error" role="status"><div>Save your site's address on the <a href="/admin/domain">Domain</a> page first: every email carries an unsubscribe link that has to point at your real site.</div></div>
+  {{end}}
+  <form method="post" action="/admin/newsletters/{{.ID}}/test" class="inline">
+    <input type="hidden" name="csrf" value="{{$.CSRF}}">
+    <button class="ghost"{{if not $.Data.MailReady}} disabled{{end}}>Send a test to {{$.Data.Me}}</button>
+  </form>
+  {{if $.Data.Recipients}}
+  <form method="post" action="/admin/newsletters/{{.ID}}/send" data-confirm="Send “{{.Subject}}” to {{$.Data.Recipients}} subscriber{{if ne $.Data.Recipients 1}}s{{end}} now? This cannot be undone.">
+    <input type="hidden" name="csrf" value="{{$.CSRF}}">
+    <input type="hidden" name="recipients" value="{{$.Data.Recipients}}">
+    <button{{if not $.Data.CanSend}} disabled{{end}}>Send to {{$.Data.Recipients}} subscriber{{if ne $.Data.Recipients 1}}s{{end}}</button>
+  </form>
+  <p class="hint">Sent one message at a time to everyone confirmed on the <a href="/admin/subscribers">list</a>, each with their own unsubscribe link. Anyone who unsubscribes while it is going out is skipped.</p>
+  {{else}}
+  <p class="muted">Nobody is subscribed yet. Add a <strong>Newsletter signup</strong> block to a page and people can join.</p>
+  {{end}}
+</div>
+{{end}}
+
+{{if .Sending}}
+<div class="card">
+  <h2>Stop sending</h2>
+  <form method="post" action="/admin/newsletters/{{.ID}}/cancel" data-confirm="Stop sending? Messages already sent can't be recalled; the rest will not go out.">
+    <input type="hidden" name="csrf" value="{{$.CSRF}}">
+    <button class="ghost danger">Stop sending</button>
+  </form>
+</div>
+{{end}}
+
+{{if $.Data.Failures}}
+<div class="card">
+  <h2>Not delivered</h2>
+  <table>
+    <tr><th>Address</th><th>Reason</th></tr>
+    {{range $.Data.Failures}}<tr><td>{{.Email}}</td><td class="muted">{{.Error}}</td></tr>{{end}}
+  </table>
+</div>
+{{end}}
+
+{{if not .Sending}}
+<div class="card">
+  <form method="post" action="/admin/newsletters/{{.ID}}/delete" data-confirm="Delete this newsletter? This cannot be undone.">
+    <input type="hidden" name="csrf" value="{{$.CSRF}}">
+    <button class="ghost danger">Delete this newsletter</button>
+  </form>
+</div>
+{{end}}
+{{end}}
+{{end}}

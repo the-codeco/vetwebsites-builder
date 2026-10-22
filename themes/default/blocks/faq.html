@@ -1,0 +1,11 @@
+{{define "block/faq"}}
+{{with .Props.heading}}<h2>{{.}}</h2>{{end}}
+<div class="faq">
+{{range $i, $q := .Props.items}}{{if $q.question}}
+  <details class="faq-item"{{if and $.Props.open_first (eq $i 0)}} open{{end}}>
+    <summary>{{$q.question}}</summary>
+    <div class="faq-answer prose">{{richtext $q.answer}}</div>
+  </details>
+{{end}}{{end}}
+</div>
+{{end}}

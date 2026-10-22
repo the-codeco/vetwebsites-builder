@@ -1,0 +1,31 @@
+{{define "content"}}
+<div class="card">
+  <h1>Shared blocks</h1>
+  <p class="muted">Write a block once and use it on as many pages as you like: an opening-hours box, a call to action, a contact form. Change it here and every page that shows it changes. You can also turn any block on a page into a shared one with “Save as shared block” in its settings.</p>
+  {{if .Data.Rows}}
+  <table>
+    <tr><th>Name</th><th>Kind</th><th>Used on</th><th>Updated</th></tr>
+    {{range .Data.Rows}}
+    <tr>
+      <td><a href="/admin/shared/{{.ID}}">{{.Name}}</a></td>
+      <td>{{.TypeLabel}}</td>
+      <td>{{if eq .Uses 0}}<span class="muted">not used yet</span>{{else}}{{.Uses}} {{if eq .Uses 1}}place{{else}}places{{end}}{{end}}</td>
+      <td class="muted">{{.UpdatedAt.Format "2 Jan 2006"}}</td>
+    </tr>
+    {{end}}
+  </table>
+  {{else}}<p class="muted">Nothing shared yet.</p>{{end}}
+</div>
+<div class="card" id="new">
+  <h2>New shared block</h2>
+  <form method="post" action="/admin/shared">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label>Name <span class="muted">(only you see this)</span> <input name="name" value="{{.Data.Name}}" maxlength="100" required></label>
+    <label>Kind of block
+      <select name="type">{{range .Data.Types}}<option value="{{.Name}}">{{.Label}}</option>{{end}}</select></label>
+    <button>Create and edit</button>
+  </form>
+</div>
+{{end}}
+
+{{define "actions"}}<a class="btn sm" href="#new"><svg class="ic" aria-hidden="true"><use href="#i-plus"></use></svg>New shared block</a>{{end}}

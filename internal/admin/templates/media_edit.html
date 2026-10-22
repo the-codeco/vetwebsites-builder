@@ -1,0 +1,65 @@
+{{define "content"}}
+<div class="card">
+  <h1>Edit image</h1>
+  <p class="hint">Turn, mirror, crop or shrink <strong>{{.Data.Item.OriginalName}}</strong> ({{.Data.Item.Width}}×{{.Data.Item.Height}}). The result is saved as a new image: the original, and the pages that use it, stay as they are.</p>
+  <form id="ie-form" method="post" action="/admin/media/{{.Data.Item.ID}}/edit">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+
+    <div class="ie-tools" role="group" aria-label="Turn and mirror">
+      <button type="button" class="ghost" data-ie="left">⟲ Turn left</button>
+      <button type="button" class="ghost" data-ie="right">⟳ Turn right</button>
+      <button type="button" class="ghost" data-ie="flip-h">⇋ Mirror</button>
+      <button type="button" class="ghost" data-ie="flip-v">⇅ Flip</button>
+      <button type="button" class="ghost" data-ie="reset">Start again</button>
+    </div>
+
+    <div class="ie-stage" id="ie-stage">
+      <canvas id="ie-canvas" data-src="{{.Data.Item.URL}}" data-w="{{.Data.Item.Width}}" data-h="{{.Data.Item.Height}}"></canvas>
+      <img class="ie-fallback" id="ie-fallback" src="{{.Data.Item.URL}}" alt="{{.Data.Item.Alt}}" width="{{.Data.Item.Width}}" height="{{.Data.Item.Height}}">
+      <div class="ie-crop" id="ie-crop" hidden tabindex="0" role="group" aria-label="Crop area. Drag it, drag a corner to resize, or use the arrow keys to move it.">
+        <span class="ie-h nw" data-corner="nw"></span><span class="ie-h ne" data-corner="ne"></span>
+        <span class="ie-h sw" data-corner="sw"></span><span class="ie-h se" data-corner="se"></span>
+      </div>
+    </div>
+
+    <div class="ie-fields">
+      <label>Turn
+        <select name="rotate">
+          {{range .Data.Rotations}}<option value="{{.Value}}"{{if .Selected}} selected{{end}}>{{.Label}}</option>{{end}}
+        </select>
+      </label>
+      <label class="check"><input type="checkbox" name="flip_h" value="1"{{if .Data.FlipH}} checked{{end}}> Mirror left to right</label>
+      <label class="check"><input type="checkbox" name="flip_v" value="1"{{if .Data.FlipV}} checked{{end}}> Flip top to bottom</label>
+      <label>Crop shape
+        <select name="ratio" id="ie-ratio">
+          <option value="">No crop</option>
+          <option value="free">Free shape</option>
+          <option value="1">Square (1:1)</option>
+          <option value="1.7778">Widescreen (16:9)</option>
+          <option value="1.5">Photo (3:2)</option>
+          <option value="1.3333">Standard (4:3)</option>
+          <option value="0.75">Portrait (3:4)</option>
+        </select>
+      </label>
+      <label>Shrink to at most
+        <select name="max_width" id="ie-out">
+          {{range .Data.Widths}}<option value="{{.Value}}"{{if .Selected}} selected{{end}}>{{.Label}}</option>{{end}}
+        </select>
+      </label>
+    </div>
+
+    <fieldset class="ie-numbers">
+      <legend>Crop box, in pixels of the turned image (leave blank for no crop)</legend>
+      <label>Left <input type="number" name="x" min="0" value="{{.Data.X}}" inputmode="numeric"></label>
+      <label>Top <input type="number" name="y" min="0" value="{{.Data.Y}}" inputmode="numeric"></label>
+      <label>Width <input type="number" name="w" min="16" value="{{.Data.W}}" inputmode="numeric"></label>
+      <label>Height <input type="number" name="h" min="16" value="{{.Data.H}}" inputmode="numeric"></label>
+    </fieldset>
+
+    <p>New image size: <strong id="ie-size">{{.Data.Item.Width}} × {{.Data.Item.Height}} px</strong></p>
+    <button>Save as a new image</button>
+    <a class="btn ghost" href="/admin/media">Cancel</a>
+  </form>
+</div>
+<script src="/static/imageedit.js" defer></script>
+{{end}}

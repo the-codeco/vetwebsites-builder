@@ -1,0 +1,52 @@
+{{define "content"}}
+<div class="card">
+  <h1>Your hosting</h1>
+  <p>Your website is published to the web hosting account you already have (for example a cPanel hosting plan). We need an <strong>FTP account</strong> for it. In cPanel, open <em>FTP Accounts</em>, make an account for this website, and copy its details here. We only ever upload your website's files to the folder you choose, and we never touch anything else in the account.</p>
+  <form method="post" action="/admin/hosting">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label>How do we connect?
+      <select name="protocol">
+        <option value="ftps"{{if or (eq .Data.Form.Protocol "ftps") (eq .Data.Form.Protocol "")}} selected{{end}}>FTP with encryption (FTPS) — works on almost every cPanel hosting</option>
+        <option value="sftp"{{if eq .Data.Form.Protocol "sftp"}} selected{{end}}>SFTP (over SSH) — if your hosting offers it</option>
+      </select></label>
+    <label>Server address <span class="muted">(shown in cPanel as “FTP server” or “Host”, for example ftp.yourdomain.com)</span>
+      <input name="host" value="{{.Data.Form.Host}}" maxlength="253" required></label>
+    <label>Port <span class="muted">(21 for FTPS, 22 for SFTP, unless your hosting says otherwise)</span>
+      <input name="port" type="number" min="1" max="65535" value="{{if .Data.Form.Port}}{{.Data.Form.Port}}{{else}}21{{end}}" required></label>
+    <label>Username <input name="user" value="{{.Data.Form.User}}" maxlength="200" autocomplete="off" required></label>
+    <label>Password {{if .Data.Form.HasPassword}}<span class="muted">(leave blank to keep the saved password)</span>{{end}}
+      <input name="password" type="password" maxlength="500" autocomplete="new-password"{{if not .Data.Form.HasPassword}} required{{end}}></label>
+    <label>Folder on the hosting <span class="muted">(usually <code>public_html</code>, or <code>public_html/shop</code> to put the site in a folder)</span>
+      <input name="dir" value="{{if .Data.Form.Dir}}{{.Data.Form.Dir}}{{else}}public_html{{end}}" maxlength="300" required></label>
+    <label>Your website's address <span class="muted">(where visitors will find it, for example https://www.yourdomain.com)</span>
+      <input name="public_url" type="url" value="{{.Data.Form.PublicURL}}" maxlength="300" placeholder="https://www.yourdomain.com" required></label>
+    <details>
+      <summary>Advanced</summary>
+      <label>Certificate name <span class="muted">(FTPS only. Some hosting presents a security certificate in its own server name, such as server123.hostprovider.com. If the test says the certificate is not valid, enter that name.)</span>
+        <input name="tls_name" value="{{.Data.Form.TLSName}}" maxlength="253"></label>
+    </details>
+    <button>Save</button>
+  </form>
+</div>
+
+{{if .Data.Form.Host}}
+<div class="card">
+  <h2>Test the connection</h2>
+  <p class="muted">Checks that we can log in and put a file in the folder, then removes it.</p>
+  {{with .Data.Test}}
+    {{if .OK}}<p class="saved" role="status">✓ {{.Message}}</p>
+    {{else}}<p class="field-error" role="alert">{{.Message}}</p>{{end}}
+    {{if .KeyChanged}}
+    <form method="post" action="/admin/hosting/trust" data-confirm="Trust the hosting's new identity?">
+      <input type="hidden" name="csrf" value="{{$.CSRF}}">
+      <p class="muted">New identity: <code>{{.NewKey}}</code></p>
+      <button class="ghost danger">Yes, my hosting moved: trust the new identity</button>
+    </form>
+    {{end}}
+    {{if .HostKey}}<p class="muted">Server identity remembered: <code>{{.HostKey}}</code></p>{{end}}
+  {{end}}
+  <form method="post" action="/admin/hosting/test"><input type="hidden" name="csrf" value="{{.CSRF}}"><button>Test the connection</button></form>
+  <p><a href="/admin/publish">Go to Publish</a></p>
+</div>
+{{end}}
+{{end}}

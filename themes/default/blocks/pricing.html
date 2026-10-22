@@ -1,0 +1,15 @@
+{{define "block/pricing"}}
+{{with .Props.heading}}<h2>{{.}}</h2>{{end}}
+{{with .Props.intro}}<p class="pricing-intro">{{.}}</p>{{end}}
+<div class="pricing cols-{{.Props.count}}">
+{{range items .Props "plan" .Props.count "name" "price" "period" "features" "button_label" "button_url" "featured"}}
+  <article class="plan{{if .featured}} plan-featured{{end}}">
+    {{if .featured}}<p class="plan-badge">Best value</p>{{end}}
+    <h3>{{.name}}</h3>
+    <p class="plan-price">{{if .price}}<span class="plan-amount">{{.price}}</span>{{end}}{{with .period}} <span class="plan-period">{{.}}</span>{{end}}</p>
+    {{with lines .features}}<ul class="plan-features">{{range .}}<li>{{.}}</li>{{end}}</ul>{{end}}
+    {{if and .button_label .button_url}}<a class="btn {{if .featured}}btn-primary{{else}}btn-outline{{end}}" href="{{safeurl .button_url}}">{{.button_label}}</a>{{end}}
+  </article>
+{{end}}
+</div>
+{{end}}

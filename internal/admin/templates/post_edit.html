@@ -1,0 +1,48 @@
+{{define "content"}}
+<div class="card">
+  <h1>{{.Data.Post.Title}} <span class="badge {{.Data.Post.Status}}">{{.Data.Post.Status}}</span>{{with .Data.Post.PublishAt}} <span class="badge">goes live {{.Format "2 Jan 15:04"}} UTC</span>{{end}}</h1>
+  <p class="muted"><a href="/admin/posts">← All posts</a> ·
+    <a href="{{.PreviewBase}}/blog/{{.Data.Post.Slug}}" target="_blank" rel="noopener">{{if eq .Data.Post.Status "published"}}View post{{else}}Preview draft{{end}} ↗</a></p>
+
+  <form method="post" action="/admin/posts/{{.Data.Post.ID}}">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label>Title <input name="title" value="{{.Data.Post.Title}}" maxlength="200" required></label>
+    <label>URL slug <span class="muted">(/blog/…)</span>
+      <input name="slug" value="{{.Data.Post.Slug}}" maxlength="80" pattern="[a-z0-9]+(-[a-z0-9]+)*" required></label>
+    <label>Status
+      <select name="status">
+        <option value="draft"{{if eq .Data.Post.Status "draft"}} selected{{end}}>Draft (only visible when logged in)</option>
+        <option value="published"{{if eq .Data.Post.Status "published"}} selected{{end}}>Published</option>
+      </select></label>
+    {{template "schedule" .Data.Post.PublishAt}}
+
+    <label>Cover image <span class="muted">(optional)</span>
+      <span class="colorrow"><input type="text" name="cover" value="{{.Data.Post.Cover}}" maxlength="2000" placeholder="/media/photo.jpg"><button type="button" class="ghost" data-pick>Choose…</button></span></label>
+
+    <label>Excerpt <span class="muted">(optional — shown in lists and the RSS feed; otherwise taken from the start of the post)</span>
+      <textarea name="excerpt" rows="2" maxlength="500">{{.Data.Post.Excerpt}}</textarea></label>
+
+    <label>Content
+      {{template "rtbar"}}
+      <textarea name="body" rows="18" class="mono" maxlength="200000">{{.Data.Post.Body}}</textarea>
+      <span class="hint">Write plain text (a blank line starts a new paragraph) or use the buttons for formatting. Unsafe HTML is removed on save.</span></label>
+
+    {{template "seofields" .Data.SEO}}
+
+    {{if .Data.Categories}}
+    <fieldset>
+      <legend>Categories</legend>
+      {{range .Data.Categories}}<label class="check"><input type="checkbox" name="category" value="{{.ID}}"{{if .Checked}} checked{{end}}> {{.Name}}</label>{{end}}
+    </fieldset>
+    {{else}}<p class="muted">No categories yet — <a href="/admin/categories">add some</a>.</p>{{end}}
+
+    <button>Save post</button>
+  </form>
+
+  <form method="post" action="/admin/posts/{{.Data.Post.ID}}/delete" data-confirm="Delete this post? This cannot be undone.">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <button class="danger">Delete post</button>
+  </form>
+</div>
+{{template "pickerdialog"}}
+{{end}}

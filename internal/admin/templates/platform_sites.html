@@ -1,0 +1,50 @@
+{{define "content"}}
+{{if .Data.Link}}
+<div class="card">
+  <h1>{{if eq .Data.LinkKind "welcome"}}Welcome link for {{.Data.LinkFor}}{{else}}Password link for {{.Data.LinkFor}}{{end}}</h1>
+  <p>Send this one-time link to the customer{{if eq .Data.LinkKind "welcome"}} so they can choose a password and log in{{else}} so they can choose a new password{{end}}. It is valid for 7 days, will not be shown again, and lets whoever opens it set the password, so pass it on privately.</p>
+  <p><code>{{.Data.Link}}</code></p>
+</div>
+{{end}}
+<div class="card">
+  <h1>Websites</h1>
+  <p class="muted">Each customer has one website. “Work on this website” opens that customer's editor as you; everything you do there is recorded in the audit log.</p>
+  {{if .Data.Sites}}
+  <table>
+    <tr><th>Website</th><th>Owner</th><th>Status</th><th>Created</th><th></th></tr>
+    {{range .Data.Sites}}
+    <tr>
+      <td><strong>{{.Name}}</strong></td>
+      <td>{{.Owner}}</td>
+      <td>{{if .Active}}<span class="badge published">active</span>{{else}}<span class="badge draft">suspended</span>{{end}}</td>
+      <td class="muted">{{.CreatedAt.Format "2 Jan 2006"}}</td>
+      <td class="row-actions">
+        {{if .Active}}<form method="post" action="/platform/sites/{{.ID}}/act" class="inline"><input type="hidden" name="csrf" value="{{$.CSRF}}"><button>Work on this website</button></form>{{end}}
+        <form method="post" action="/platform/sites/{{.ID}}/reset" class="inline" data-confirm="Make a one-time password link for {{.Owner}}? Any earlier link stops working."><input type="hidden" name="csrf" value="{{$.CSRF}}"><button class="ghost">Password link</button></form>
+        <form method="post" action="/platform/sites/{{.ID}}/status" class="inline" data-confirm="{{if .Active}}Suspend this website? Its owner will be signed out and cannot log in or publish.{{else}}Let this website's owner log in again?{{end}}"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="active" value="{{if .Active}}0{{else}}1{{end}}"><button class="ghost">{{if .Active}}Suspend{{else}}Resume{{end}}</button></form>
+        <details class="inline-danger"><summary>Delete…</summary>
+          <form method="post" action="/platform/sites/{{.ID}}/delete">
+            <input type="hidden" name="csrf" value="{{$.CSRF}}">
+            <label>Type the website's name (<strong>{{.Name}}</strong>) to delete it, its account and every file. This cannot be undone.
+              <input name="confirm" autocomplete="off" required></label>
+            <button class="danger">Delete website and account</button>
+          </form>
+        </details>
+      </td>
+    </tr>
+    {{end}}
+  </table>
+  {{else}}<p class="muted">No websites yet. Add the first customer below.</p>{{end}}
+</div>
+<div class="card" id="new">
+  <h2>New customer</h2>
+  <form method="post" action="/platform/sites">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label>Customer's email address <input type="email" name="email" value="{{.Data.NewEmail}}" maxlength="254" required></label>
+    <label>Website name <span class="muted">(also the starting site title)</span> <input name="name" value="{{.Data.NewName}}" maxlength="100" required></label>
+    <button>Create account and website</button>
+  </form>
+</div>
+{{end}}
+
+{{define "actions"}}<a class="btn sm" href="#new"><svg class="ic" aria-hidden="true"><use href="#i-plus"></use></svg>New customer</a>{{end}}

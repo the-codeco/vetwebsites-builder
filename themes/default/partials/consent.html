@@ -1,0 +1,12 @@
+{{/* The cookie notice. Hidden until its script decides the visitor hasn't answered yet, so there is no flash. */}}
+{{define "consent-banner"}}{{with .Site.Consent}}<div class="consent" id="consent" role="region" aria-label="Cookie notice" data-consent-version="{{.Version}}" hidden>
+  <p class="consent-text">{{.Text}}{{with .LinkURL}} <a href="{{.}}">{{$.Site.Consent.LinkLabel}}</a>{{end}}</p>
+  <div class="consent-actions">
+    {{if .Ask}}<button type="button" class="btn btn-secondary" data-consent="declined">Decline</button>
+    <button type="button" class="btn btn-primary" data-consent="accepted">Accept</button>{{else}}<button type="button" class="btn btn-primary" data-consent="ok">Got it</button>{{end}}
+  </div>
+</div>
+<script src="{{$.Site.ConsentJS}}" defer></script>{{end}}{{end}}
+
+{{/* A footer link to change the answer later: only when visitors are asked to choose. */}}
+{{define "consent-reopen"}}{{with .Site.Consent}}{{if .Ask}}<p class="consent-reopen-wrap"><button type="button" class="consent-reopen" data-consent-reopen hidden>Cookie settings</button></p>{{end}}{{end}}{{end}}

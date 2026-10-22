@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en"{{if .Site.ColorMode}} data-color-mode="{{.Site.ColorMode}}"{{end}}>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+{{template "seo-head" .}}
+{{template "color-mode-head" .}}
+<link rel="alternate" type="application/rss+xml" title="{{.Site.Title}}" href="/rss.xml">
+{{range .Site.Styles}}<link rel="stylesheet" href="{{.}}">
+{{end}}
+<link rel="stylesheet" href="{{.Site.CSSURL}}">
+{{template "site-head-extras" .}}
+</head>
+<body>
+{{if .Preview}}<div class="preview-banner">Draft preview — not visible to the public</div>{{end}}
+{{template "menu-topbar" .}}
+<header class="site-header masthead{{if .Nav.Main.Sticky}} is-sticky{{end}}">
+  <div class="site-header-inner">
+    {{template "site-brand" .}}
+    {{template "menu-main" .}}
+    {{template "site-search" .}}
+    {{template "color-toggle" .}}
+  </div>
+</header>
+<main>{{.Content}}</main>
+{{template "menu-footer" .}}
+<footer class="site-footer">
+  {{template "footer-columns" .}}
+  <p class="footer-bottom">{{.Site.Footer.Bottom}}</p>
+  {{template "consent-reopen" .}}
+</footer>
+<script src="{{.Site.MenuJS}}" defer></script>
+{{template "consent-banner" .}}
+</body>
+</html>

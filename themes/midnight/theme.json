@@ -1,0 +1,15 @@
+{
+  "label": "Midnight",
+  "description": "A dark theme with a teal accent, soft rounded corners and a compact header.",
+  "extends": "default",
+  "tokens": [
+    {"key": "color-bg",           "default": "#0f1218"},
+    {"key": "color-text",         "default": "#e6e9ef"},
+    {"key": "color-muted",        "default": "#8b94a7"},
+    {"key": "color-surface",      "default": "#1a1f2b"},
+    {"key": "color-primary",      "default": "#2dd4bf"},
+    {"key": "color-primary-text", "default": "#06201c"},
+    {"key": "font-heading",       "default": "humanist"},
+    {"key": "radius",             "default": "12px"}
+  ]
+}

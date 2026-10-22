@@ -1,0 +1,89 @@
+{{define "actions"}}<nav class="range" aria-label="Time range">{{range .Data.Ranges}}<a class="btn secondary{{if .Current}} on{{end}}" href="/admin/analytics?days={{.Days}}"{{if .Current}} aria-current="true"{{end}}>{{.Days}} days</a>{{end}}</nav>{{end}}
+
+{{define "content"}}
+{{if not .Data.Enabled}}
+<div class="alert error" role="status"><svg class="ic" aria-hidden="true"><use href="#i-alert"></use></svg><p>Analytics is turned off, so new visits aren't being counted.{{if .Data.IsAdmin}} You can turn it back on at the bottom of this page.{{end}}</p></div>
+{{end}}
+
+<div class="stats">
+  <div class="stat"><span class="stat-num">{{.Data.Report.Views}}</span><span class="stat-label">Page views</span><span class="stat-sub">last {{.Data.Report.Days}} days</span></div>
+  <div class="stat"><span class="stat-num">{{.Data.Report.Visitors}}</span><span class="stat-label">Visitors</span><span class="stat-sub">unique per day, added up</span></div>
+  <div class="stat"><span class="stat-num">{{if .Data.Report.Views}}{{printf "%.1f" (divf .Data.Report.Views .Data.Report.Days)}}{{else}}0{{end}}</span><span class="stat-label">Views per day</span><span class="stat-sub">on average</span></div>
+  <div class="stat"><span class="stat-num">{{.Data.Report.Direct}}</span><span class="stat-label">Direct</span><span class="stat-sub">views with no referring site</span></div>
+</div>
+
+<div class="card">
+  <h2>Visits over time</h2>
+  {{if .Data.Empty}}
+  <p class="muted">No visits recorded in this period yet. Page views from real visitors show up here within a few seconds; your own visits while logged in, bots and previews aren't counted.</p>
+  {{else}}
+  <svg class="chart" viewBox="0 0 {{.Data.ChartW}} {{.Data.ChartH}}" preserveAspectRatio="none" role="img" aria-label="Page views per day">
+    {{range .Data.Bars}}<g><title>{{.Label}}</title>
+      <rect class="bar-views" x="{{.X}}" y="{{.ViewsY}}" width="{{.W}}" height="{{.ViewsH}}"></rect>
+      <rect class="bar-visitors" x="{{.X}}" y="{{.VisitorsY}}" width="{{.W}}" height="{{.VisitorsH}}"></rect></g>{{end}}
+  </svg>
+  <p class="legend"><span class="key views"></span> Page views <span class="key visitors"></span> Visitors</p>
+  {{end}}
+</div>
+
+<div class="two-col">
+  <div class="card">
+    <h2>Top pages</h2>
+    {{template "toptable" (tbl .Data.Pages "Page")}}
+  </div>
+  <div class="card">
+    <h2>Where visitors come from</h2>
+    {{template "toptable" (tbl .Data.Referrers "Site")}}
+    <p class="hint">Only the website a visitor came from is kept — never the full address.</p>
+  </div>
+</div>
+
+<div class="two-col">
+  <div class="card"><h2>Devices</h2>{{template "toptable" (tbl .Data.Devices "Device")}}</div>
+  <div class="card"><h2>Browsers</h2>{{template "toptable" (tbl .Data.Browsers "Browser")}}</div>
+</div>
+
+<div class="card">
+  <h2>Privacy</h2>
+  <p>Analytics is built in. It sets no cookies, loads no outside scripts and sends nothing to anyone, so visitors don't need a consent banner for it. Each visit stores the page, the referring website, a device type, a browser name and an anonymous code that changes every day — never an IP address. Logged-in users, bots, drafts and previews are not counted, and neither are visitors who send “Do Not Track”. Data older than {{.Data.Retention}} days is deleted automatically.</p>
+  {{if .Data.IsAdmin}}
+  <form method="post" action="/admin/analytics/settings">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label class="check"><input type="checkbox" name="enabled"{{if .Data.Enabled}} checked{{end}}> Count visits to this site</label>
+    <button>Save</button>
+  </form>
+  <form method="post" action="/admin/analytics/delete" data-confirm="Delete all recorded visits? This cannot be undone.">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <button class="ghost danger">Delete all analytics data</button>
+  </form>
+  {{end}}
+</div>
+{{if .Data.IsAdmin}}
+<div class="card">
+  <h2>Outside analytics services</h2>
+  <p class="muted">Optional. If you also use Google Analytics or Plausible, enter the service's ID here and it is added to every public page. Nothing else can be added, so a pasted script can't put your site at risk. Neither service is loaded for logged-in users. Google Analytics sets cookies and sends visitor data to Google, so tell visitors in your privacy policy.</p>
+  <form method="post" action="/admin/analytics/tracking">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label>Google Analytics 4 measurement ID <span class="muted">(optional)</span>
+      <input name="ga4" value="{{.Data.Tracking.GA4}}" maxlength="20" placeholder="G-ABC123XYZ" pattern="[Gg]-[A-Za-z0-9]{4,14}"></label>
+    <label>Plausible domain <span class="muted">(optional)</span>
+      <input name="plausible" value="{{.Data.Tracking.PlausibleDomain}}" maxlength="100" placeholder="example.com"></label>
+    <label class="check"><input type="checkbox" name="wait"{{if not .Data.Tracking.NoWait}} checked{{end}}> Wait until the visitor accepts the cookie notice</label>
+    {{if and (not .Data.Tracking.NoWait) .Data.Tracking.Any (not .Data.ConsentAsks)}}
+    <p class="alert error" role="status"><svg class="ic" aria-hidden="true"><use href="#i-alert"></use></svg>These services will never load: they wait for “Accept”, but the cookie notice is not set to offer Accept and Decline. Turn that on under Appearance, or untick the box above.</p>
+    {{end}}
+    <button>Save</button>
+  </form>
+</div>
+{{end}}
+{{end}}
+
+{{define "toptable"}}{{if .Rows}}
+<table class="top">
+  <tr><th>{{.Head}}</th><th class="num">Views</th><th class="num">Visitors</th></tr>
+  {{range .Rows}}<tr>
+    <td><span class="top-name">{{.Name}}</span><progress value="{{.Views}}" max="{{.Max}}" aria-label="{{.Pct}}% of views"></progress></td>
+    <td class="num">{{.Views}}</td><td class="num">{{.Visitors}}</td>
+  </tr>{{end}}
+</table>
+{{else}}<p class="muted">Nothing yet.</p>{{end}}{{end}}

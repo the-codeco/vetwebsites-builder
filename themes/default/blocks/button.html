@@ -1,0 +1,1 @@
+{{define "block/button"}}{{if and .Props.label .Props.url}}<p><a class="btn btn-{{.Props.variant}}" href="{{safeurl .Props.url}}">{{.Props.label}}</a></p>{{end}}{{end}}

@@ -1,0 +1,15 @@
+{{define "block/team"}}
+{{with .Props.heading}}<h2>{{.}}</h2>{{end}}
+{{with .Props.intro}}<p class="team-intro">{{.}}</p>{{end}}
+<div class="team cols-{{.Props.columns}} team-{{.Props.shape}}">
+{{range .Props.people}}{{if .name}}
+  <article class="member">
+    {{with .photo}}<img class="member-photo" src="{{.}}" {{srcset . "(min-width: 800px) 25vw, 50vw"}} alt="" loading="lazy">{{end}}
+    <h3>{{.name}}</h3>
+    {{with .role}}<p class="member-role">{{.}}</p>{{end}}
+    {{with .bio}}<p class="member-bio">{{.}}</p>{{end}}
+    {{if .link}}<a class="member-link" href="{{safeurl .link}}">{{or $.Props.link_label "Profile"}}<span class="sr-only">: {{.name}}</span></a>{{end}}
+  </article>
+{{end}}{{end}}
+</div>
+{{end}}

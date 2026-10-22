@@ -1,0 +1,29 @@
+{{define "content"}}
+<div class="card">
+  <h1>{{.Data.R.Name}} <span class="badge">{{.Data.R.TypeLabel}}</span></h1>
+  <p class="muted"><a href="/admin/shared">← All shared blocks</a></p>
+  {{if .Data.Saved}}<p class="saved" role="status">Saved ✓ Every page that shows this block now shows the new version.</p>{{end}}
+  <form method="post" action="/admin/shared/{{.Data.R.ID}}">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label>Name <span class="muted">(only you see this)</span> <input name="name" value="{{.Data.R.Name}}" maxlength="100" required></label>
+    {{range .Data.Fields}}{{template "field" .}}{{end}}
+    <details class="stylebox">
+      <summary>Style</summary>
+      {{range .Data.StyleFields}}{{template "field" .}}{{end}}
+    </details>
+    <button>Save</button>
+  </form>
+</div>
+<div class="card">
+  <h2>Where it is used</h2>
+  {{if .Data.Uses}}
+  <p class="muted">Changes appear on {{len .Data.Uses}} {{if eq (len .Data.Uses) 1}}page{{else}}pages{{end}}:</p>
+  <ul>{{range .Data.Uses}}<li><a href="/admin/pages/{{.PageID}}">{{.Title}}</a> <span class="muted">{{if eq .Slug "home"}}/{{else}}/{{.Slug}}{{end}}</span></li>{{end}}</ul>
+  {{else}}<p class="muted">No page shows it yet. Open a page and use “Add a shared block”.</p>{{end}}
+  <form method="post" action="/admin/shared/{{.Data.R.ID}}/delete" data-confirm="Delete this shared block?">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <button class="danger"{{if .Data.Uses}} disabled title="Remove it from its pages first"{{end}}>Delete shared block</button>
+  </form>
+</div>
+{{template "pickerdialog"}}
+{{end}}

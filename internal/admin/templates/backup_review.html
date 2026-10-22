@@ -1,0 +1,56 @@
+{{define "actions"}}<a class="btn secondary" href="/admin/backup">← Backup</a>{{end}}
+
+{{define "content"}}
+{{if .Data.Result}}
+<div class="card">
+  <h1>Restored</h1>
+  {{with .Data.Result.Counts}}
+  <p>The site now has {{.Pages}} page{{if ne .Pages 1}}s{{end}} ({{.Blocks}} blocks), {{.Posts}} post{{if ne .Posts 1}}s{{end}}, {{.Categories}} categor{{if eq .Categories 1}}y{{else}}ies{{end}} and {{.Media}} image{{if ne .Media 1}}s{{end}}.{{if .Subscribers}} {{.Subscribers}} subscribers and {{.Messages}} messages were restored too.{{end}}</p>
+  {{end}}
+  {{if .Data.Result.Warnings}}
+  <h2>Left out</h2>
+  <ul class="plain">{{range .Data.Result.Warnings}}<li>{{.}}</li>{{end}}</ul>
+  {{end}}
+  <p>The site as it was just before is saved as <code>{{.Data.Snapshot}}</code>. To undo this restore, go to <a href="/admin/backup">Backup</a>, find that file and press Restore.</p>
+  <p><a class="btn" href="/" target="_blank" rel="noopener">View the site</a></p>
+</div>
+{{else}}
+{{with .Data.Archive}}
+<div class="card">
+  <h1>Restore this backup?</h1>
+  <p class="muted">{{$.Data.Label}}</p>
+  <dl class="plain">
+    <dt>Site</dt><dd>{{.Manifest.SiteTitle}}</dd>
+    <dt>Made</dt><dd>{{.Manifest.CreatedAt.Format "Monday 2 January 2006, 15:04"}} UTC</dd>
+    <dt>Holds</dt><dd>{{.Manifest.Counts.Pages}} page{{if ne .Manifest.Counts.Pages 1}}s{{end}} ({{.Manifest.Counts.Blocks}} blocks), {{.Manifest.Counts.Posts}} post{{if ne .Manifest.Counts.Posts 1}}s{{end}}, {{.Manifest.Counts.Categories}} categor{{if eq .Manifest.Counts.Categories 1}}y{{else}}ies{{end}}, {{.Manifest.Counts.Media}} image{{if ne .Manifest.Counts.Media 1}}s{{end}}{{if .Manifest.Personal}}, {{.Manifest.Counts.Subscribers}} subscribers and {{.Manifest.Counts.Messages}} contact messages{{end}}</dd>
+  </dl>
+  {{if .Manifest.Missing}}<div class="alert error" role="status"><div>{{len .Manifest.Missing}} image{{if ne (len .Manifest.Missing) 1}}s were{{else}} was{{end}} missing from the site when this backup was made, so {{if ne (len .Manifest.Missing) 1}}they are{{else}}it is{{end}} not in it.</div></div>{{end}}
+  {{if .Warnings}}
+  <h2>Will be left out</h2>
+  <p class="hint">These parts of the file aren't valid for this site:</p>
+  <ul class="plain">{{range .Warnings}}<li>{{.}}</li>{{end}}</ul>
+  {{end}}
+</div>
+
+<div class="card">
+  <h2>What will change</h2>
+  <ul class="plain">
+    <li><strong>Replaced:</strong> all pages and their blocks, all posts and categories, all images, the menus, and the theme, colours, custom CSS, search and cookie-notice settings.</li>
+    <li><strong>Not touched:</strong> user accounts, the domain, email settings, analytics, sent newsletters{{if not .Manifest.Personal}}, the subscriber list and contact messages{{end}}.</li>
+    <li>The current site is saved first as a <em>pre-restore</em> backup, so this can be undone.</li>
+  </ul>
+  <form method="post" action="/admin/backup/restore">
+    <input type="hidden" name="csrf" value="{{$.CSRF}}">
+    <input type="hidden" name="source" value="{{$.Data.Source}}">
+    <input type="hidden" name="label" value="{{$.Data.Label}}">
+    {{if .Manifest.Personal}}
+    <label class="check"><input type="checkbox" name="personal" value="1"> Also replace the subscriber list and contact messages with the backup's</label>
+    {{end}}
+    <label>Type <strong>{{$.Data.Word}}</strong> to confirm <input name="confirm" autocomplete="off" required pattern="{{$.Data.Word}}" placeholder="{{$.Data.Word}}"></label>
+    <button class="danger">Replace the site with this backup</button>
+    <a class="btn ghost" href="/admin/backup">Cancel</a>
+  </form>
+</div>
+{{end}}
+{{end}}
+{{end}}

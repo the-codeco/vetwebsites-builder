@@ -1,0 +1,19 @@
+{{/* Everything search engines and link previews read. Layouts include it once, inside <head>. */}}
+{{define "seo-head"}}{{$desc := or .SEO.Description .Description}}<title>{{if .SEO.Title}}{{.SEO.Title}}{{else}}{{if .PageTitle}}{{.PageTitle}} · {{end}}{{.Site.Title}}{{end}}</title>
+{{with $desc}}<meta name="description" content="{{.}}">
+{{end}}{{with .SEO.Robots}}<meta name="robots" content="{{.}}">
+{{end}}{{with .SEO.Canonical}}<link rel="canonical" href="{{.}}">
+{{end}}{{if .SEO.Type}}<meta property="og:type" content="{{.SEO.Type}}">
+<meta property="og:site_name" content="{{.SEO.SiteName}}">
+<meta property="og:title" content="{{if .PageTitle}}{{.PageTitle}}{{else}}{{.Site.Title}}{{end}}">
+{{with $desc}}<meta property="og:description" content="{{.}}">
+{{end}}{{with .SEO.Canonical}}<meta property="og:url" content="{{.}}">
+{{end}}{{with .SEO.Image}}<meta property="og:image" content="{{.}}">
+{{end}}{{with .SEO.Published}}<meta property="article:published_time" content="{{.}}">
+{{end}}{{with .SEO.Modified}}<meta property="article:modified_time" content="{{.}}">
+{{end}}<meta name="twitter:card" content="{{if .SEO.Image}}summary_large_image{{else}}summary{{end}}">
+<meta name="twitter:title" content="{{if .PageTitle}}{{.PageTitle}}{{else}}{{.Site.Title}}{{end}}">
+{{with $desc}}<meta name="twitter:description" content="{{.}}">
+{{end}}{{with .SEO.Image}}<meta name="twitter:image" content="{{.}}">
+{{end}}{{end}}{{with .SEO.JSONLD}}<script type="application/ld+json">{{.}}</script>
+{{end}}{{end}}

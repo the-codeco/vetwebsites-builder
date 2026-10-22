@@ -1,0 +1,41 @@
+{{define "repitem"}}<fieldset class="rep-item" data-rep-item>
+  <legend>{{.Label}} <span data-rep-n>{{.N}}</span></legend>
+  {{range .Fields}}{{template "field" .}}{{end}}
+  <div class="rep-actions">
+    <button type="button" class="ghost" data-rep="up" title="Move up" aria-label="Move up">↑</button>
+    <button type="button" class="ghost" data-rep="down" title="Move down" aria-label="Move down">↓</button>
+    <button type="button" class="ghost danger" data-rep="remove">Remove</button>
+  </div>
+</fieldset>{{end}}
+
+{{define "field"}}
+{{if eq .Kind "repeater"}}<div class="repeater" data-repeater data-max="{{.Max}}">
+  <span class="rep-title">{{.Label}}</span>
+  <div class="rep-list" data-rep-list>{{$f := .}}{{range .Items}}{{template "repitem" (repctx $f.ItemLabel .)}}{{end}}</div>
+  <template data-rep-template>{{template "repitem" (repctx .ItemLabel .Blank)}}</template>
+  <button type="button" class="ghost" data-rep="add">+ Add {{lower .ItemLabel}}</button>
+</div>
+{{else if eq .Kind "bool"}}<label class="check"><input type="checkbox" name="{{.Name}}"{{if .Checked}} checked{{end}}> {{.Label}}</label>
+{{else}}<label>{{.Label}}
+  {{if eq .Kind "textarea"}}<textarea name="{{.Name}}" rows="3" maxlength="5000">{{.Str}}</textarea>
+  {{else if eq .Kind "richtext"}}{{template "rtbar"}}<textarea name="{{.Name}}" rows="10" class="mono" maxlength="50000">{{.Str}}</textarea>
+    <span class="hint">Plain text works (blank line = new paragraph), or use the buttons / basic HTML. Anything unsafe is removed on save.</span>
+  {{else if eq .Kind "imagelist"}}<textarea name="{{.Name}}" rows="4" class="mono" placeholder="/media/photo.jpg">{{.Str}}</textarea>
+    <button type="button" class="ghost" data-pick>Add from library…</button>
+  {{else if eq .Kind "select"}}<select name="{{.Name}}">{{range .Options}}<option value="{{.Value}}"{{if .Selected}} selected{{end}}>{{.Label}}</option>{{end}}</select>
+  {{else if eq .Kind "number"}}<input type="number" step="any" name="{{.Name}}" value="{{.Str}}">
+  {{else if eq .Kind "color"}}<span class="colorrow"><input type="text" name="{{.Name}}" value="{{.Str}}" pattern="#[0-9a-fA-F]{6}" placeholder="#rrggbb (none)" data-color-text><input type="color" value="{{if .Str}}{{.Str}}{{else}}#ffffff{{end}}" aria-label="Pick colour" data-color-pick></span>
+  {{else if eq .Kind "image"}}<span class="colorrow"><input type="text" name="{{.Name}}" value="{{.Str}}" maxlength="2000" placeholder="/media/photo.jpg or https://…"><button type="button" class="ghost" data-pick>Choose…</button></span>
+  {{else if eq .Kind "link"}}<input type="text" name="{{.Name}}" value="{{.Str}}" maxlength="2000" placeholder="/about or https://…">
+  {{else}}<input type="text" name="{{.Name}}" value="{{.Str}}" maxlength="300">
+  {{end}}
+</label>{{end}}
+{{end}}
+
+{{/* "Publish on": a draft goes live by itself at this time. The visible box is in the person's own time zone (a
+     small script converts it); "publish_at" carries the same moment in UTC. */}}
+{{define "schedule"}}<div class="schedule" data-schedule>
+  <label>Publish automatically on <span class="muted">(optional, only while this is a draft; your local time)</span>
+    <input type="datetime-local" name="publish_local"{{with .}} value="{{.Format "2006-01-02T15:04"}}" data-utc="{{.UTC.Format "2006-01-02T15:04:05Z"}}"{{end}}></label>
+  <input type="hidden" name="publish_at" value="{{with .}}{{.UTC.Format "2006-01-02T15:04:05Z"}}{{end}}">
+</div>{{end}}

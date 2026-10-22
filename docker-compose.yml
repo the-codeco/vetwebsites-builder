@@ -1,0 +1,85 @@
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: webbuilder
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-webbuilder}
+      POSTGRES_DB: webbuilder
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5433:5432" # for local tools only; never published to the network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U webbuilder"]
+      interval: 5s
+      retries: 10
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://webbuilder:${POSTGRES_PASSWORD:-webbuilder}@db:5432/webbuilder?sslmode=disable
+      ADDR: ":8080"
+      # Caddy's certificate check. Only reachable on the Docker network (no "ports:" entry).
+      INTERNAL_ADDR: ":8081"
+      MEDIA_DIR: /data/media
+      # Set TRUST_PROXY=true in .env when running behind Caddy (the "prod" profile).
+      TRUST_PROXY: ${TRUST_PROXY:-false}
+      SECURE_COOKIES: ${SECURE_COOKIES:-false}
+      # If set, creating the first admin account requires this value.
+      SETUP_TOKEN: ${SETUP_TOKEN:-}
+      # Optional: email a copy of contact-form messages (see .env.example).
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      # Backups (Admin > Backup) are kept in their own volume, apart from the public media folder.
+      BACKUP_DIR: /data/backups
+      BACKUP_KEEP: ${BACKUP_KEEP:-7}
+      BACKUP_PERSONAL: ${BACKUP_PERSONAL:-false}
+    volumes:
+      - media:/data/media
+      - backups:/data/backups
+    ports:
+      # localhost only: in production, visitors must come through Caddy, not straight to the app
+      - "127.0.0.1:8080:8080"
+    healthcheck:
+      test: ["CMD", "/server", "-healthcheck"] # the image has no shell or curl
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    # The app only writes to the media volume and /tmp (large uploads spool there).
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data # certificates live here: keep this volume
+      - caddy_config:/config
+    ports:
+      - "80:80"
+      - "443:443"
+    profiles: ["prod"]
+
+volumes:
+  pgdata:
+  media:
+  backups:
+  caddy_data:
+  caddy_config:

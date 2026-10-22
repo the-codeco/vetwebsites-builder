@@ -1,0 +1,14 @@
+{{define "block/testimonials"}}
+{{with .Props.heading}}<h2>{{.}}</h2>{{end}}
+<div class="testimonials cols-{{.Props.columns}}">
+{{range .Props.items}}{{if .quote}}
+  <figure class="testimonial">
+    <blockquote><p>{{.quote}}</p></blockquote>
+    {{if or .name .role .photo}}<figcaption>
+      {{with .photo}}<img class="testimonial-photo" src="{{.}}" alt="" loading="lazy" width="48" height="48">{{end}}
+      <span>{{with .name}}<strong>{{.}}</strong>{{end}}{{with .role}}<span class="testimonial-role">{{.}}</span>{{end}}</span>
+    </figcaption>{{end}}
+  </figure>
+{{end}}{{end}}
+</div>
+{{end}}

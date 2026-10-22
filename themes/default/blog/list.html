@@ -1,0 +1,29 @@
+{{define "postcard"}}
+<article class="postcard">
+  {{if .Cover}}<a href="{{.URL}}" class="postcard-cover" tabindex="-1" aria-hidden="true"><img src="{{.Cover}}" {{srcset .Cover "(min-width: 700px) 33vw, 100vw"}} alt="" loading="lazy"></a>{{end}}
+  <div class="postcard-body">
+    <p class="postmeta"><time datetime="{{.DateISO}}">{{.Date}}</time>{{range .Categories}} · <a href="{{.URL}}">{{.Name}}</a>{{end}}</p>
+    <h3><a href="{{.URL}}">{{.Title}}</a></h3>
+    {{if .Excerpt}}<p>{{.Excerpt}}</p>{{end}}
+  </div>
+</article>
+{{end}}
+
+{{define "blog/list"}}
+<section class="block pad-md align-left width-normal"><div class="block-inner">
+  <h1>{{.Heading}}</h1>
+  {{if .Category}}<p class="muted"><a href="/blog">← All posts</a></p>{{end}}
+  {{if .Posts}}
+  <div class="postgrid">{{range .Posts}}{{template "postcard" .}}{{end}}</div>
+  {{else}}
+  <p class="muted">No posts yet.</p>
+  {{end}}
+  {{if or .PrevURL .NextURL}}
+  <nav class="pager" aria-label="Pagination">
+    {{if .PrevURL}}<a href="{{.PrevURL}}">← Newer</a>{{else}}<span></span>{{end}}
+    <span>Page {{.Page}} of {{.Pages}}</span>
+    {{if .NextURL}}<a href="{{.NextURL}}">Older →</a>{{else}}<span></span>{{end}}
+  </nav>
+  {{end}}
+</div></section>
+{{end}}

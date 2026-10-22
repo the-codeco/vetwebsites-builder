@@ -1,0 +1,7 @@
+{{define "block/columns"}}
+<div class="columns cols-{{.Props.count}}">
+  <div class="col">{{with .Props.col1_title}}<h3>{{.}}</h3>{{end}}{{with .Props.col1_text}}<p>{{.}}</p>{{end}}</div>
+  <div class="col">{{with .Props.col2_title}}<h3>{{.}}</h3>{{end}}{{with .Props.col2_text}}<p>{{.}}</p>{{end}}</div>
+  {{if eq .Props.count "3"}}<div class="col">{{with .Props.col3_title}}<h3>{{.}}</h3>{{end}}{{with .Props.col3_text}}<p>{{.}}</p>{{end}}</div>{{end}}
+</div>
+{{end}}

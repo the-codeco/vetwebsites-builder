@@ -1,0 +1,10 @@
+{{define "block/video"}}
+{{with video .Props.url}}
+<figure class="video">
+  <div class="video-frame ratio-{{$.Props.ratio}}">
+    <iframe src="{{.Src}}" title="{{or $.Props.title "Video"}}" loading="lazy" allow="fullscreen; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" sandbox="allow-scripts allow-same-origin allow-presentation allow-popups allow-popups-to-escape-sandbox"></iframe>
+  </div>
+  {{with $.Props.caption}}<figcaption>{{.}}</figcaption>{{end}}
+</figure>
+{{end}}
+{{end}}

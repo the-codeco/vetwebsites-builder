@@ -1,0 +1,54 @@
+{{/*
+  Navigation partials. Every layout includes these so a theme only decides where
+  the menus go; the markup, keyboard behaviour and mobile menu come from here.
+
+  A section is "frozen" (sticky) when the site owner ticks that box: layouts add
+  the class is-sticky to the header they put the main menu in, and these
+  partials add it to the top bar and footer menu.
+*/}}
+
+{{define "navlink"}}<a href="{{safeurl .URL}}"{{if .Button}} class="btn btn-primary"{{end}}{{if .Active}} aria-current="page"{{end}}{{if .NewTab}} target="_blank" rel="noopener noreferrer"{{end}}>{{.Label}}</a>{{end}}
+
+{{define "menu-topbar"}}{{if .Nav.TopBar.Items}}
+<nav class="menu-topbar{{if .Nav.TopBar.Sticky}} is-sticky{{end}}" aria-label="Utility">
+  <div class="menu-topbar-inner"><ul>{{range .Nav.TopBar.Items}}<li>{{template "navlink" .}}</li>{{end}}</ul></div>
+</nav>
+{{end}}{{end}}
+
+{{define "menu-main"}}{{if .Nav.Main.Items}}
+<nav class="menu-main" aria-label="Main">
+  <button type="button" class="menu-burger" aria-expanded="false" aria-controls="menu-main-list"><span class="sr-only">Menu</span><span class="burger-bars" aria-hidden="true"></span></button>
+  <ul class="menu-list" id="menu-main-list">
+  {{range $i, $it := .Nav.Main.Items}}
+    {{if eq $it.Kind "dropdown"}}
+    <li class="menu-item has-panel{{if $it.Within}} is-current{{end}}">
+      <button type="button" class="menu-toggle" aria-expanded="false" aria-controls="menu-panel-{{$i}}">{{$it.Label}}<span class="caret" aria-hidden="true"></span></button>
+      <ul class="menu-panel menu-dropdown" id="menu-panel-{{$i}}">{{range $it.Children}}<li>{{template "navlink" .}}</li>{{end}}</ul>
+    </li>
+    {{else if eq $it.Kind "mega"}}
+    <li class="menu-item has-panel has-mega{{if $it.Within}} is-current{{end}}">
+      <button type="button" class="menu-toggle" aria-expanded="false" aria-controls="menu-panel-{{$i}}">{{$it.Label}}<span class="caret" aria-hidden="true"></span></button>
+      <div class="menu-panel menu-mega" id="menu-panel-{{$i}}">
+        <div class="menu-mega-grid mega-cols-{{len $it.Columns}}">
+          {{range $it.Columns}}
+          <div class="menu-col">
+            {{with .Heading}}<p class="menu-col-heading">{{.}}</p>{{end}}
+            <ul>{{range .Links}}<li>{{template "navlink" .}}{{with .Description}}<span class="menu-desc">{{.}}</span>{{end}}</li>{{end}}</ul>
+          </div>
+          {{end}}
+        </div>
+      </div>
+    </li>
+    {{else}}
+    <li class="menu-item">{{template "navlink" $it}}</li>
+    {{end}}
+  {{end}}
+  </ul>
+</nav>
+{{end}}{{end}}
+
+{{define "menu-footer"}}{{if .Nav.Footer.Items}}
+<nav class="menu-footer{{if .Nav.Footer.Sticky}} is-sticky{{end}}" aria-label="Footer">
+  <ul>{{range .Nav.Footer.Items}}<li>{{template "navlink" .}}</li>{{end}}</ul>
+</nav>
+{{end}}{{end}}

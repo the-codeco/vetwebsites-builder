@@ -1,0 +1,17 @@
+{
+  "label": "Journal",
+  "description": "Warm and literary: classical serif type, a paper-toned background and a centred masthead.",
+  "extends": "default",
+  "tokens": [
+    {"key": "color-bg",      "default": "#faf7f2", "dark": "#1c1815"},
+    {"key": "color-text",    "default": "#2b2622", "dark": "#efe7dc"},
+    {"key": "color-muted",   "default": "#7a6f66", "dark": "#b3a698"},
+    {"key": "color-surface", "default": "#efe9df", "dark": "#2a2420"},
+    {"key": "color-primary", "default": "#9c3d2a", "dark": "#e8866f"},
+    {"key": "color-primary-text", "dark": "#1c1815"},
+    {"key": "font-body",     "default": "classical"},
+    {"key": "font-heading",  "default": "classical"},
+    {"key": "content-width", "default": "960px"},
+    {"key": "radius",        "default": "2px"}
+  ]
+}

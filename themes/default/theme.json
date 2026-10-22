@@ -1,0 +1,17 @@
+{
+  "label": "Default",
+  "description": "Clean and modern: sans-serif type, a blue accent and a spacious layout.",
+  "tokens": [
+    {"key": "color-bg",           "label": "Background",      "kind": "color", "default": "#ffffff", "dark": "#12151c"},
+    {"key": "color-text",         "label": "Text",            "kind": "color", "default": "#1f2430", "dark": "#e6e9ef"},
+    {"key": "color-muted",        "label": "Muted text",      "kind": "color", "default": "#6b7280", "dark": "#9aa3b5"},
+    {"key": "color-surface",      "label": "Surface",         "kind": "color", "default": "#f4f5f8", "dark": "#1d222d"},
+    {"key": "color-primary",      "label": "Primary",         "kind": "color", "default": "#3b5bdb", "dark": "#8ba2ff"},
+    {"key": "color-primary-text", "label": "Text on primary", "kind": "color", "default": "#ffffff", "dark": "#0b1020"},
+    {"key": "font-body",          "label": "Body font",       "kind": "font",  "default": "sans"},
+    {"key": "font-heading",       "label": "Heading font",    "kind": "font",  "default": "sans"},
+    {"key": "content-width",      "label": "Content width",   "kind": "size",  "default": "1100px"},
+    {"key": "radius",             "label": "Corner radius",   "kind": "size",  "default": "6px"},
+    {"key": "space",              "label": "Base spacing",    "kind": "size",  "default": "1rem"}
+  ]
+}

@@ -1,0 +1,100 @@
+{{define "content"}}
+<datalist id="page-urls">{{range .Data.PageURLs}}<option value="{{.}}">{{end}}</datalist>
+
+<div class="editor">
+  <div class="editor-main" data-menu-builder>
+    {{range .Data.Sections}}
+    {{$nested := .Nested}}
+    <div class="card menu-card" id="menu-{{.Key}}">
+      <h2>{{.Label}}</h2>
+      <p class="hint">{{.Help}}</p>
+      <form method="post" action="/admin/menus/{{.Key}}" data-menu-form>
+        <input type="hidden" name="csrf" value="{{$.CSRF}}">
+        <input type="hidden" name="structure" value="">
+        <label class="check freeze"><input type="checkbox" name="sticky"{{if .Sticky}} checked{{end}}>
+          <span><strong>Freeze</strong> — keep the {{lower .Label}} on screen while visitors scroll</span></label>
+
+        <div class="mi-sub" data-sub="items">
+          <ol class="mi-list" data-list>{{range .Items}}{{template "mi-item" (itemctx . $nested)}}{{end}}</ol>
+          <button type="button" class="ghost" data-act="add" data-tpl="tpl-item-{{.Key}}">+ Add item</button>
+        </div>
+        <button>Save {{lower .Label}}</button>
+      </form>
+      <template id="tpl-item-{{.Key}}">{{template "mi-item" (itemctx blankitem $nested)}}</template>
+    </div>
+    {{end}}
+
+    <template id="tpl-link">{{template "mi-link" (linkctx blanklink false)}}</template>
+    <template id="tpl-mlink">{{template "mi-link" (linkctx blanklink true)}}</template>
+    <template id="tpl-col">{{template "mi-col" blankcol}}</template>
+  </div>
+
+  <div class="editor-preview">
+    <div class="preview-bar"><span>Live preview — saved menus</span><a href="{{.PreviewBase}}/" target="_blank" rel="noopener">Open site ↗</a></div>
+    <iframe id="preview" src="{{.PreviewBase}}/" title="Site preview"></iframe>
+  </div>
+</div>
+{{end}}
+
+{{/* a top-level item: link, dropdown or mega menu */}}
+{{define "mi-item"}}<li class="mi" data-kind="{{.Kind}}">
+  <div class="mi-fields">
+    <input data-f="label" value="{{.Label}}" placeholder="Label" maxlength="60" aria-label="Label">
+    {{if .Nested}}<select data-f="kind" aria-label="Type">
+      <option value="link"{{if eq .Kind "link"}} selected{{end}}>Link</option>
+      <option value="dropdown"{{if eq .Kind "dropdown"}} selected{{end}}>Dropdown</option>
+      <option value="mega"{{if eq .Kind "mega"}} selected{{end}}>Mega menu</option>
+    </select>{{end}}
+    <input data-f="url" class="mi-url" value="{{.URL}}" placeholder="/about" list="page-urls" maxlength="2000" aria-label="Address">
+    <label class="chk chk-newtab"><input type="checkbox" data-f="new_tab"{{if .NewTab}} checked{{end}}> New tab</label>
+    <label class="chk chk-newtab" title="Show this link as a button"><input type="checkbox" data-f="button"{{if .Button}} checked{{end}}> Button</label>
+    <label class="chk"><input type="checkbox" data-f="hidden"{{if .Hidden}} checked{{end}}> Hide</label>
+    {{template "mi-buttons"}}
+  </div>
+  {{if .Nested}}
+  <div class="mi-panel mi-dropdown">
+    <p class="hint">Opens a simple list of links.</p>
+    <div class="mi-sub" data-sub="children">
+      <div class="mi-list" data-list>{{range .Children}}{{template "mi-link" (linkctx . false)}}{{end}}</div>
+      <button type="button" class="ghost" data-act="add" data-tpl="tpl-link">+ Add link</button>
+    </div>
+  </div>
+  <div class="mi-panel mi-mega">
+    <p class="hint">Opens a wide panel of up to 4 columns, each with a heading and links.</p>
+    <div class="mi-sub" data-sub="columns">
+      <div class="mi-list mi-cols" data-list>{{range .Columns}}{{template "mi-col" .}}{{end}}</div>
+      <button type="button" class="ghost" data-act="add" data-tpl="tpl-col">+ Add column</button>
+    </div>
+  </div>
+  {{end}}
+</li>{{end}}
+
+{{/* a link inside a dropdown or a mega column (only mega links have a description) */}}
+{{define "mi-link"}}<div class="mi-link">
+  <div class="mi-fields">
+    <input data-f="label" value="{{.Label}}" placeholder="Label" maxlength="60" aria-label="Link label">
+    <input data-f="url" value="{{.URL}}" placeholder="/page" list="page-urls" maxlength="2000" aria-label="Link address">
+    {{if .Desc}}<input data-f="description" class="mi-desc" value="{{.Description}}" placeholder="Short description (optional)" maxlength="120" aria-label="Description">{{end}}
+    <label class="chk"><input type="checkbox" data-f="new_tab"{{if .NewTab}} checked{{end}}> New tab</label>
+    <label class="chk"><input type="checkbox" data-f="hidden"{{if .Hidden}} checked{{end}}> Hide</label>
+    {{template "mi-buttons"}}
+  </div>
+</div>{{end}}
+
+{{/* one column of a mega menu */}}
+{{define "mi-col"}}<div class="mi-col">
+  <div class="mi-fields">
+    <input data-f="heading" value="{{.Heading}}" placeholder="Column heading" maxlength="60" aria-label="Column heading">
+    {{template "mi-buttons"}}
+  </div>
+  <div class="mi-sub" data-sub="links">
+    <div class="mi-list" data-list>{{range .Links}}{{template "mi-link" (linkctx . true)}}{{end}}</div>
+    <button type="button" class="ghost" data-act="add" data-tpl="tpl-mlink">+ Add link</button>
+  </div>
+</div>{{end}}
+
+{{define "mi-buttons"}}<span class="mi-btns">
+  <button type="button" class="ghost" data-act="up" title="Move up / earlier" aria-label="Move up">↑</button>
+  <button type="button" class="ghost" data-act="down" title="Move down / later" aria-label="Move down">↓</button>
+  <button type="button" class="ghost danger" data-act="remove" title="Remove" aria-label="Remove">✕</button>
+</span>{{end}}

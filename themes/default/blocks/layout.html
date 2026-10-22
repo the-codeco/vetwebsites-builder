@@ -1,0 +1,5 @@
+{{define "block/layout"}}
+<div class="layout layout-{{.Props.columns}} ratio-{{.Props.ratio}} gap-{{.Props.gap}} valign-{{.Props.valign}}{{if .Props.reverse}} reverse-mobile{{end}}">
+{{range .Columns}}  <div class="layout-col">{{range .}}{{.}}{{end}}</div>
+{{end}}</div>
+{{end}}

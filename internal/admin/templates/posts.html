@@ -1,0 +1,31 @@
+{{define "content"}}
+<div class="card">
+  <h1>All posts</h1>
+  {{if .Data.Posts}}
+  <table>
+    <tr><th>Title</th><th>Status</th><th>Categories</th><th>Date</th></tr>
+    {{range .Data.Posts}}
+    <tr>
+      <td><a href="/admin/posts/{{.ID}}">{{.Title}}</a></td>
+      <td><span class="badge {{.Status}}">{{.Status}}</span>{{with .PublishAt}} <span class="muted">goes live {{.Format "2 Jan 15:04"}} UTC</span>{{end}}</td>
+      <td class="muted">{{range $i, $c := .Categories}}{{if $i}}, {{end}}{{$c.Name}}{{end}}</td>
+      <td class="muted">{{.Date.Format "2 Jan 2006"}}</td>
+    </tr>
+    {{end}}
+  </table>
+  {{else}}<p class="muted">No posts yet. Write your first one below.</p>{{end}}
+  <p class="muted"><a href="/admin/categories">Manage categories</a> · <a href="/blog" target="_blank" rel="noopener">View blog ↗</a> · <a href="/rss.xml" target="_blank" rel="noopener">RSS feed ↗</a></p>
+</div>
+<div class="card" id="new">
+  <h2>New post</h2>
+  <form method="post" action="/admin/posts">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label>Title <input name="title" value="{{.Data.NewTitle}}" maxlength="200" required></label>
+    <label>URL slug <span class="muted">(optional — made from the title if blank)</span>
+      <input name="slug" value="{{.Data.NewSlug}}" maxlength="80" pattern="[a-z0-9]+(-[a-z0-9]+)*" placeholder="my-first-post"></label>
+    <button>Create post</button>
+  </form>
+</div>
+{{end}}
+
+{{define "actions"}}<a class="btn sm secondary" href="/admin/categories">Categories</a><a class="btn sm" href="#new"><svg class="ic" aria-hidden="true"><use href="#i-plus"></use></svg>New post</a>{{end}}

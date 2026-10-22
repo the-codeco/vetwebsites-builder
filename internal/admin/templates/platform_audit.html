@@ -1,0 +1,14 @@
+{{define "content"}}
+<div class="card">
+  <h1>Audit log</h1>
+  <p class="muted">The latest 200 actions: who worked on whose website, and the changes made to websites and accounts.</p>
+  {{if .Data}}
+  <table>
+    <tr><th>When (UTC)</th><th>Who</th><th>Website</th><th>What</th></tr>
+    {{range .Data}}
+    <tr><td class="muted">{{.At.Format "2 Jan 15:04:05"}}</td><td>{{.Actor}}</td><td>{{.Site}}</td><td>{{.Action}}{{with .Detail}} <span class="muted">{{.}}</span>{{end}}</td></tr>
+    {{end}}
+  </table>
+  {{else}}<p class="muted">Nothing recorded yet.</p>{{end}}
+</div>
+{{end}}

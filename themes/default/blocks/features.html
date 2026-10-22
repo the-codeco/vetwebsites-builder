@@ -1,0 +1,14 @@
+{{define "block/features"}}
+{{with .Props.heading}}<h2>{{.}}</h2>{{end}}
+{{with .Props.intro}}<p class="features-intro">{{.}}</p>{{end}}
+<div class="features cols-{{.Props.columns}} features-{{.Props.look}}">
+{{range .Props.cards}}{{if .title}}
+  <article class="feature">
+    {{if .image}}<img class="feature-pic" src="{{.image}}" {{srcset .image "(min-width: 800px) 25vw, 100vw"}} alt="" loading="lazy">{{else if .icon}}<span class="feature-icon" aria-hidden="true">{{.icon}}</span>{{end}}
+    <h3>{{.title}}</h3>
+    {{with .text}}<p>{{.}}</p>{{end}}
+    {{if .link}}<a class="feature-link" href="{{safeurl .link}}">{{or $.Props.link_label "Learn more"}}<span class="sr-only">: {{.title}}</span></a>{{end}}
+  </article>
+{{end}}{{end}}
+</div>
+{{end}}

@@ -1,0 +1,74 @@
+{{define "content"}}
+<div class="card" id="upload">
+  <h1>Media library</h1>
+  <form method="post" action="/admin/media" enctype="multipart/form-data">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <div class="dropzone" data-dropzone>
+      <p>Drag images here, or choose files</p>
+      <input type="file" name="files" multiple required accept="image/jpeg,image/png,image/gif,image/webp" data-max-bytes="10485760">
+    </div>
+    <p class="hint">JPEG, PNG, GIF or WebP · up to 10 MB each · up to 10 files at a time</p>
+    <button>Upload</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>{{.Data.Total}} image{{if ne .Data.Total 1}}s{{end}}</h2>
+  {{if .Data.Items}}
+  <div class="mediagrid big">
+    {{range .Data.Items}}
+    <div class="mcard">
+      <a href="{{.URL}}" target="_blank" rel="noopener"><img src="{{.ThumbURL}}" alt="{{.Alt}}" width="{{.Width}}" height="{{.Height}}" loading="lazy"></a>
+      <div class="mmeta">
+        <strong title="{{.OriginalName}}">{{.OriginalName}}</strong>
+        <span class="muted">{{.Width}}×{{.Height}} · {{.SizeLabel}}{{if .UsedOn}} · used on {{.UsedOn}} page{{if ne .UsedOn 1}}s{{end}}{{end}}</span>
+      </div>
+      <details>
+        <summary>Edit</summary>
+        {{if ne .Mime "image/gif"}}<p><a href="/admin/media/{{.ID}}/edit">Crop, turn or shrink…</a></p>{{end}}
+        <form method="post" action="/admin/media/{{.ID}}">
+          <input type="hidden" name="csrf" value="{{$.CSRF}}">
+          <label>Alt text <input name="alt" value="{{.Alt}}" maxlength="300" placeholder="Describe the image"></label>
+          <button class="ghost">Save</button>
+        </form>
+        <label>URL <input readonly value="{{.URL}}" data-select></label>
+        <form method="post" action="/admin/media/{{.ID}}/delete" data-confirm="Delete this image?{{if .UsedOn}} It is used on {{.UsedOn}} page{{if ne .UsedOn 1}}s{{end}}: those spots will show a broken image.{{end}}">
+          <input type="hidden" name="csrf" value="{{$.CSRF}}">
+          <button class="ghost danger">Delete</button>
+        </form>
+      </details>
+    </div>
+    {{end}}
+  </div>
+  {{if gt .Data.Pages 1}}
+  <p class="pager">
+    {{if gt .Data.Page 1}}<a href="/admin/media?page={{sub1 .Data.Page}}">← Newer</a>{{end}}
+    <span class="muted">Page {{.Data.Page}} of {{.Data.Pages}}</span>
+    {{if lt .Data.Page .Data.Pages}}<a href="/admin/media?page={{add1 .Data.Page}}">Older →</a>{{end}}
+  </p>
+  {{end}}
+  {{else}}<p class="muted">No images yet. Upload some above.</p>{{end}}
+</div>
+{{end}}
+
+{{define "picker"}}
+{{if .Items}}
+<div class="mediagrid">
+  {{range .Items}}
+  <button type="button" class="pick" data-media-url="{{.URL}}" data-media-alt="{{.Alt}}" title="{{.OriginalName}}">
+    <img src="{{.ThumbURL}}" alt="" loading="lazy">
+    <span>{{.OriginalName}}</span>
+  </button>
+  {{end}}
+</div>
+{{if gt .Pages 1}}
+<p class="pager">
+  {{if gt .Page 1}}<button type="button" class="ghost" hx-get="/admin/media/picker?page={{sub1 .Page}}" hx-target="#picker-body" hx-swap="innerHTML">← Newer</button>{{end}}
+  <span class="muted">Page {{.Page}} of {{.Pages}}</span>
+  {{if lt .Page .Pages}}<button type="button" class="ghost" hx-get="/admin/media/picker?page={{add1 .Page}}" hx-target="#picker-body" hx-swap="innerHTML">Older →</button>{{end}}
+</p>
+{{end}}
+{{else}}<p class="muted">No images yet — use Upload above.</p>{{end}}
+{{end}}
+
+{{define "actions"}}<a class="btn sm" href="#upload"><svg class="ic" aria-hidden="true"><use href="#i-plus"></use></svg>Upload</a>{{end}}

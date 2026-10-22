@@ -1,0 +1,13 @@
+{{define "block/details"}}
+{{with .Props.heading}}<h2>{{.}}</h2>{{end}}
+{{with .Extra}}{{if not .Empty}}{{$d := .}}
+<ul class="details">
+  {{if and $.Props.show_phone $d.Phone}}<li class="details-phone"><span class="details-label">Phone</span> <a href="{{safeurl $d.PhoneLink}}">{{$d.Phone}}</a></li>{{end}}
+  {{if and $.Props.show_whatsapp $d.WhatsApp}}<li class="details-whatsapp"><span class="details-label">WhatsApp</span> <a href="{{safeurl $d.WhatsAppLink}}" rel="noopener">{{$d.WhatsApp}}</a></li>{{end}}
+  {{if and $.Props.show_email $d.Email}}<li class="details-email"><span class="details-label">Email</span> <a href="mailto:{{$d.Email}}">{{$d.Email}}</a></li>{{end}}
+  {{if and $.Props.show_address $d.Address}}<li class="details-address"><span class="details-label">Address</span> <span class="details-lines">{{$d.Address}}</span></li>{{end}}
+  {{if and $.Props.show_hours $d.Hours}}<li class="details-hours"><span class="details-label">Opening hours</span> <span class="details-lines">{{$d.Hours}}</span></li>{{end}}
+  {{if and $.Props.show_social $d.Social}}<li class="details-social"><span class="details-label">Follow us</span> <span class="details-links">{{range $d.Social}}<a href="{{.URL}}" rel="noopener">{{.Label}}</a> {{end}}</span></li>{{end}}
+</ul>
+{{end}}{{end}}
+{{end}}

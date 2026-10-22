@@ -1,0 +1,37 @@
+{{define "content"}}
+<div class="card">
+  <h1>Newsletters</h1>
+  {{if not .Data.MailReady}}
+  <div class="alert error" role="status"><div>Email isn't set up on this server, so newsletters can be written but not sent. Set <code>SMTP_HOST</code> and <code>SMTP_FROM</code> (see <code>.env.example</code>).</div></div>
+  {{else if not .Data.HasDomain}}
+  <div class="alert error" role="status"><div>Newsletters can't be sent until you save your site's address on the <a href="/admin/domain">Domain</a> page: every email carries an unsubscribe link that has to point at your real site.</div></div>
+  {{end}}
+  {{if .Data.Campaigns}}
+  <table>
+    <tr><th>Subject</th><th>Status</th><th>Sent to</th><th>Date</th><th></th></tr>
+    {{range .Data.Campaigns}}
+    <tr>
+      <td><a href="/admin/newsletters/{{.ID}}">{{.Subject}}</a></td>
+      <td><span class="badge {{if eq .Status "sent"}}published{{else if eq .Status "draft"}}draft{{end}}">{{.Status}}</span></td>
+      <td>{{if .Draft}}<span class="muted">—</span>{{else}}{{.Sent}} of {{.Total}}{{if .Failed}} <span class="muted">· {{.Failed}} failed</span>{{end}}{{end}}</td>
+      <td class="muted nowrap">{{if .StartedAt}}{{.StartedAt.Format "2 Jan 2006"}}{{else}}{{.UpdatedAt.Format "2 Jan 2006"}}{{end}}</td>
+      <td><a href="/admin/newsletters/{{.ID}}">Open</a></td>
+    </tr>
+    {{end}}
+  </table>
+  {{else}}
+  <p class="muted">No newsletters yet. Write the first one below.</p>
+  {{end}}
+</div>
+
+<div class="card">
+  <h2>Write a newsletter</h2>
+  <p class="hint">It is saved as a draft first. You can send yourself a test, and nothing goes to your {{.Data.Recipients}} confirmed subscriber{{if ne .Data.Recipients 1}}s{{end}} until you press Send.</p>
+  <form method="post" action="/admin/newsletters">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label>Subject <input name="subject" value="{{.Data.Subject}}" maxlength="150" required></label>
+    <label>Message <textarea name="body" rows="12" maxlength="20000" required placeholder="Write in plain text. Blank lines make paragraphs; paste links as they are.">{{.Data.Body}}</textarea></label>
+    <button>Save draft</button>
+  </form>
+</div>
+{{end}}

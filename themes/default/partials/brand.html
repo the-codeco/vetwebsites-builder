@@ -1,0 +1,7 @@
+{{/* The site's name in the header: its logo (with the title beside it unless the owner hid it), or just the title. */}}
+{{define "site-brand"}}{{with .Site.Brand.Logo}}<a class="site-title site-brand" href="/"><img class="site-logo" src="{{.}}" alt="{{if $.Site.Brand.ShowTitle}}{{else}}{{$.Site.Brand.Alt}}{{end}}" height="{{$.Site.Brand.Height}}">{{if $.Site.Brand.ShowTitle}}<span>{{$.Site.Title}}</span>{{end}}</a>{{else}}<a class="site-title" href="/">{{.Site.Title}}</a>{{end}}{{end}}
+
+{{/* Things for <head> that the owner can switch on: the tab icon, and the analytics loader (which waits for the cookie notice unless told not to). */}}
+{{define "site-head-extras"}}{{with .Site.Brand.Icon}}<link rel="icon" href="{{.}}">
+{{end}}{{with .Site.Tracking}}<script src="{{.JS}}" defer data-wait="{{if .Wait}}1{{else}}0{{end}}"{{with .GA4}} data-ga4="{{.}}"{{end}}{{with .Plausible}} data-plausible="{{.}}"{{end}}></script>
+{{end}}{{end}}

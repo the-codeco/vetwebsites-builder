@@ -1,0 +1,21 @@
+{{define "block/hero"}}
+{{if and .Props.image (or (eq (print .Props.layout) "left") (eq (print .Props.layout) "right"))}}
+<div class="hero hero-split hero-image-{{.Props.layout}} hero-{{.Props.size}}">
+  <div class="hero-content">
+    {{if .Props.heading}}<h1>{{.Props.heading}}</h1>{{end}}
+    {{if .Props.subheading}}<p class="hero-sub">{{.Props.subheading}}</p>{{end}}
+    {{if and .Props.button_label .Props.button_url}}<a class="btn btn-primary" href="{{safeurl .Props.button_url}}">{{.Props.button_label}}</a>{{end}}
+  </div>
+  <img class="hero-pic" src="{{.Props.image}}" {{srcset .Props.image "(min-width: 800px) 50vw, 100vw"}} alt="{{.Props.image_alt}}">
+</div>
+{{else}}
+<div class="hero hero-{{.Props.size}}">
+  {{if .Props.image}}<img class="hero-bg" src="{{.Props.image}}" {{srcset .Props.image "100vw"}} alt="">{{end}}
+  <div class="hero-content">
+    {{if .Props.heading}}<h1>{{.Props.heading}}</h1>{{end}}
+    {{if .Props.subheading}}<p class="hero-sub">{{.Props.subheading}}</p>{{end}}
+    {{if and .Props.button_label .Props.button_url}}<a class="btn btn-primary" href="{{safeurl .Props.button_url}}">{{.Props.button_label}}</a>{{end}}
+  </div>
+</div>
+{{end}}
+{{end}}

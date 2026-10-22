@@ -1,0 +1,148 @@
+{{define "content"}}
+<div class="editor">
+  <div class="editor-main">
+    <div class="card">
+      <h1>{{.Data.Page.Title}} <span class="badge {{.Data.Page.Status}}">{{.Data.Page.Status}}</span>{{with .Data.Page.PublishAt}} <span class="badge">goes live {{.Format "2 Jan 15:04"}} UTC</span>{{end}}</h1>
+      <p class="muted"><a href="/admin/pages">← All pages</a></p>
+      <details{{if .Error}} open{{end}}>
+        <summary>Page settings</summary>
+        <form method="post" action="/admin/pages/{{.Data.Page.ID}}">
+          <input type="hidden" name="csrf" value="{{.CSRF}}">
+          <label>Title <input name="title" value="{{.Data.Page.Title}}" maxlength="200" required></label>
+          <label>URL slug
+            <input name="slug" value="{{.Data.Page.Slug}}" maxlength="80" pattern="[a-z0-9]+(-[a-z0-9]+)*"{{if .Data.IsHome}} readonly title="The home page's URL can't be changed"{{end}} required></label>
+          <label>Status
+            <select name="status">
+              <option value="draft"{{if eq .Data.Page.Status "draft"}} selected{{end}}>Draft (only visible when logged in)</option>
+              <option value="published"{{if eq .Data.Page.Status "published"}} selected{{end}}>Published</option>
+            </select></label>
+          {{template "schedule" .Data.Page.PublishAt}}
+          {{template "seofields" .Data.SEO}}
+          <button>Save settings</button>
+        </form>
+        {{if not .Data.IsHome}}
+        <form method="post" action="/admin/pages/{{.Data.Page.ID}}/delete" data-confirm="Delete this page and all its blocks? This cannot be undone.">
+          <input type="hidden" name="csrf" value="{{.CSRF}}">
+          <button class="danger">Delete page</button>
+        </form>
+        {{end}}
+      </details>
+    </div>
+
+    <div class="card">
+      <h2>Blocks</h2>
+      {{template "blocklist" .Data.List}}
+      <form class="addblock" hx-post="/admin/pages/{{.Data.Page.ID}}/blocks" hx-target="#blocks" hx-swap="outerHTML">
+        <select name="type" aria-label="Block type">
+          {{range .Data.List.Types}}<option value="{{.Name}}">{{.Label}}</option>{{end}}
+        </select>
+        <button>Add block</button>
+      </form>
+      {{if .Data.List.Shared}}
+      <form class="addblock" hx-post="/admin/pages/{{.Data.Page.ID}}/blocks" hx-target="#blocks" hx-swap="outerHTML">
+        <input type="hidden" name="type" value="reusable">
+        <select name="ref" aria-label="Shared block">
+          {{range .Data.List.Shared}}<option value="{{.ID}}">{{.Name}}</option>{{end}}
+        </select>
+        <button>Add a shared block</button>
+      </form>
+      {{end}}
+      <p class="hint"><a href="/admin/shared">Manage shared blocks</a></p>
+    </div>
+
+    {{if .Data.History}}
+    <div class="card">
+      <h2>History</h2>
+      <p class="muted">Earlier versions of this page's blocks, saved automatically as you edit. Going back keeps your current version here too, so nothing is lost. (Page settings such as the title and address are not part of the history.)</p>
+      <ul class="history">
+        {{range .Data.History}}
+        <li>
+          <div><strong>{{.CreatedAt.Format "2 Jan 2006, 15:04"}} UTC</strong>{{with .By}} <span class="muted">· before a change by {{.}}</span>{{end}}{{with .Note}} <span class="muted">· {{.}}</span>{{end}}<br>
+            <span class="muted">{{.Blocks}} {{if eq .Blocks 1}}block{{else}}blocks{{end}}{{with .Summary}}: {{.}}{{end}}</span></div>
+          <form method="post" action="/admin/pages/{{$.Data.Page.ID}}/history/{{.ID}}/restore" data-confirm="Go back to this version? Your current blocks are saved in the history first.">
+            <input type="hidden" name="csrf" value="{{$.CSRF}}">
+            <button class="ghost">Go back to this</button>
+          </form>
+        </li>
+        {{end}}
+      </ul>
+    </div>
+    {{end}}
+  </div>
+
+  <div class="editor-preview">
+    <div class="preview-bar"><span>Live preview</span><a href="{{.PreviewBase}}{{.Data.PreviewURL}}" target="_blank" rel="noopener">Open in new tab ↗</a></div>
+    <iframe id="preview" src="{{.PreviewBase}}{{.Data.PreviewURL}}" title="Page preview"></iframe>
+  </div>
+</div>
+
+{{template "pickerdialog"}}
+{{end}}
+
+{{define "blocklist"}}<div id="blocks">
+{{range .Blocks}}{{template "blockcard" .}}{{else}}<p class="muted">No blocks yet. Choose a type below and add one.</p>{{end}}
+</div>{{end}}
+
+{{define "blockcard"}}<details class="blk{{if .Nested}} nested{{end}}" id="blk-{{.ID}}"{{if .Open}} open{{end}}>
+  <summary><strong>{{.Label}}</strong> <span class="muted">{{.Summary}}</span></summary>
+  {{with .Shared}}
+  <div class="shared-card">
+    {{if .Missing}}<p class="muted">This shared block was deleted, so nothing is shown here. Delete this block or add a different one.</p>
+    {{else}}<p>Shows the shared block <strong>{{.Name}}</strong> <span class="muted">({{.TypeLabel}})</span>. It looks the same wherever it is used; change it once and every page follows.</p>
+    <p><a class="btn sm" href="/admin/shared/{{.ID}}">Edit the shared block</a></p>{{end}}
+  </div>
+  {{end}}
+  {{if .Fields}}
+  <form hx-post="/admin/blocks/{{.ID}}" hx-target="{{if .IsLayout}}#blocks{{else}}closest details{{end}}" hx-swap="outerHTML">
+    {{range .Fields}}{{template "field" .}}{{end}}
+    <details class="stylebox">
+      <summary>Style</summary>
+      {{range .StyleFields}}{{template "field" .}}{{end}}
+    </details>
+    <button>Save block</button>{{if .Flash}} <span class="saved" role="status">{{.Flash}} ✓</span>{{end}}
+  </form>
+  {{end}}
+  {{if .IsLayout}}{{$layout := .}}
+  <div class="layout-cols">
+    {{range .Columns}}
+    <div class="colbox">
+      <h4>Column {{.Number}}</h4>
+      {{$col := .}}
+      {{range .Blocks}}{{template "blockcard" .}}{{else}}<p class="muted">Empty. Add a block below.</p>{{end}}
+      <form class="addblock" hx-post="/admin/blocks/{{$layout.ID}}/children" hx-target="#blocks" hx-swap="outerHTML">
+        <input type="hidden" name="slot" value="{{$col.Index}}">
+        <select name="type" aria-label="Block to add to column {{$col.Number}}">
+          {{range $layout.NestTypes}}<option value="{{.Name}}">{{.Label}}</option>{{end}}
+        </select>
+        <button>Add to column {{$col.Number}}</button>
+      </form>
+      {{if $layout.SharedChoices}}
+      <form class="addblock" hx-post="/admin/blocks/{{$layout.ID}}/children" hx-target="#blocks" hx-swap="outerHTML">
+        <input type="hidden" name="slot" value="{{$col.Index}}">
+        <input type="hidden" name="type" value="reusable">
+        <select name="ref" aria-label="Shared block to add to column {{$col.Number}}">
+          {{range $layout.SharedChoices}}<option value="{{.ID}}">{{.Name}}</option>{{end}}
+        </select>
+        <button>Add shared block</button>
+      </form>
+      {{end}}
+    </div>
+    {{end}}
+  </div>
+  {{end}}
+  {{if .CanShare}}
+  <form class="sharebox" hx-post="/admin/blocks/{{.ID}}/share" hx-target="#blocks" hx-swap="outerHTML">
+    <input name="name" maxlength="100" placeholder="Name to share it as" aria-label="Name for the shared block" required>
+    <button class="ghost" title="Move this block into the shared library and use it from there">Save as shared block</button>
+  </form>
+  {{end}}
+  <div class="blk-actions">
+    <button type="button" class="ghost" title="Move up" aria-label="Move up" hx-post="/admin/blocks/{{.ID}}/move" hx-vals='{"dir":"up"}' hx-target="#blocks" hx-swap="outerHTML">↑</button>
+    <button type="button" class="ghost" title="Move down" aria-label="Move down" hx-post="/admin/blocks/{{.ID}}/move" hx-vals='{"dir":"down"}' hx-target="#blocks" hx-swap="outerHTML">↓</button>
+    {{if .Nested}}
+    <button type="button" class="ghost" title="Move to the previous column" aria-label="Move to the previous column" hx-post="/admin/blocks/{{.ID}}/slot" hx-vals='{"dir":"left"}' hx-target="#blocks" hx-swap="outerHTML">←</button>
+    <button type="button" class="ghost" title="Move to the next column" aria-label="Move to the next column" hx-post="/admin/blocks/{{.ID}}/slot" hx-vals='{"dir":"right"}' hx-target="#blocks" hx-swap="outerHTML">→</button>
+    {{end}}
+    <button type="button" class="ghost danger" hx-post="/admin/blocks/{{.ID}}/delete" hx-target="#blocks" hx-swap="outerHTML" hx-confirm="{{if .IsLayout}}Delete this layout and every block inside it?{{else}}Delete this block?{{end}}">Delete</button>
+  </div>
+</details>{{end}}

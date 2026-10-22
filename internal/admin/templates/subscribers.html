@@ -1,0 +1,42 @@
+{{define "actions"}}{{if .Data.Confirmed}}<a class="btn secondary" href="/admin/subscribers.csv" download>Export CSV</a> <a class="btn" href="/admin/newsletters">Write a newsletter</a>{{end}}{{end}}
+
+{{define "content"}}
+<div class="stats">
+  <div class="stat"><span class="stat-num">{{.Data.Confirmed}}</span><span class="stat-label">Subscribers</span><span class="stat-sub">confirmed addresses</span></div>
+  <div class="stat"><span class="stat-num">{{.Data.Pending}}</span><span class="stat-label">Waiting to confirm</span><span class="stat-sub">removed after 14 days</span></div>
+</div>
+
+<div class="card">
+  <h1>Subscribers</h1>
+  {{if .Data.Subscribers}}
+  <table>
+    <tr><th>Email</th><th>Status</th><th>Signed up</th><th></th></tr>
+    {{range .Data.Subscribers}}
+    <tr>
+      <td>{{.Email}}</td>
+      <td>{{if .Confirmed}}<span class="badge published">Confirmed</span>{{else}}<span class="badge draft">Waiting</span>{{end}}</td>
+      <td class="muted nowrap">{{.CreatedAt.Format "2 Jan 2006"}}</td>
+      <td>
+        <form method="post" action="/admin/subscribers/{{.ID}}/delete" class="inline" data-confirm="Remove {{.Email}} from the list?">
+          <input type="hidden" name="csrf" value="{{$.CSRF}}">
+          <button class="ghost danger">Remove</button>
+        </form>
+      </td>
+    </tr>
+    {{end}}
+  </table>
+  {{else}}
+  <p class="muted">No subscribers yet. Add a <strong>Newsletter signup</strong> block to a page (for example your home page or footer area) and sign-ups will appear here.</p>
+  {{end}}
+</div>
+
+<div class="card">
+  <h2>How it works</h2>
+  <ul class="plain">
+    <li>{{if .Data.DoubleOptIn}}<strong>Confirmed by email.</strong> New sign-ups get an email with a link and only join the list once they press its button. That keeps strangers from signing up other people.{{else}}<strong>Counted straight away.</strong> {{if .Data.MailReady}}Email is set up, but sign-up confirmation also needs a <a href="/admin/domain">custom domain</a> so the link in the email points at your real site.{{else}}Sign-ups are confirmed by email when email is set up (<code>SMTP_HOST</code> and <code>SMTP_FROM</code>, see <code>.env.example</code>) and you have saved a <a href="/admin/domain">custom domain</a>. Until then, anyone who submits an address is added to the list.{{end}}{{end}}</li>
+    <li>Write and send to this list from <a href="/admin/newsletters">Newsletters</a>. Every email carries the person's own unsubscribe link. You can also export the CSV for any other tool you send mail with.</li>
+    <li>People can leave on their own: the confirmation email and every newsletter carry an unsubscribe link. You can also remove anyone above.</li>
+    <li>Only an address and the sign-up date are stored — no IP address.</li>
+  </ul>
+</div>
+{{end}}

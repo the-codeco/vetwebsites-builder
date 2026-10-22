@@ -1,0 +1,29 @@
+{{define "content"}}
+<div class="card">
+  <h1>All pages</h1>
+  <table>
+    <tr><th>Title</th><th>URL</th><th>Status</th><th>Blocks</th><th>Updated</th></tr>
+    {{range .Data.Pages}}
+    <tr>
+      <td><a href="/admin/pages/{{.ID}}">{{.Title}}</a></td>
+      <td><code>{{if eq .Slug "home"}}/{{else}}/{{.Slug}}{{end}}</code></td>
+      <td><span class="badge {{.Status}}">{{.Status}}</span>{{with .PublishAt}} <span class="muted">goes live {{.Format "2 Jan 15:04"}} UTC</span>{{end}}</td>
+      <td>{{.BlockCount}}</td>
+      <td class="muted">{{.UpdatedAt.Format "2 Jan 2006"}}</td>
+    </tr>
+    {{end}}
+  </table>
+</div>
+<div class="card" id="new">
+  <h2>New page</h2>
+  <form method="post" action="/admin/pages">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label>Title <input name="title" value="{{.Data.NewTitle}}" maxlength="200" required></label>
+    <label>URL slug <span class="muted">(optional — made from the title if blank)</span>
+      <input name="slug" value="{{.Data.NewSlug}}" maxlength="80" pattern="[a-z0-9]+(-[a-z0-9]+)*" placeholder="my-page"></label>
+    <button>Create page</button>
+  </form>
+</div>
+{{end}}
+
+{{define "actions"}}<a class="btn sm" href="#new"><svg class="ic" aria-hidden="true"><use href="#i-plus"></use></svg>New page</a>{{end}}

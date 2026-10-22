@@ -1,0 +1,14 @@
+{{define "content"}}
+<div class="card">
+  <h1>Accept your invitation</h1>
+  <p>Setting up the account for <strong>{{.Data}}</strong>.</p>
+  <form method="post">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label for="password">Password (10+ characters)</label>
+    <input id="password" name="password" type="password" autocomplete="new-password" minlength="10" required autofocus>
+    <label for="confirm">Confirm password</label>
+    <input id="confirm" name="confirm" type="password" autocomplete="new-password" minlength="10" required>
+    <button>Create account</button>
+  </form>
+</div>
+{{end}}

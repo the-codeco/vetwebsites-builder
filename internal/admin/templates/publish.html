@@ -1,0 +1,56 @@
+{{define "content"}}
+{{if not .Data.Configured}}
+<div class="card">
+  <h1>Publish your website</h1>
+  <p>Before you can publish, tell us where your website lives: the web hosting account you pay for. You only do this once.</p>
+  <p><a class="btn" href="/admin/hosting">Set up your hosting</a></p>
+</div>
+{{else}}
+<div class="card">
+  <h1>Publish your website</h1>
+  <p>Publishing puts every change you have made on your hosting at <strong>{{.Data.Hosting.PublicURL}}</strong>. Until you publish, visitors see the version that was published last, so you can work on the site freely and check it with “Preview”.</p>
+  {{template "publishstatus" .Data}}
+  <div class="actions">
+    <form method="post" action="/admin/build" class="inline"><input type="hidden" name="csrf" value="{{.CSRF}}"><button class="ghost">Preview before publishing</button></form>
+    {{if not .Data.Active}}
+    <form method="post" action="/admin/publish/start" class="inline"><input type="hidden" name="csrf" value="{{.CSRF}}"><button>Publish all changes{{if .Data.Unpublished}} ({{.Data.Unpublished}}){{end}}</button></form>
+    {{end}}
+  </div>
+  <details>
+    <summary>Something looks wrong on the published site?</summary>
+    <p class="muted">“Upload everything again” re-sends every file, even the ones that look unchanged. Use it if files on your hosting were deleted or changed by something else.</p>
+    <form method="post" action="/admin/publish/start" data-confirm="Upload every file again?"><input type="hidden" name="csrf" value="{{.CSRF}}"><input type="hidden" name="force" value="1"><button class="ghost"{{if .Data.Active}} disabled{{end}}>Upload everything again</button></form>
+  </details>
+</div>
+<div class="card">
+  <h2>History</h2>
+  {{if .Data.Jobs}}
+  <table>
+    <tr><th>When</th><th>Who</th><th>Result</th></tr>
+    {{range .Data.Jobs}}
+    <tr>
+      <td class="muted">{{.Created.Format "2 Jan 2006 15:04"}} UTC</td>
+      <td>{{.By}}</td>
+      <td>{{if eq .Status "done"}}<span class="badge published">published</span> {{.Uploaded}} uploaded, {{.Deleted}} removed, {{.Unchanged}} unchanged{{else if eq .Status "failed"}}<span class="badge draft">failed</span> {{.Error}}{{else}}<span class="badge">{{.Status}}</span>{{end}}
+        {{range .Warnings}}<br><span class="muted">{{.}}</span>{{end}}</td>
+    </tr>
+    {{end}}
+  </table>
+  {{else}}<p class="muted">You have not published yet.</p>{{end}}
+</div>
+{{end}}
+{{end}}
+
+{{define "publishstatus"}}<div id="publish-status"{{if .Active}} hx-get="/admin/publish/status" hx-trigger="every 2s" hx-target="#publish-status" hx-swap="outerHTML"{{end}} aria-live="polite">
+  {{with .Active}}
+  <div class="progress-card">
+    <p><strong>{{if eq .Status "queued"}}Waiting to start…{{else}}Publishing…{{end}}</strong> {{.Message}}</p>
+    <progress max="100" value="{{.Percent}}">{{.Percent}}%</progress>
+    <p class="muted">{{.FilesDone}} of {{.FilesTotal}} steps</p>
+  </div>
+  {{else}}
+    {{if .Unpublished}}<p class="alert-line"><strong>{{.Unpublished}} change{{if ne .Unpublished 1}}s{{end}}</strong> not published yet.</p>
+    {{else if .Jobs}}<p>Your published site is up to date.</p>{{end}}
+    {{with .Jobs}}{{with index . 0}}{{if eq .Status "failed"}}<p class="field-error">The last publish failed: {{.Error}}</p>{{end}}{{end}}{{end}}
+  {{end}}
+</div>{{end}}

@@ -1,0 +1,3 @@
+{{define "block/gallery"}}
+<div class="gallery cols-{{.Props.columns}}">{{range .Props.images}}<img src="{{.}}" {{srcset . "(min-width: 700px) 33vw, 100vw"}} alt="" loading="lazy">{{end}}</div>
+{{end}}

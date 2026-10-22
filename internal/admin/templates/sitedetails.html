@@ -1,0 +1,31 @@
+{{define "content"}}
+<div class="card">
+  <h1>Site details</h1>
+  <p class="muted">Your phone number, address, opening hours and social links, written once. Add a “Contact details” block to any page to show them, or tick the box below to show them in the footer of every page. Change them here and every place follows.</p>
+  <form method="post" action="/admin/details">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label>Phone <span class="muted">(becomes a tap-to-call link)</span>
+      <input name="phone" value="{{.Data.D.Phone}}" maxlength="30" placeholder="+27 21 555 0123"></label>
+    {{with index .Data.Errors "phone"}}<p class="field-error">{{.}}</p>{{end}}
+    <label>WhatsApp number <span class="muted">(with country code; becomes a WhatsApp chat link)</span>
+      <input name="whatsapp" value="{{.Data.D.WhatsApp}}" maxlength="30" placeholder="+27 82 555 0123"></label>
+    {{with index .Data.Errors "whatsapp"}}<p class="field-error">{{.}}</p>{{end}}
+    <label>Email
+      <input type="email" name="email" value="{{.Data.D.Email}}" maxlength="120" placeholder="hello@example.com"></label>
+    {{with index .Data.Errors "email"}}<p class="field-error">{{.}}</p>{{end}}
+    <label>Address <span class="muted">(one line per row, up to 8)</span>
+      <textarea name="address" rows="3" maxlength="300">{{.Data.D.Address}}</textarea></label>
+    <label>Opening hours <span class="muted">(one line per row, up to 8)</span>
+      <textarea name="hours" rows="4" maxlength="500" placeholder="Mon to Fri: 8:00 to 17:00&#10;Sat: 9:00 to 13:00">{{.Data.D.Hours}}</textarea></label>
+    <fieldset class="plainset">
+      <legend>Social links <span class="muted">(full https:// addresses)</span></legend>
+      {{range .Data.Social}}{{$key := .Key}}
+      <label>{{.Label}} <input name="social_{{.Key}}" value="{{.Value}}" maxlength="500" placeholder="https://"></label>
+      {{with index $.Data.Errors (printf "social_%s" $key)}}<p class="field-error">{{.}}</p>{{end}}
+      {{end}}
+    </fieldset>
+    <label class="check"><input type="checkbox" name="in_footer"{{if .Data.D.InFooter}} checked{{end}}> Show these details in the footer of every page</label>
+    <button>Save</button>
+  </form>
+</div>
+{{end}}

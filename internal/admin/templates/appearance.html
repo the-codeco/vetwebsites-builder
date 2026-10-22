@@ -1,0 +1,234 @@
+{{define "content"}}
+<div class="editor">
+  <div class="editor-main">
+
+    <div class="card">
+      <h2>Site title</h2>
+      <form method="post" action="/admin/appearance/title" class="inline">
+        <input type="hidden" name="csrf" value="{{.CSRF}}">
+        <input name="title" value="{{.Data.SiteTitle}}" maxlength="100" aria-label="Site title" required>
+        <button>Save</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Logo and tab icon</h2>
+      <p class="muted">Show your logo in the header instead of (or beside) the site title, and set the small picture on browser tabs. Choose pictures from the media library; a PNG or SVG with a clear background works best.</p>
+      <form method="post" action="/admin/appearance/brand">
+        <input type="hidden" name="csrf" value="{{.CSRF}}">
+        <label>Logo
+          <span class="colorrow"><input type="text" name="logo" value="{{.Data.Brand.Logo}}" maxlength="2000" placeholder="/media/logo.png or https://…"><button type="button" class="ghost" data-pick>Choose…</button></span></label>
+        <label>Logo description <span class="muted">(read aloud when the title is hidden; defaults to the site title)</span>
+          <input name="logo_alt" value="{{.Data.Brand.LogoAlt}}" maxlength="120"></label>
+        <label>Logo size
+          <select name="logo_height">{{range .Data.LogoHeights}}<option value="{{.Key}}"{{if .Selected}} selected{{end}}>{{.Label}}</option>{{end}}</select></label>
+        <label class="check"><input type="checkbox" name="hide_title"{{if .Data.Brand.HideTitle}} checked{{end}}> Show only the logo, not the site title beside it</label>
+        <label>Browser tab icon <span class="muted">(a small square picture)</span>
+          <span class="colorrow"><input type="text" name="icon" value="{{.Data.Brand.Icon}}" maxlength="2000" placeholder="/media/icon.png"><button type="button" class="ghost" data-pick>Choose…</button></span></label>
+        <button>Save</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Your own fonts</h2>
+      <p class="muted">Upload a font as a WOFF2 file (up to 600 KB) and it appears in the font lists under “Colours, fonts and spacing”. Fonts are served from your own site, so visitors' browsers make no requests to anyone else. Upload a Regular file and, if you like, a Bold file with the same name. Only upload fonts you have the licence to use on a website.</p>
+      {{if .Data.Fonts}}
+      <table>
+        <tr><th>Font</th><th>Weight</th><th>Size</th><th></th></tr>
+        {{range .Data.Fonts}}
+        <tr>
+          <td>{{.Family}}</td><td>{{.Weight}}</td><td>{{.KB}} KB</td>
+          <td><form method="post" action="/admin/appearance/fonts/{{.ID}}/delete" data-confirm="Delete this font file?">
+            <input type="hidden" name="csrf" value="{{$.CSRF}}"><button class="ghost danger">Delete</button></form></td>
+        </tr>
+        {{end}}
+      </table>
+      {{end}}
+      <form method="post" action="/admin/appearance/fonts" enctype="multipart/form-data">
+        <input type="hidden" name="csrf" value="{{.CSRF}}">
+        <label>Font name <span class="muted">(letters, numbers, spaces and dashes)</span>
+          <input name="family" maxlength="40" placeholder="Acme Sans" required></label>
+        <label>Weight
+          <select name="weight"><option value="400">Regular</option><option value="700">Bold</option></select></label>
+        <label>WOFF2 file
+          <input type="file" name="file" accept=".woff2,font/woff2" required></label>
+        <button>Upload font</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Dark mode</h2>
+      {{if .Data.HasDark}}
+      <form method="post" action="/admin/appearance/colormode">
+        <input type="hidden" name="csrf" value="{{.CSRF}}">
+        <fieldset class="plainset">
+          <label class="check"><input type="radio" name="color_mode" value="light"{{if eq .Data.ColorMode "light"}} checked{{end}}> <span><strong>Off</strong> — the site is always light</span></label>
+          <label class="check"><input type="radio" name="color_mode" value="toggle"{{if eq .Data.ColorMode "toggle"}} checked{{end}}> <span><strong>Switch</strong> — light by default, with a button in the header to go dark</span></label>
+          <label class="check"><input type="radio" name="color_mode" value="auto"{{if eq .Data.ColorMode "auto"}} checked{{end}}> <span><strong>Automatic</strong> — follows each visitor's device setting, and they can switch</span></label>
+        </fieldset>
+        <span class="hint">Dark mode uses this theme's dark colours. A Primary colour you set above is kept in both modes. Visitors' choice is remembered in their own browser only.</span>
+        <button>Save</button>
+      </form>
+      {{else}}
+      <p class="muted">The active theme is already dark, so it has no light and dark variants to switch between. Pick the Default or Journal theme to offer a dark mode toggle.</p>
+      {{end}}
+    </div>
+
+    <div class="card">
+      <h2>Cookie notice</h2>
+      <p class="muted">A banner at the bottom of every page. This site sets no tracking cookies of its own, so you only need it if your visitors expect one or your local rules require it.</p>
+      <form method="post" action="/admin/appearance/consent">
+        <input type="hidden" name="csrf" value="{{.CSRF}}">
+        <label class="check"><input type="checkbox" name="consent_enabled"{{if .Data.Consent.Enabled}} checked{{end}}> Show a cookie notice</label>
+        <fieldset class="plainset">
+          <label class="check"><input type="radio" name="consent_mode" value="notice"{{if not .Data.Consent.Ask}} checked{{end}}> <span><strong>Notice</strong> — tells visitors, with a single “Got it” button</span></label>
+          <label class="check"><input type="radio" name="consent_mode" value="choice"{{if .Data.Consent.Ask}} checked{{end}}> <span><strong>Choice</strong> — “Accept” and “Decline” buttons, and a “Cookie settings” link in the footer to change the answer</span></label>
+        </fieldset>
+        <label>Text <span class="muted">(optional)</span>
+          <textarea name="consent_text" rows="3" maxlength="300" placeholder="{{.Data.ConsentHint}}">{{.Data.Consent.Text}}</textarea></label>
+        <label>Link text <span class="muted">(optional)</span>
+          <input name="consent_link_label" value="{{.Data.Consent.LinkLabel}}" maxlength="40" placeholder="Privacy policy"></label>
+        <label>Link address
+          <input name="consent_link_url" value="{{.Data.Consent.LinkURL}}" maxlength="2000" placeholder="/privacy"></label>
+        <span class="hint">“Choice” records the answer in the visitor's own browser and makes it available to the site's features; nothing is sent to the server. Today nothing on the site depends on it. If you change the notice, visitors are asked again.</span>
+        <button>Save</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Footer</h2>
+      <p class="muted">Content shown at the bottom of every page, above the bottom line: opening hours, an address, a few links, a short about. Fill in up to four columns; empty ones are left out. Text can be plain (a blank line starts a new paragraph) or basic HTML such as <code>&lt;a href="/contact"&gt;</code>. Anything unsafe is removed on save. Links for the footer menu are set under Menus.</p>
+      <form method="post" action="/admin/appearance/footer">
+        <input type="hidden" name="csrf" value="{{.CSRF}}">
+        {{range $i, $c := .Data.FooterCols}}{{$n := inc $i}}
+        <fieldset class="plainset">
+          <legend>Column {{$n}}</legend>
+          <label>Heading <span class="muted">(optional)</span>
+            <input name="footer_heading_{{$n}}" value="{{$c.Heading}}" maxlength="60"></label>
+          <label>Text
+            <textarea name="footer_text_{{$n}}" rows="5" class="mono" maxlength="5000">{{$c.Text}}</textarea></label>
+        </fieldset>
+        {{end}}
+        <label>Bottom line <span class="muted">(optional)</span>
+          <input name="footer_bottom" value="{{.Data.FooterBottom}}" maxlength="300" placeholder="{{.Data.FooterHint}}"></label>
+        <span class="hint"><code>{year}</code> becomes the current year and <code>{title}</code> your site's title.</span>
+        <button>Save footer</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Search box</h2>
+      <form method="post" action="/admin/appearance/search">
+        <input type="hidden" name="csrf" value="{{.CSRF}}">
+        <label class="check"><input type="checkbox" name="show_search"{{if .Data.ShowSearch}} checked{{end}}> Show a search box in the site header</label>
+        <span class="hint">Visitors can always search at <a href="{{.PreviewBase}}/search" target="_blank" rel="noopener">/search</a>.</span>
+        <button>Save</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Theme</h2>
+      <div class="themegrid">
+        {{range .Data.Themes}}
+        <div class="themecard{{if .Active}} active{{end}}">
+          <div class="swatches" aria-hidden="true">{{range .Swatches}}<span data-color="{{.}}"></span>{{end}}</div>
+          <strong>{{.Label}}</strong>{{if .Active}} <span class="badge published">Active</span>{{end}}
+          <p class="muted">{{.Description}}</p>
+          <div class="themeactions">
+            <a href="/?theme={{.Name}}" target="_blank" rel="noopener">Preview ↗</a>
+            {{if not .Active}}
+            <form method="post" action="/admin/appearance/theme">
+              <input type="hidden" name="csrf" value="{{$.CSRF}}">
+              <input type="hidden" name="theme" value="{{.Name}}">
+              <button class="ghost">Activate</button>
+            </form>
+            {{end}}
+          </div>
+        </div>
+        {{end}}
+      </div>
+      <p class="hint">Each theme remembers its own colour and font settings, so you can switch back and forth safely.</p>
+    </div>
+
+    <div class="card">
+      <h2>Colours, fonts and spacing <span class="muted">· {{.Data.ActiveLabel}}</span></h2>
+      <p class="hint">Changes show in the preview as you type. Leave a field blank to use the theme's default.</p>
+      <form method="post" action="/admin/appearance/tokens" data-token-form>
+        <input type="hidden" name="csrf" value="{{.CSRF}}">
+        {{range .Data.Tokens}}
+        <label>{{.Label}}
+          {{if eq .Kind "color"}}
+          <span class="colorrow">
+            <input type="text" name="t.{{.Key}}" value="{{.Value}}" placeholder="{{.Default}}" pattern="#[0-9a-fA-F]{6}" maxlength="7" data-color-text data-token="{{.Key}}" data-kind="color">
+            <input type="color" value="{{if .Value}}{{.Value}}{{else}}{{.Default}}{{end}}" aria-label="Pick {{.Label}}" data-color-pick>
+          </span>
+          {{else if eq .Kind "font"}}
+          <select name="t.{{.Key}}" data-token="{{.Key}}" data-kind="font">
+            {{range .Fonts}}<option value="{{.Value}}" data-stack="{{.Stack}}"{{if .Selected}} selected{{end}}>{{.Label}}</option>{{end}}
+          </select>
+          {{else}}
+          <input type="text" name="t.{{.Key}}" value="{{.Value}}" placeholder="{{.Default}}" maxlength="10" data-token="{{.Key}}" data-kind="size">
+          {{end}}
+        </label>
+        {{end}}
+        <button>Save</button>
+      </form>
+      {{if .Data.HasOverrides}}
+      <form method="post" action="/admin/appearance/tokens/reset" data-confirm="Reset all colours, fonts and spacing for this theme to its defaults?">
+        <input type="hidden" name="csrf" value="{{.CSRF}}">
+        <button class="ghost">Reset to theme defaults</button>
+      </form>
+      {{end}}
+    </div>
+
+    {{if .Data.HasDark}}
+    <div class="card" id="dark-palette">
+      <h2>Dark mode colours <span class="muted">· {{.Data.ActiveLabel}}</span></h2>
+      <p class="hint">The colours the site uses in dark mode. Changes show in the preview as you type, in dark mode. Leave a field blank to use the theme's dark colour.{{if eq .Data.ColorMode "light"}} <strong>Dark mode is currently off</strong>, so visitors won't see these until you turn it on above.{{end}}</p>
+      {{if .Data.DarkNotes}}
+      <div class="alert error" role="status"><div>
+        <strong>Some dark colours may be hard to read:</strong>
+        <ul>{{range .Data.DarkNotes}}<li>{{.}}</li>{{end}}</ul>
+      </div></div>
+      {{end}}
+      <form method="post" action="/admin/appearance/dark" data-dark-form>
+        <input type="hidden" name="csrf" value="{{.CSRF}}">
+        {{range .Data.DarkFields}}
+        <label>{{.Label}}
+          <span class="colorrow">
+            <input type="text" name="d.{{.Key}}" value="{{.Value}}" placeholder="{{.Default}}" pattern="#[0-9a-fA-F]{6}" maxlength="7" data-color-text data-dark-token="{{.Key}}">
+            <input type="color" value="{{if .Value}}{{.Value}}{{else}}{{.Default}}{{end}}" aria-label="Pick dark {{.Label}}" data-color-pick>
+          </span>
+        </label>
+        {{end}}
+        <button>Save dark colours</button>
+      </form>
+      {{if .Data.HasDarkOverrides}}
+      <form method="post" action="/admin/appearance/dark/reset" data-confirm="Reset the dark mode colours to the theme's?">
+        <input type="hidden" name="csrf" value="{{.CSRF}}">
+        <button class="ghost">Reset dark colours</button>
+      </form>
+      {{end}}
+    </div>
+    {{end}}
+
+    <div class="card">
+      <h2>Custom CSS</h2>
+      <p class="hint">For anything the settings above can't do. Applied to the public site after the theme and your settings. Each block also has its own Style section in the page editor.</p>
+      <form method="post" action="/admin/appearance/css">
+        <input type="hidden" name="csrf" value="{{.CSRF}}">
+        <textarea name="css" rows="10" class="mono" maxlength="20000" spellcheck="false" placeholder=".site-title { letter-spacing: .05em; }">{{.Data.CustomCSS}}</textarea>
+        <button>Save CSS</button>
+      </form>
+    </div>
+
+  </div>
+
+  <div class="editor-preview">
+    <div class="preview-bar"><span>Live preview</span><a href="{{.PreviewBase}}/" target="_blank" rel="noopener">Open site ↗</a></div>
+    <iframe id="preview" src="{{.PreviewBase}}/" title="Site preview"></iframe>
+  </div>
+</div>
+
+{{template "pickerdialog"}}
+{{end}}

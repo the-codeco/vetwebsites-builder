@@ -1,0 +1,9 @@
+{{define "blog/post"}}
+<article class="block pad-md align-left width-narrow"><div class="block-inner">
+  <p class="muted"><a href="{{.BackURL}}">← Blog</a></p>
+  <h1>{{.Title}}</h1>
+  <p class="postmeta"><time datetime="{{.DateISO}}">{{.Date}}</time>{{range .Categories}} · <a href="{{.URL}}">{{.Name}}</a>{{end}}</p>
+  {{if .Cover}}<img class="post-cover" src="{{.Cover}}" {{srcset .Cover "(min-width: 1100px) 1100px, 100vw"}} alt="">{{end}}
+  <div class="prose">{{.Body}}</div>
+</div></article>
+{{end}}

@@ -1,0 +1,38 @@
+{{define "content"}}
+<div class="card">
+  <h1>All categories</h1>
+  {{if .Data}}
+  <table>
+    <tr><th>Name</th><th>Posts</th><th></th></tr>
+    {{range .Data}}
+    <tr>
+      <td>
+        <form method="post" action="/admin/categories/{{.ID}}" class="inline">
+          <input type="hidden" name="csrf" value="{{$.CSRF}}">
+          <input name="name" value="{{.Name}}" maxlength="50" aria-label="Category name" required>
+          <button class="ghost">Rename</button>
+        </form>
+        <span class="muted">/blog/category/{{.Slug}}</span>
+      </td>
+      <td>{{.Posts}}</td>
+      <td>
+        <form method="post" action="/admin/categories/{{.ID}}/delete" class="inline" data-confirm="Delete “{{.Name}}”? Posts keep existing, but lose this category.">
+          <input type="hidden" name="csrf" value="{{$.CSRF}}">
+          <button class="ghost danger">Delete</button>
+        </form>
+      </td>
+    </tr>
+    {{end}}
+  </table>
+  {{else}}<p class="muted">No categories yet.</p>{{end}}
+  <p class="muted"><a href="/admin/posts">← Posts</a></p>
+</div>
+<div class="card">
+  <h2>New category</h2>
+  <form method="post" action="/admin/categories">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label>Name <input name="name" maxlength="50" required></label>
+    <button>Add category</button>
+  </form>
+</div>
+{{end}}

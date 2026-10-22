@@ -1,0 +1,14 @@
+{{/* The footer content the owner wrote: columns (heading + text), and the contact details when they asked for them there. */}}
+{{define "footer-columns"}}{{$d := .Site.Details}}{{$details := and $d.InFooter (not $d.Empty)}}{{if or .Site.Footer.Columns $details}}<div class="footer-cols footer-cols-{{len .Site.Footer.Columns}}">
+{{range .Site.Footer.Columns}}  <section class="footer-col">{{with .Heading}}<h2>{{.}}</h2>{{end}}{{with .Text}}<div class="prose">{{richtext .}}</div>{{end}}</section>
+{{end}}{{if $details}}  <section class="footer-col footer-details"><h2>Contact</h2>
+    <ul class="details">
+      {{with $d.Phone}}<li><a href="{{safeurl $d.PhoneLink}}">{{.}}</a></li>{{end}}
+      {{with $d.WhatsApp}}<li><a href="{{safeurl $d.WhatsAppLink}}" rel="noopener">WhatsApp {{.}}</a></li>{{end}}
+      {{with $d.Email}}<li><a href="mailto:{{.}}">{{.}}</a></li>{{end}}
+      {{with $d.Address}}<li class="details-lines">{{.}}</li>{{end}}
+      {{with $d.Hours}}<li class="details-lines">{{.}}</li>{{end}}
+      {{with $d.Social}}<li class="details-links">{{range .}}<a href="{{.URL}}" rel="noopener">{{.Label}}</a> {{end}}</li>{{end}}
+    </ul>
+  </section>
+{{end}}</div>{{end}}{{end}}

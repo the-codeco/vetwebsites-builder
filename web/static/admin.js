@@ -1,0 +1,458 @@
+(function () {
+  'use strict';
+
+  // ---- sidebar: a drawer on phones, collapsible to icons on desktop ----
+  var body = document.body;
+  var drawerBtn = document.querySelector('[data-sidebar-open]');
+  var sidebar = document.getElementById('sidebar');
+  var COLLAPSE_KEY = 'wb-admin-sidebar';
+
+  function setDrawer(open, focusBack) {
+    body.classList.toggle('sidebar-open', open);
+    if (drawerBtn) drawerBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open && sidebar) {
+      var first = sidebar.querySelector('.nav-link');
+      if (first) first.focus();
+    } else if (focusBack && drawerBtn) {
+      drawerBtn.focus();
+    }
+  }
+
+  function setCollapsed(collapsed) {
+    body.classList.toggle('sidebar-collapsed', collapsed);
+    var btn = document.querySelector('[data-sidebar-collapse]');
+    if (btn) {
+      var label = collapsed ? 'Expand sidebar' : 'Collapse sidebar';
+      btn.setAttribute('aria-label', label);
+      btn.title = label;
+    }
+    try { localStorage.setItem(COLLAPSE_KEY, collapsed ? 'collapsed' : 'open'); } catch (e) { /* storage blocked: not essential */ }
+  }
+
+  if (sidebar) {
+    try { if (localStorage.getItem(COLLAPSE_KEY) === 'collapsed') setCollapsed(true); } catch (e) { /* ignore */ }
+
+    document.addEventListener('click', function (e) {
+      var t = e.target.closest ? e.target.closest('[data-sidebar-open], [data-sidebar-close], [data-sidebar-collapse]') : null;
+      if (!t) return;
+      if (t.hasAttribute('data-sidebar-open')) setDrawer(!body.classList.contains('sidebar-open'));
+      else if (t.hasAttribute('data-sidebar-close')) setDrawer(false, true);
+      else setCollapsed(!body.classList.contains('sidebar-collapsed'));
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && body.classList.contains('sidebar-open')) setDrawer(false, true);
+    });
+
+    // rotating or resizing to a wide screen must not leave the drawer "open" behind the layout
+    var wide = window.matchMedia('(min-width: 901px)');
+    var onWide = function () { if (wide.matches) setDrawer(false); };
+    if (wide.addEventListener) wide.addEventListener('change', onWide); else wide.addListener(onWide);
+  }
+
+  // Reload the live preview whenever the server says content changed (HX-Trigger: preview-refresh).
+  document.addEventListener('preview-refresh', function () {
+    var f = document.getElementById('preview');
+    if (f && f.contentWindow) f.contentWindow.location.reload();
+  });
+
+  // Keep block cards open across list swaps (move/delete/add replace the whole list).
+  var open = [];
+  document.addEventListener('htmx:beforeRequest', function () {
+    open = Array.prototype.map.call(document.querySelectorAll('details.blk[open]'), function (d) { return d.id; });
+  });
+  document.addEventListener('htmx:afterSwap', function () {
+    open.forEach(function (id) { var d = document.getElementById(id); if (d) d.open = true; });
+  });
+
+  // Colour fields: keep the text box and the picker in sync.
+  document.addEventListener('input', function (e) {
+    var t = e.target;
+    if (!t.matches) return;
+    var row = t.closest('.colorrow');
+    if (!row) return;
+    var text = row.querySelector('[data-color-text]'), pick = row.querySelector('[data-color-pick]');
+    if (t === pick) text.value = pick.value;
+    else if (/^#[0-9a-fA-F]{6}$/.test(text.value)) pick.value = text.value;
+  });
+
+  // Theme swatches: colours come from data attributes and are applied through the
+  // CSS object model, which a strict Content-Security-Policy (no inline styles) allows.
+  document.querySelectorAll('[data-color]').forEach(function (el) {
+    el.style.background = el.getAttribute('data-color');
+  });
+
+  // Read-only URL boxes: select everything when focused, ready to copy.
+  document.addEventListener('focusin', function (e) {
+    if (e.target.matches && e.target.matches('[data-select]')) e.target.select();
+  });
+
+  // Confirm destructive form submits: <form data-confirm="message">.
+  document.addEventListener('submit', function (e) {
+    var msg = e.target.getAttribute && e.target.getAttribute('data-confirm');
+    if (msg && !window.confirm(msg)) e.preventDefault();
+  });
+
+  // ---- media: uploads and the image picker ----
+  var MAX_BYTES = 10 * 1024 * 1024;
+  function csrf() { var m = document.querySelector('meta[name=csrf]'); return m ? m.content : ''; }
+
+  // Uploads files as JSON; resolves to {uploaded: [...], errors: [...]}.
+  function upload(files) {
+    var fd = new FormData(), errors = [];
+    Array.prototype.forEach.call(files, function (f) {
+      if (f.size > MAX_BYTES) errors.push(f.name + ': larger than 10 MB.');
+      else fd.append('files', f);
+    });
+    if (!fd.has('files')) return Promise.resolve({ uploaded: [], errors: errors });
+    return fetch('/admin/media', {
+      method: 'POST', body: fd, credentials: 'same-origin',
+      headers: { 'X-CSRF-Token': csrf(), 'Accept': 'application/json' }
+    }).then(function (r) { return r.json(); })
+      .catch(function () { return { uploaded: [], errors: ['Upload failed.'] }; })
+      .then(function (j) { j.errors = errors.concat(j.errors || []); return j; });
+  }
+
+  var dialog = document.getElementById('media-picker'), target = null;
+  var msg = document.getElementById('picker-msg');
+
+  function loadPicker() { htmx.ajax('GET', '/admin/media/picker', { target: '#picker-body', swap: 'innerHTML' }); }
+
+  // ---- rich text toolbar ----
+  function attrEsc(s) { return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
+
+  function insertAtCursor(ta, text) {
+    var s = ta.selectionStart, e = ta.selectionEnd;
+    ta.setRangeText(text, s, e, 'end');
+    ta.focus();
+    ta.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  function formatText(ta, kind) {
+    var sel = ta.value.slice(ta.selectionStart, ta.selectionEnd), out;
+    var wrap = { strong: 'strong', em: 'em', h2: 'h2', h3: 'h3', quote: 'blockquote' }[kind];
+    if (wrap) {
+      out = '<' + wrap + '>' + (sel || 'text') + '</' + wrap + '>';
+    } else if (kind === 'ul') {
+      var lines = (sel || 'Item').split('\n').map(function (l) { return l.trim(); }).filter(Boolean);
+      out = '<ul>\n' + lines.map(function (l) { return '  <li>' + l + '</li>'; }).join('\n') + '\n</ul>';
+    } else if (kind === 'a') {
+      var url = window.prompt('Link address (e.g. /about or https://example.com)');
+      if (!url) return;
+      out = '<a href="' + attrEsc(url) + '">' + (sel || attrEsc(url)) + '</a>';
+    } else {
+      return;
+    }
+    insertAtCursor(ta, out);
+  }
+
+  var insertMode = false;
+
+  function choose(item) {
+    var url = item.getAttribute('data-media-url');
+    if (insertMode) { // toolbar "Image": put an <img> at the cursor
+      insertAtCursor(target, '<img src="' + attrEsc(url) + '" alt="' + attrEsc(item.getAttribute('data-media-alt') || '') + '">');
+      dialog.close();
+      return;
+    }
+    if (target.tagName === 'TEXTAREA') {
+      target.value = (target.value.trim() ? target.value.replace(/\s+$/, '') + '\n' : '') + url;
+    } else {
+      target.value = url;
+    }
+    // prefill the block's alt text from the library if it is still empty
+    var form = target.closest('form');
+    var alt = form && form.querySelector('input[name="p.alt"]');
+    if (alt && !alt.value) alt.value = item.getAttribute('data-media-alt') || '';
+    dialog.close();
+  }
+
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest ? e.target : e.target.parentElement;
+    if (!t) return;
+    var fmt = t.closest('[data-rt]');
+    if (fmt && !fmt.hasAttribute('data-pick')) {
+      formatText(fmt.closest('label').querySelector('textarea'), fmt.getAttribute('data-rt'));
+      return;
+    }
+    var pick = t.closest('[data-pick]');
+    if (pick && dialog) {
+      insertMode = pick.hasAttribute('data-insert');
+      target = pick.closest('label').querySelector('input[type=text], textarea');
+      msg.textContent = '';
+      dialog.showModal();
+      loadPicker();
+      return;
+    }
+    var item = t.closest('[data-media-url]');
+    if (item && dialog && target) { choose(item); return; }
+    if (t.closest('[data-picker-close]') && dialog) dialog.close();
+    if (t === dialog) dialog.close(); // click on the backdrop
+  });
+
+  var pickerUpload = document.getElementById('picker-upload');
+  if (pickerUpload) {
+    pickerUpload.addEventListener('change', function () {
+      msg.textContent = 'Uploading…';
+      upload(pickerUpload.files).then(function (j) {
+        msg.textContent = (j.errors || []).join(' ');
+        pickerUpload.value = '';
+        loadPicker();
+      });
+    });
+  }
+
+  // Library page: drag files onto the drop zone.
+  var zone = document.querySelector('[data-dropzone]');
+  if (zone) {
+    ['dragenter', 'dragover'].forEach(function (n) {
+      zone.addEventListener(n, function (e) { e.preventDefault(); zone.classList.add('over'); });
+    });
+    ['dragleave', 'drop'].forEach(function (n) {
+      zone.addEventListener(n, function (e) { e.preventDefault(); zone.classList.remove('over'); });
+    });
+    zone.addEventListener('drop', function (e) {
+      zone.querySelector('p').textContent = 'Uploading…';
+      upload(e.dataTransfer.files).then(function (j) {
+        if ((j.errors || []).length) window.alert(j.errors.join('\n'));
+        window.location.reload();
+      });
+    });
+    var input = zone.querySelector('input[type=file]');
+    input.addEventListener('change', function () { // catch oversize files before sending them
+      var big = Array.prototype.filter.call(input.files, function (f) { return f.size > MAX_BYTES; });
+      if (big.length) {
+        window.alert(big.map(function (f) { return f.name + ' is larger than 10 MB.'; }).join('\n'));
+        input.value = '';
+      }
+    });
+  }
+
+  // ---- appearance: show token edits in the preview immediately ----
+  // Two forms feed the preview: the light palette (data-token fields) and the dark palette
+  // (data-dark-token fields). The dark form shows the preview in dark mode, the light form in light mode.
+  var tokenForm = document.querySelector('[data-token-form]');
+  var darkForm = document.querySelector('[data-dark-form]');
+  var previewFrame = document.getElementById('preview');
+  if (tokenForm && previewFrame) {
+    var previewMode = null; // null = leave the preview as it loaded
+    var setVar = function (doc, name, v) {
+      if (v === '') doc.documentElement.style.removeProperty('--' + name);
+      else doc.documentElement.style.setProperty('--' + name, v);
+    };
+    // Shows every unsaved edit of the mode being edited; the other mode's edits are cleared from the page.
+    var syncPreview = function (overrides) {
+      var doc = previewFrame.contentDocument;
+      if (!doc) return;
+      overrides = overrides || {};
+      if (previewMode) doc.documentElement.setAttribute('data-theme', previewMode);
+      tokenForm.querySelectorAll('[data-token]').forEach(function (f) {
+        var v = (overrides[f.name] !== undefined ? overrides[f.name] : f.value).trim();
+        if (f.dataset.kind === 'font') v = f.options[f.selectedIndex].dataset.stack || '';
+        setVar(doc, f.dataset.token, previewMode === 'dark' ? '' : v);
+      });
+      if (darkForm && previewMode === 'dark') {
+        darkForm.querySelectorAll('[data-dark-token]').forEach(function (f) {
+          setVar(doc, f.dataset.darkToken, (overrides[f.name] !== undefined ? overrides[f.name] : f.value).trim());
+        });
+      }
+    };
+    var onInput = function (mode) {
+      return function (e) {
+        var t = e.target, o = {};
+        previewMode = mode;
+        if (t.matches('[data-color-pick]')) { // the shared handler copies this into the text box afterwards
+          var text = t.closest('.colorrow').querySelector('[data-color-text]');
+          o[text.name] = t.value;
+        }
+        syncPreview(o);
+      };
+    };
+    tokenForm.addEventListener('input', onInput('light'));
+    if (darkForm) darkForm.addEventListener('input', onInput('dark'));
+    // a theme/CSS change reloads the frame: put the unsaved edits back
+    previewFrame.addEventListener('load', function () { syncPreview(); });
+  }
+
+  // ---- menu builder: links, dropdowns and mega menus ----
+  // The page renders every saved row; this adds/moves/removes rows at any level and, on
+  // save, writes the whole tree into the hidden "structure" field as JSON (the server
+  // validates it again).
+  function fieldOf(row, name) {
+    return row.querySelector(':scope > .mi-fields [data-f="' + name + '"]');
+  }
+  function textOf(row, name) { var el = fieldOf(row, name); return el ? el.value : ''; }
+  function checkOf(row, name) { var el = fieldOf(row, name); return !!(el && el.checked); }
+
+  function readLink(row) {
+    return {
+      label: textOf(row, 'label'), url: textOf(row, 'url'), description: textOf(row, 'description'),
+      new_tab: checkOf(row, 'new_tab'), hidden: checkOf(row, 'hidden')
+    };
+  }
+
+  function readItem(li) {
+    var kind = li.getAttribute('data-kind') || 'link';
+    var item = { kind: kind, label: textOf(li, 'label'), url: '', new_tab: false, button: false, hidden: checkOf(li, 'hidden') };
+    if (kind === 'link') {
+      item.url = textOf(li, 'url');
+      item.new_tab = checkOf(li, 'new_tab');
+      item.button = checkOf(li, 'button');
+    } else if (kind === 'dropdown') {
+      item.children = Array.prototype.map.call(
+        li.querySelectorAll(':scope > .mi-dropdown [data-sub="children"] > [data-list] > .mi-link'), readLink);
+    } else if (kind === 'mega') {
+      item.columns = Array.prototype.map.call(
+        li.querySelectorAll(':scope > .mi-mega [data-sub="columns"] > [data-list] > .mi-col'), function (col) {
+          return {
+            heading: textOf(col, 'heading'),
+            links: Array.prototype.map.call(
+              col.querySelectorAll(':scope > [data-sub="links"] > [data-list] > .mi-link'), readLink)
+          };
+        });
+    }
+    return item;
+  }
+
+  document.addEventListener('submit', function (e) {
+    var form = e.target;
+    if (!form.matches || !form.matches('[data-menu-form]')) return;
+    var rows = form.querySelectorAll('[data-sub="items"] > [data-list] > .mi');
+    form.elements.structure.value = JSON.stringify(Array.prototype.map.call(rows, readItem));
+  });
+
+  document.addEventListener('change', function (e) {
+    var sel = e.target;
+    if (sel.matches && sel.matches('.mi > .mi-fields select[data-f="kind"]')) {
+      sel.closest('.mi').setAttribute('data-kind', sel.value);
+    }
+  });
+
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest && e.target.closest('[data-menu-builder] button[data-act]');
+    if (!btn) return;
+    var act = btn.getAttribute('data-act');
+    if (act === 'add') {
+      var tpl = document.getElementById(btn.getAttribute('data-tpl'));
+      var list = btn.parentElement.querySelector(':scope > [data-list]');
+      list.appendChild(tpl.content.cloneNode(true));
+      var added = list.lastElementChild.querySelector('input');
+      if (added) added.focus();
+      return;
+    }
+    var row = btn.closest('.mi-link, .mi-col, .mi'); // the innermost row this button belongs to
+    if (!row) return;
+    if (act === 'remove') row.remove();
+    else if (act === 'up' && row.previousElementSibling) row.parentNode.insertBefore(row, row.previousElementSibling);
+    else if (act === 'down' && row.nextElementSibling) row.parentNode.insertBefore(row.nextElementSibling, row);
+  });
+
+  // ---- search & sharing: length counters and a live search-result preview ----
+  // Guidance only: nothing here blocks a save. Ranges match internal/seo (title 15-60, description 70-160).
+  function seoCount(span, n, min, max) {
+    span.textContent = n === 0 ? '' : n + ' characters';
+    span.className = 'count' + (n === 0 ? '' : (n < min || n > max) ? ' warn' : ' ok');
+  }
+  function seoClip(s, max) {
+    s = s.replace(/\s+/g, ' ').trim();
+    var chars = Array.from(s);
+    return chars.length > max ? chars.slice(0, max - 1).join('').replace(/\s+\S*$/, '') + '…' : s;
+  }
+  document.querySelectorAll('form').forEach(function (form) {
+    var titleIn = form.elements['seo_title'], descIn = form.elements['seo_description'];
+    if (!descIn) return;
+    var box = form.querySelector('[data-seo]');
+    var counts = {};
+    form.querySelectorAll('[data-count-for]').forEach(function (s) { counts[s.getAttribute('data-count-for')] = s; });
+    var ownTitle = form.elements['title'];
+    function update() {
+      var desc = descIn.value.trim();
+      if (counts.seo_description) seoCount(counts.seo_description, Array.from(desc).length, 70, 160);
+      if (!box) return;
+      var site = box.getAttribute('data-site'), heading = box.getAttribute('data-heading');
+      // the home page's heading is empty on purpose: its tab title is just the site name
+      var own = heading !== '' && ownTitle ? ownTitle.value.trim() : heading;
+      var title = titleIn.value.trim() || (own ? own + ' · ' + site : site);
+      if (counts.seo_title) seoCount(counts.seo_title, Array.from(title).length, 15, 60);
+      var path = box.getAttribute('data-path');
+      box.querySelector('[data-snippet=url]').textContent = box.getAttribute('data-host') + (path && path !== '/' ? ' › ' + path.replace(/^\//, '').split('/').join(' › ') : '');
+      box.querySelector('[data-snippet=title]').textContent = seoClip(title, 60);
+      box.querySelector('[data-snippet=desc]').textContent = seoClip(desc || descIn.placeholder, 160);
+    }
+    form.addEventListener('input', update);
+    update();
+  });
+  // Repeating lists in the block editor: add, remove and reorder items in the browser. Every change renumbers the
+  // fields (p.cards.0.title, p.cards.1.title…) in the order shown, which is the order the server saves.
+  function repRenumber(rep) {
+    var list = rep.querySelector('[data-rep-list]');
+    var items = list.querySelectorAll(':scope > [data-rep-item]');
+    Array.prototype.forEach.call(items, function (item, i) {
+      var n = item.querySelector('[data-rep-n]');
+      if (n) n.textContent = String(i + 1);
+      Array.prototype.forEach.call(item.querySelectorAll('[name]'), function (el) {
+        el.name = el.name.replace(/\.(\d+|__N__)\./, '.' + i + '.');
+      });
+    });
+    var max = parseInt(rep.getAttribute('data-max'), 10) || 200;
+    var add = rep.querySelector('[data-rep="add"]');
+    if (add) add.disabled = items.length >= max;
+  }
+
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest ? e.target.closest('[data-rep]') : null;
+    var rep = btn && btn.closest('[data-repeater]');
+    if (!rep) return;
+    var list = rep.querySelector('[data-rep-list]');
+    var what = btn.getAttribute('data-rep');
+    if (what === 'add') {
+      var tpl = rep.querySelector('template[data-rep-template]');
+      if (!tpl || btn.disabled) return;
+      list.appendChild(tpl.content.cloneNode(true));
+      repRenumber(rep);
+      var added = list.lastElementChild && list.lastElementChild.querySelector('input, textarea, select');
+      if (added) added.focus();
+      return;
+    }
+    var item = btn.closest('[data-rep-item]');
+    if (!item) return;
+    if (what === 'remove') item.remove();
+    else if (what === 'up' && item.previousElementSibling) list.insertBefore(item, item.previousElementSibling);
+    else if (what === 'down' && item.nextElementSibling) list.insertBefore(item.nextElementSibling, item);
+    repRenumber(rep);
+    if (what !== 'remove') btn.focus();
+  });
+
+  document.addEventListener('DOMContentLoaded', function () {
+    Array.prototype.forEach.call(document.querySelectorAll('[data-repeater]'), repRenumber);
+  });
+  document.addEventListener('htmx:afterSwap', function () {
+    Array.prototype.forEach.call(document.querySelectorAll('[data-repeater]'), repRenumber);
+  });
+
+  // "Publish automatically on": show the saved time in the person's own time zone and send the chosen time as UTC.
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+  function localInput(d) {
+    return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()) + 'T' + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+  }
+  function initSchedule(box) {
+    var input = box.querySelector('input[type="datetime-local"]');
+    var hidden = box.querySelector('input[type="hidden"]');
+    if (!input || !hidden) return;
+    var utc = input.getAttribute('data-utc');
+    if (utc) {
+      var d = new Date(utc);
+      if (!isNaN(d.getTime())) input.value = localInput(d);
+    }
+    function sync() {
+      var d = input.value ? new Date(input.value) : null;
+      hidden.value = d && !isNaN(d.getTime()) ? d.toISOString() : '';
+    }
+    input.addEventListener('input', sync);
+    input.addEventListener('change', sync);
+    if (input.form) input.form.addEventListener('submit', sync);
+    sync();
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('[data-schedule]'), initSchedule);
+
+})();

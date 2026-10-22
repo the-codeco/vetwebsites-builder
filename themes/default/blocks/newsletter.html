@@ -1,0 +1,17 @@
+{{define "block/newsletter"}}
+{{with .Props.heading}}<h2>{{.}}</h2>{{end}}
+{{with .Props.intro}}<p>{{.}}</p>{{end}}
+{{with .Extra}}{{if .Sent}}
+<p class="form-notice" id="newsletter-{{$.ID}}" role="status">{{or $.Props.success "Thanks for subscribing!"}}{{if .Confirm}} Please check your inbox and confirm your address.{{end}}</p>
+{{else if .Token}}
+<form class="newsletter-form" id="newsletter-{{$.ID}}" method="post" action="/subscribe">
+  <input type="hidden" name="t" value="{{.Token}}">
+  <input type="hidden" name="from" value="{{.Path}}">
+  <input type="hidden" name="block" value="{{$.ID}}">
+  <p class="hp" aria-hidden="true"><label>Leave this field empty <input name="website" tabindex="-1" autocomplete="off"></label></p>
+  <label class="sr-only" for="nl-email-{{$.ID}}">Email address</label>
+  <input id="nl-email-{{$.ID}}" type="email" name="email" required maxlength="254" autocomplete="email" placeholder="you@example.com">
+  <button class="btn btn-primary" type="submit">{{or $.Props.button_label "Subscribe"}}</button>
+</form>
+{{end}}{{end}}
+{{end}}

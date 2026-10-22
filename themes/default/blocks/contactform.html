@@ -1,0 +1,19 @@
+{{define "block/contactform"}}
+{{with .Props.heading}}<h2>{{.}}</h2>{{end}}
+{{with .Props.intro}}<p>{{.}}</p>{{end}}
+{{with .Extra}}{{if .Sent}}
+<p class="form-notice" id="contact-{{$.ID}}" role="status">{{or $.Props.success "Thanks! Your message has been sent."}}</p>
+{{else if .Token}}
+<form class="contact-form" id="contact-{{$.ID}}" method="post" action="/contact">
+  <input type="hidden" name="t" value="{{.Token}}">
+  <input type="hidden" name="from" value="{{.Path}}">
+  <input type="hidden" name="block" value="{{$.ID}}">
+  <p class="hp" aria-hidden="true"><label>Leave this field empty <input name="website" tabindex="-1" autocomplete="off"></label></p>
+  <label>Your name <input name="name" required maxlength="100" autocomplete="name"></label>
+  <label>Email address <input type="email" name="email" required maxlength="254" autocomplete="email"></label>
+  {{if $.Props.show_subject}}<label>Subject <input name="subject" maxlength="150"></label>{{end}}
+  <label>Message <textarea name="message" required rows="6" maxlength="5000"></textarea></label>
+  <button class="btn btn-primary" type="submit">{{or $.Props.button_label "Send message"}}</button>
+</form>
+{{end}}{{end}}
+{{end}}

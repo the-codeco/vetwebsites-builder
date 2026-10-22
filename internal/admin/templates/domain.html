@@ -1,0 +1,63 @@
+{{define "content"}}
+<div class="card">
+  <h1>Custom domain</h1>
+  {{if .Data.Current}}
+  <p>Your site's address is <strong><a href="https://{{.Data.Current}}" target="_blank" rel="noopener">{{.Data.Current}}</a></strong>.
+    {{if .Data.WWW}}<span class="muted">www.{{.Data.Current}} redirects to it.</span>{{end}}</p>
+  {{else}}
+  <p class="muted">No domain set. The site is available at whatever address you're using to reach it now. Add a domain to get a secure (HTTPS) address of your own.</p>
+  {{end}}
+
+  <form method="post" action="/admin/domain">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label>Domain name
+      <input name="domain" value="{{.Data.Input}}" placeholder="example.com" maxlength="253" autocomplete="off" spellcheck="false" required>
+      <span class="hint">Your main address without “www” — for example <code>example.com</code>.</span></label>
+    <button>Save domain</button>
+  </form>
+  {{if .Data.Current}}
+  <form method="post" action="/admin/domain/remove" data-confirm="Remove the domain? HTTPS certificates will no longer be issued for it.">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <button class="ghost danger">Remove domain</button>
+  </form>
+  {{end}}
+</div>
+
+<div class="card">
+  <h2>Set it up</h2>
+  <ol class="steps">
+    <li><strong>Run the site on a server</strong> with a public IP address and ports <code>80</code> and <code>443</code> open to the internet, using the production setup (see <code>docs/DEPLOY.md</code>):
+      <pre>docker compose --profile prod up -d</pre>
+      with <code>SECURE_COOKIES=true</code> and <code>TRUST_PROXY=true</code> in your <code>.env</code>.</li>
+    <li><strong>Point your domain at the server</strong> by adding these records where you manage your DNS:
+      <table>
+        <tr><th>Type</th><th>Name</th><th>Value</th></tr>
+        <tr><td><code>A</code></td><td><code>{{if .Data.Current}}{{.Data.Current}}{{else}}example.com{{end}}</code> (or <code>@</code>)</td><td>your server's IPv4 address</td></tr>
+        <tr><td><code>AAAA</code></td><td>same</td><td>your server's IPv6 address (only if it has one)</td></tr>
+        <tr><td><code>CNAME</code></td><td><code>www</code></td><td><code>{{if .Data.Current}}{{.Data.Current}}{{else}}example.com{{end}}</code> (or an <code>A</code> record with the same IP)</td></tr>
+      </table>
+      <p class="hint">Your hosting provider shows the server's IP address in its dashboard. DNS changes can take a few minutes to a few hours.</p></li>
+    <li><strong>Save the domain above</strong>, then run the check below.</li>
+    <li>The first visit over HTTPS makes the server request a free certificate (from Let's Encrypt). That takes a few seconds, and it only happens for the domain you saved here.</li>
+  </ol>
+</div>
+
+<div class="card">
+  <h2>Check the connection</h2>
+  {{if .Data.Current}}
+  <p class="hint">Looks up the domain, then visits it from this server over HTTP and HTTPS to confirm it reaches this site. Some hosts can't connect to their own public address; if so, open the address in your browser instead.</p>
+  <form method="post" action="/admin/domain/check">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <button>Check {{.Data.Current}}</button>
+  </form>
+  {{with .Data.Report}}
+  <ul class="checks">
+    {{range .Steps}}
+    <li class="{{if .OK}}ok{{else}}fail{{end}}"><strong>{{if .OK}}✓{{else}}✗{{end}} {{.Name}}</strong> <span>{{.Detail}}</span></li>
+    {{end}}
+  </ul>
+  {{if .OK}}<p class="notice">All good — <a href="https://{{.Domain}}" target="_blank" rel="noopener">https://{{.Domain}}</a> is live.</p>{{end}}
+  {{end}}
+  {{else}}<p class="muted">Save a domain above to enable the check.</p>{{end}}
+</div>
+{{end}}

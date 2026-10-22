@@ -1,0 +1,21 @@
+/* Journal: layered on top of the default theme's stylesheet. */
+body { line-height: 1.75; }
+h1, h2, h3, h4 { font-weight: 600; letter-spacing: -.01em; }
+
+
+
+.btn { text-transform: uppercase; letter-spacing: .1em; font-size: .8rem; }
+.prose { font-size: 1.08rem; }
+.prose > p:first-of-type::first-letter { font-size: 3.1em; float: left; line-height: .9; padding: .08em .1em 0 0; color: var(--color-primary); }
+.postcard { background: transparent; border: 1px solid var(--color-surface); }
+
+/* centred masthead: title above a centred menu */
+.masthead { border-bottom: 1px solid var(--color-surface); }
+.masthead .site-header-inner { flex-direction: column; justify-content: center; text-align: center; gap: var(--space); padding-top: calc(var(--space) * 2.5); padding-bottom: calc(var(--space) * 1.5); }
+.masthead .site-title { font-size: 2.4rem; font-weight: 600; letter-spacing: .02em; }
+.masthead .menu-main, .masthead .menu-list { justify-content: center; flex-wrap: wrap; }
+.masthead .menu-item > a, .masthead .menu-toggle { text-transform: uppercase; letter-spacing: .12em; font-size: .78rem; border-radius: 0; }
+.masthead .menu-item > a[aria-current] { border-bottom: 1px solid currentColor; }
+.masthead .menu-item > a:hover, .masthead .menu-toggle:hover, .masthead .menu-item.open > .menu-toggle { background: transparent; color: var(--color-primary); }
+.menu-topbar, .menu-footer { border-radius: 0; }
+@media (max-width: 800px) { .masthead .menu-main { justify-content: center; } }

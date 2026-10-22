@@ -1,0 +1,24 @@
+{
+	# Certificates are only issued for the domain saved in the admin. Caddy asks
+	# the app first, over the private Docker network (the app's internal listener,
+	# which is not published to the internet).
+	on_demand_tls {
+		ask http://app:8081/tls-check
+	}
+}
+
+# Plain HTTP goes to the app, which redirects the saved domain to HTTPS. Until
+# a domain is saved, the site and admin work over plain HTTP at the server's IP
+# address, so a fresh install can be set up. (Let's Encrypt's HTTP challenge is
+# answered by Caddy itself, before this block.)
+http:// {
+	reverse_proxy app:8080
+}
+
+https:// {
+	tls {
+		on_demand
+	}
+	encode zstd gzip
+	reverse_proxy app:8080
+}
