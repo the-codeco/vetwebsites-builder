@@ -190,7 +190,7 @@ func (s *Service) infoPage(w http.ResponseWriter, r *http.Request, status int, t
 	theme, themePreview := s.themeFor(r, st)
 	nav, _ := s.nav(context.WithoutCancel(r.Context()), "/")
 	s.write(w, theme, status, true, themes.PageData{
-		Site:      siteInfo(r, theme, st, themePreview),
+		Site:      s.siteInfo(r, theme, st, themePreview),
 		PageTitle: title,
 		SEO:       buildSEO(seoInput{st: st, base: baseURL(r, st), pageTitle: title, hidden: true}),
 		Nav:       nav,

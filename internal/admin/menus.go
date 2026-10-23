@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 
@@ -69,17 +70,30 @@ func (h *Handler) renderMenus(w http.ResponseWriter, r *http.Request, status int
 		}
 		views = append(views, v)
 	}
-	pages, err := h.Content.ListPages(r.Context())
+	urls, dests, err := h.linkTargets(r.Context())
 	if err != nil {
 		serverError(w, err)
 		return
 	}
-	posts, err := h.Content.ListPosts(r.Context())
+	id := auth.CurrentIdentity(r)
+	h.render(w, r, status, "menus", pageData{
+		Title: "Menus", User: id, CSRF: id.CSRF, Notice: notice, Error: errMsg, Wide: true,
+		Data: menusData{Sections: views, PageURLs: urls, Destinations: dests},
+	})
+}
+
+// linkTargets are the site's own addresses for link fields: the plain list behind an address box's
+// suggestions, and the JSON behind "Find…" (every page and post with its title).
+func (h *Handler) linkTargets(ctx context.Context) (urls []string, destJSON string, err error) {
+	pages, err := h.Content.ListPages(ctx)
 	if err != nil {
-		serverError(w, err)
-		return
+		return nil, "", err
 	}
-	urls := []string{"/blog"}
+	posts, err := h.Content.ListPosts(ctx)
+	if err != nil {
+		return nil, "", err
+	}
+	urls = []string{"/blog"}
 	var dests []destination
 	for _, p := range pages {
 		urls = append(urls, pagePath(p.Slug))
@@ -89,16 +103,11 @@ func (h *Handler) renderMenus(w http.ResponseWriter, r *http.Request, status int
 	for _, p := range posts {
 		dests = append(dests, destination{Title: p.Title, URL: "/blog/" + p.Slug, Type: "Post", Draft: p.Status != "published"})
 	}
-	destJSON, err := json.Marshal(dests)
+	data, err := json.Marshal(dests)
 	if err != nil {
-		serverError(w, err)
-		return
+		return nil, "", err
 	}
-	id := auth.CurrentIdentity(r)
-	h.render(w, r, status, "menus", pageData{
-		Title: "Menus", User: id, CSRF: id.CSRF, Notice: notice, Error: errMsg, Wide: true,
-		Data: menusData{Sections: views, PageURLs: urls, Destinations: string(destJSON)},
-	})
+	return urls, string(data), nil
 }
 
 func (h *Handler) menusPage(w http.ResponseWriter, r *http.Request) {

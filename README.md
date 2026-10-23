@@ -9,7 +9,7 @@ blocks, write posts, upload images, restyle the whole site, and put it on your o
 - **Pages from blocks** — hero, text, image, gallery, columns, button, latest posts, spacer, plus pricing tables, testimonials,
   FAQ accordions, tabs, video, maps and layouts that hold other blocks (below). Edit in a form
   with a live preview that updates as you type (before you save); reorder, restyle each block (colours, padding, alignment, width).
-- **Menus** — three sections: a top bar, the main navigation and a footer menu. Items can be links, simple
+- **Menus** — two sections: a top bar and the main navigation (footer links are part of the footer builder). Items can be links, simple
   dropdowns or **mega menus** (up to 6 sections, each a title — which can be a link — over links with short descriptions);
   "Find…" searches your pages and posts to fill in a label and address. Each can open in
   a new tab or be hidden without deleting it. Any section can be **frozen** so it stays on screen while visitors
@@ -27,7 +27,7 @@ blocks, write posts, upload images, restyle the whole site, and put it on your o
   Content-Security-Policy lists them under `frame-src`, and any other address shows nothing. Note that visitors' browsers contact
   those sites when a page with a video or map loads, so mention them in your privacy policy.
 - **Hero** — a big heading with a button, with the picture either behind the text or beside it (left or right; stacks on phones).
-- **Footer** — Admin → Appearance → Footer: up to four columns (heading + text, basic HTML allowed) above an editable bottom line (`{year}` and `{title}` are filled in). Footer links still live under Menus. Included in backups.
+- **Footer builder** — Admin → Footer (admins): rows of 1–4 columns (equal, or one wider; left, centred or right), each column a stack of widgets — text (basic HTML), a list or row of links (with "Find…" for your pages and posts), contact details and social links from Site details, your logo with a tagline, a newsletter signup — above an editable bottom line (`{year}` and `{title}` are filled in). The footer can have its own background and text colour and padding. A footer from before the builder, the old footer menu and "show contact details in the footer" are moved into it automatically. Included in backups (format version 4; older versions still restore and are upgraded the same way).
 - **Maps** — a Map block shows either OpenStreetMap by latitude and longitude (private, no cookies) or Google Maps found by street address (Google may set its own cookies in the visitor's browser). Public pages allow framing only www.openstreetmap.org and www.google.com for maps, plus the video hosts.
 - **Password reset** — "Forgot your password?" on the login page emails a one-time link (valid for an hour) when the site has mail settings and a saved domain; the link is always built from the saved domain, never from the request. An admin can also make a one-time link for anyone under Users → Reset password, which works without email. A reset signs the user out everywhere else and sends a "your password was changed" notice.
 - **Scheduled publishing** — a draft page or post can be given a "Publish automatically on" time (set in your own time zone); it goes live by itself within about 20 seconds of that time, even after downtime.
@@ -35,7 +35,7 @@ blocks, write posts, upload images, restyle the whole site, and put it on your o
 - **Redirects** — Admin → Redirects sends old addresses to new ones (permanent or temporary); changing a page or post's address adds one automatically. Unknown addresses of any depth show the themed not-found page. Included in backups.
 - **Phone and WhatsApp links** — `tel:` links work in buttons, menus and cards (`https://wa.me/…` links already worked).
 - **Logo, tab icon and menu buttons** — Appearance → Logo and tab icon puts a logo in the header (with or without the title); any plain menu link can be drawn as a button ("Book now").
-- **Site details** — Admin → Site details holds phone, WhatsApp, email, address, opening hours and social links once; a "Contact details" block or the footer shows them everywhere.
+- **Site details** — Admin → Site details holds phone, WhatsApp, email, address, opening hours and social links once; a "Contact details" block or a footer widget shows them everywhere.
 - **Your own fonts** — upload WOFF2 files under Appearance (up to 12, 600 KB each); they appear in the font lists, are served from your own site, and are part of backups.
 - **Analytics services** — Admin → Analytics lets an admin enter a Google Analytics 4 ID and/or a Plausible domain. Only the ID is entered, never a script; the public pages' security policy lets through exactly those services, they are not loaded for logged-in users, and by default they wait for the visitor to accept the cookie notice.
 - **Shared blocks** — Admin → Shared blocks: write a block once (text, button, form, anything but a layout), add it to as many pages and layout columns as you like, and edit it in one place. Any block on a page can be turned into a shared one with "Save as shared block". A shared block that is still used can't be deleted. Included in backups (format version 3; versions 1 and 2 still restore).
@@ -182,6 +182,11 @@ migrations/          SQL migrations, applied automatically at startup
 header, which should carry `{{if .Nav.Main.Sticky}} is-sticky{{end}}`) and `{{template "menu-footer" .}}` — and
 loads the menu script with `<script src="{{.Site.MenuJS}}" defer></script>`. Markup, keyboard behaviour and the mobile menu come from the partials, so
 a theme only styles them (see the `.menu-*` rules in the default `theme.css`).
+
+**Footer in themes:** a layout draws the footer as
+`<footer class="site-footer{{.Site.Footer.Classes}}" id="site-footer"{{with .Site.Footer.Style}} style="{{.}}"{{end}}>`
+holding `{{template "footer-columns" .}}` (the owner's rows of widgets, from `partials/footer.html`) and the bottom line
+`{{.Site.Footer.Bottom}}`. The owner's colours arrive as `--footer-bg` and `--footer-fg`; see the `.footer-*` rules in the default `theme.css`.
 
 **Cookie notice in themes:** layouts add `{{template "consent-banner" .}}` just before `</body>` and `{{template "consent-reopen" .}}` in the
 footer (both print nothing when the notice is off). The banner starts `hidden` and its script shows it only to visitors who haven't answered.

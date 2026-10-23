@@ -1,5 +1,5 @@
 // Package menus is the data model and validation for the site's navigation:
-// three sections (top bar, main navigation, footer), each a list of items that
+// two sections (top bar, main navigation), each a list of items that
 // are plain links, simple dropdowns or mega menus (columns of links, each column
 // with an optional heading that can itself be a link).
 package menus
@@ -81,9 +81,11 @@ var Sections = []Section{
 		Help: "A slim bar above the header: phone number, login link, language… Links only."},
 	{Key: "main", Label: "Main navigation", Nested: true, MaxItems: 12,
 		Help: "The site's main menu. Items can be plain links, simple dropdowns, or mega menus with columns of links."},
-	{Key: "footer", Label: "Footer", MaxItems: 12,
-		Help: "Links shown at the bottom of every page. Links only."},
 }
+
+// FooterKey is where the footer menu was kept before links moved into the footer builder
+// (package footer). Old data and backups may still carry it; it is upgraded, never shown.
+const FooterKey = "footer"
 
 func SectionByKey(key string) (Section, bool) {
 	for _, s := range Sections {

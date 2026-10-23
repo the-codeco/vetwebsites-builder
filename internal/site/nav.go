@@ -45,7 +45,8 @@ func navSection(m menus.Menu, path string) themes.NavSection {
 	return out
 }
 
-// nav loads all three menu sections for rendering the page at path.
+// nav loads the menu sections for rendering the page at path. The footer's links are part of the
+// footer itself now, so Nav.Footer stays empty (layouts may still place it).
 func (s *Service) nav(ctx context.Context, path string) (themes.Nav, error) {
 	all, err := s.content.Menus(ctx)
 	if err != nil {
@@ -54,6 +55,5 @@ func (s *Service) nav(ctx context.Context, path string) (themes.Nav, error) {
 	return themes.Nav{
 		TopBar: navSection(all["topbar"], path),
 		Main:   navSection(all["main"], path),
-		Footer: navSection(all["footer"], path),
 	}, nil
 }

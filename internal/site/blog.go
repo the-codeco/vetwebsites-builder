@@ -166,7 +166,7 @@ func (s *Service) serveBlogList(w http.ResponseWriter, r *http.Request, category
 		return
 	}
 	s.write(w, theme, http.StatusOK, themePreview, themes.PageData{
-		Site:      siteInfo(r, theme, st, themePreview),
+		Site:      s.siteInfo(r, theme, st, themePreview),
 		PageTitle: list.Heading, Nav: nav, Content: body, Year: time.Now().Year(),
 		SEO:         listSEO,
 		Description: listSEO.Description,
@@ -229,7 +229,7 @@ func (s *Service) blogPost(w http.ResponseWriter, r *http.Request) {
 		hidden: preview || themePreview,
 	})
 	s.write(w, theme, http.StatusOK, preview || themePreview, themes.PageData{
-		Site:      siteInfo(r, theme, st, themePreview),
+		Site:      s.siteInfo(r, theme, st, themePreview),
 		PageTitle: post.Title, Description: postSEO.Description, SEO: postSEO, Nav: nav, Content: body,
 		Year: time.Now().Year(), Preview: preview,
 	})

@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"webbuilder/internal/footer"
 	"webbuilder/internal/menus"
 	"webbuilder/internal/themes"
 )
@@ -466,16 +467,23 @@ func TestInspectDropsWhatIsNotValidInsteadOfTrustingIt(t *testing.T) {
 	if st.Consent["link_url"] != nil || st.Consent["link_label"] != nil || st.Consent["evil"] != nil || len([]rune(st.Consent["text"].(string))) != 300 {
 		t.Errorf("consent: %v", st.Consent)
 	}
-	foot := st.Footer
-	cols, _ := foot["columns"].([]any)
-	first, _ := cols[0].(map[string]any)
-	if foot["evil"] != nil || len([]rune(foot["bottom"].(string))) != 300 || len(cols) != 4 || first["heading"] != "Visit us" {
-		t.Errorf("footer: %v", foot)
+	// a footer from before the footer builder is upgraded: the (first) footer menu becomes a row of
+	// links, and the old columns (at most four, as shown then) a row of text widgets
+	foot := footer.FromStored(st.Footer)
+	if st.Footer["evil"] != nil || foot.Version != footer.Version || len([]rune(foot.Bottom)) != 300 || len(foot.Rows) != 2 {
+		t.Fatalf("footer: %+v", foot)
 	}
-	if txt := first["text"].(string); strings.Contains(txt, "script") || strings.Contains(txt, "onclick") || strings.Contains(txt, "javascript:") || !strings.Contains(txt, `href="/ok"`) {
+	if links := foot.Rows[0].Columns[0].Widgets[0]; links.Type != footer.TypeLinks || len(links.Links) != 1 || links.Links[0].URL != "/about" {
+		t.Errorf("footer menu: %+v", links)
+	}
+	cols := foot.Rows[1].Columns
+	if len(cols) != 4 || cols[0].Widgets[0].Heading != "Visit us" {
+		t.Errorf("footer columns: %+v", cols)
+	}
+	if txt := cols[0].Widgets[0].Text; strings.Contains(txt, "script") || strings.Contains(txt, "onclick") || strings.Contains(txt, "javascript:") || !strings.Contains(txt, `href="/ok"`) {
 		t.Errorf("footer text not cleaned: %s", txt)
 	}
-	if h := cols[1].(map[string]any)["heading"].(string); len([]rune(h)) != 60 {
+	if h := cols[1].Widgets[0].Heading; len([]rune(h)) != 60 {
 		t.Errorf("heading limit: %d", len([]rune(h)))
 	}
 	def := st.Tokens["default"]
@@ -531,7 +539,7 @@ func TestInspectDropsWhatIsNotValidInsteadOfTrustingIt(t *testing.T) {
 	for _, m := range got.Menus {
 		byLoc[m.Location] = m
 	}
-	if len(got.Menus) != 2 || len(byLoc["main"].Items) != 0 || len(byLoc["footer"].Items) != 1 || !byLoc["footer"].Sticky {
+	if len(got.Menus) != 1 || len(byLoc["main"].Items) != 0 { // the footer menu moved into the footer
 		t.Errorf("menus: %+v", got.Menus)
 	}
 

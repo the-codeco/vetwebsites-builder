@@ -65,7 +65,7 @@ type SiteInfo struct {
 	Consent      *ConsentInfo  // the cookie notice, nil when it is off
 	ConsentJS    string        // the script that shows it and remembers the answer
 	TrackJS      string        // the analytics loader (used only when Tracking is set)
-	Footer       FooterInfo    // the footer content the owner wrote
+	Footer       FooterInfo    // the footer the owner built
 	Brand        BrandInfo     // the logo and browser-tab icon
 	Details      DetailsInfo   // the contact details
 	Tracking     *TrackingInfo // analytics services to load, nil when there are none (or the visitor is logged in)
@@ -202,14 +202,36 @@ type TrackingInfo struct {
 	JS             string // the loader script
 }
 
-// FooterInfo is the footer content: columns of cleaned text above a bottom line.
+// FooterInfo is the footer: rows of columns of widgets above a bottom line. Classes and Style go
+// on the <footer> element (the owner's padding and colours).
 type FooterInfo struct {
-	Columns []FooterColumn
+	Rows    []FooterRow
 	Bottom  string
+	Classes string
+	Style   template.CSS
 }
 
-// FooterColumn is a heading and some text (basic HTML, sanitised again when drawn).
-type FooterColumn struct{ Heading, Text string }
+// FooterRow is one band of columns. Ratio is "equal", "wide-left", "wide-middle" or "wide-right";
+// Align is "left", "center" or "right".
+type FooterRow struct {
+	Ratio, Align string
+	Columns      []FooterColumn
+}
+
+// FooterColumn is one column's widgets, top to bottom.
+type FooterColumn struct{ Widgets []FooterWidget }
+
+// FooterWidget is one piece of footer content. Type is "text", "links", "contact", "social",
+// "logo" or "newsletter"; the fields used depend on it (see package footer). Show lists the
+// contact details to show; Form is the newsletter signup's state.
+type FooterWidget struct {
+	Type, Heading, Text string
+	Links               []NavLink
+	Inline              bool
+	Show                map[string]bool
+	Button, Success     string
+	Form                NewsletterForm
+}
 
 // ConsentInfo is what the cookie notice shows.
 type ConsentInfo struct {

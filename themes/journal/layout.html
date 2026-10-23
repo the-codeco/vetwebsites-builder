@@ -24,10 +24,12 @@
 </header>
 <main>{{.Content}}</main>
 {{template "menu-footer" .}}
-<footer class="site-footer">
+<footer class="site-footer{{.Site.Footer.Classes}}" id="site-footer"{{with .Site.Footer.Style}} style="{{.}}"{{end}}>
+  <div class="site-footer-inner">
   {{template "footer-columns" .}}
   <p class="footer-bottom">{{.Site.Footer.Bottom}}</p>
   {{template "consent-reopen" .}}
+  </div>
 </footer>
 <script src="{{.Site.MenuJS}}" defer></script>
 {{template "consent-banner" .}}

@@ -23,7 +23,7 @@ import (
 const (
 	// Format and Version identify a backup file. A file with another format, or a newer version, is refused.
 	Format  = "webbuilder-backup"
-	Version = 3 // 2: blocks can hold child blocks (layouts); 3: the shared block library
+	Version = 4 // 2: blocks can hold child blocks (layouts); 3: the shared block library; 4: the footer builder
 
 	ManifestName = "manifest.json"
 	SiteName     = "site.json"

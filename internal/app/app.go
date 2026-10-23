@@ -161,6 +161,10 @@ func NewWith(ctx context.Context, cfg config.Config, pool *pgxpool.Pool, opt Opt
 	if err := siteSvc.Seed(ctx); err != nil {
 		return nil, err
 	}
+	// a footer saved before the footer builder (and the old footer menu) becomes rows of widgets, once
+	if err := contentStore.UpgradeFooter(ctx); err != nil {
+		return nil, err
+	}
 	// the search index of pages is built from their blocks: bring it up to date (covers starter content too)
 	if err := contentStore.ReindexAllPages(ctx); err != nil {
 		return nil, err

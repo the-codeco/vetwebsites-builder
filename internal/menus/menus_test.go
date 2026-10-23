@@ -13,8 +13,8 @@ var (
 )
 
 func TestSectionsAreDefined(t *testing.T) {
-	want := map[string]bool{"topbar": false, "main": true, "footer": false}
-	if len(Sections) != 3 {
+	want := map[string]bool{"topbar": false, "main": true} // the footer's links are part of the footer builder now
+	if len(Sections) != 2 {
 		t.Fatalf("%d sections", len(Sections))
 	}
 	for _, s := range Sections {

@@ -1,0 +1,153 @@
+{{define "content"}}
+<datalist id="page-urls">{{range .Data.PageURLs}}<option value="{{.}}">{{end}}</datalist>
+
+<div class="editor">
+  <div class="editor-main" data-footer-builder data-destinations="{{.Data.Destinations}}">
+    <form method="post" action="/admin/footer" data-footer-form>
+      <input type="hidden" name="csrf" value="{{.CSRF}}">
+      <input type="hidden" name="structure" value="">
+
+      <div class="card">
+        <h2>Rows</h2>
+        <p class="hint">The footer is made of rows, top to bottom. Each row has 1–4 columns, and each column holds widgets: text, links, contact details, social links, your logo or a newsletter signup. Phones show the columns one under another. Contact details and social links come from <a href="/admin/details">Site details</a>.</p>
+        <div class="fb-rows" data-list>{{range .Data.Rows}}{{template "fb-row" .}}{{end}}</div>
+        <button type="button" class="ghost" data-act="add" data-tpl="tpl-fb-row">+ Add row</button>
+      </div>
+
+      <div class="card">
+        <h2>Bottom line</h2>
+        <label>Text <span class="muted">(optional)</span>
+          <input data-fb="bottom" value="{{.Data.Bottom}}" maxlength="300" placeholder="{{.Data.BottomHint}}"></label>
+        <span class="hint"><code>{year}</code> becomes the current year and <code>{title}</code> your site's title.</span>
+      </div>
+
+      <div class="card">
+        <h2>Look</h2>
+        <p class="hint">Leave a colour empty to use the theme's. Colours you choose are kept in dark mode too.</p>
+        <div class="fb-look">
+          <label>Background colour
+            <span class="colorrow"><input type="text" data-fb="background" value="{{.Data.Style.Background}}" pattern="#[0-9a-fA-F]{6}" maxlength="7" placeholder="#rrggbb (theme)" data-color-text><input type="color" value="{{if .Data.Style.Background}}{{.Data.Style.Background}}{{else}}#ffffff{{end}}" aria-label="Pick background colour" data-color-pick></span></label>
+          <label>Text colour
+            <span class="colorrow"><input type="text" data-fb="text" value="{{.Data.Style.Text}}" pattern="#[0-9a-fA-F]{6}" maxlength="7" placeholder="#rrggbb (theme)" data-color-text><input type="color" value="{{if .Data.Style.Text}}{{.Data.Style.Text}}{{else}}#333333{{end}}" aria-label="Pick text colour" data-color-pick></span></label>
+          <label>Padding
+            <select data-fb="padding">
+              <option value="sm"{{if eq .Data.Style.Padding "sm"}} selected{{end}}>Small</option>
+              <option value="md"{{if or (eq .Data.Style.Padding "md") (eq .Data.Style.Padding "")}} selected{{end}}>Medium</option>
+              <option value="lg"{{if eq .Data.Style.Padding "lg"}} selected{{end}}>Large</option>
+            </select></label>
+        </div>
+      </div>
+
+      <button>Save footer</button>
+    </form>
+
+    <template id="tpl-fb-row">{{template "fb-row" .Data.BlankRow}}</template>
+    <template id="tpl-fb-col">{{template "fb-col" .Data.BlankColumn}}</template>
+    <template id="tpl-fb-link">{{template "fb-link" .Data.BlankLink}}</template>
+    {{range .Data.BlankWidgets}}<template id="tpl-fb-w-{{.Type}}">{{template "fb-widget" .}}</template>
+    {{end}}
+  </div>
+
+  <div class="editor-preview">
+    <div class="preview-bar"><span>Live preview — saved footer</span><a href="{{.PreviewBase}}/#site-footer" target="_blank" rel="noopener">Open site ↗</a></div>
+    <iframe id="preview" src="{{.PreviewBase}}/#site-footer" title="Site preview"></iframe>
+  </div>
+</div>
+{{end}}
+
+{{/* one row: its layout controls, then its columns side by side */}}
+{{define "fb-row"}}<div class="fb-row">
+  <div class="mi-fields fb-row-head">
+    <strong class="fb-title">Row</strong>
+    <label class="fb-inline">Columns <select data-f="count" aria-label="Number of columns">
+      {{$n := len .Columns}}<option value="1"{{if eq $n 1}} selected{{end}}>1</option><option value="2"{{if eq $n 2}} selected{{end}}>2</option><option value="3"{{if eq $n 3}} selected{{end}}>3</option><option value="4"{{if eq $n 4}} selected{{end}}>4</option>
+    </select></label>
+    <label class="fb-inline">Widths <select data-f="ratio" aria-label="Column widths">
+      <option value="equal"{{if eq .Ratio "equal"}} selected{{end}}>All equal</option>
+      <option value="wide-left"{{if eq .Ratio "wide-left"}} selected{{end}}>First wider</option>
+      <option value="wide-middle"{{if eq .Ratio "wide-middle"}} selected{{end}}>Middle wider (3)</option>
+      <option value="wide-right"{{if eq .Ratio "wide-right"}} selected{{end}}>Last wider</option>
+    </select></label>
+    <label class="fb-inline">Align <select data-f="align" aria-label="Alignment">
+      <option value="left"{{if eq .Align "left"}} selected{{end}}>Left</option>
+      <option value="center"{{if eq .Align "center"}} selected{{end}}>Centre</option>
+      <option value="right"{{if eq .Align "right"}} selected{{end}}>Right</option>
+    </select></label>
+    {{template "mi-buttons"}}
+  </div>
+  <div class="fb-cols" data-cols="{{len .Columns}}">{{range .Columns}}{{template "fb-col" .}}{{end}}</div>
+</div>{{end}}
+
+{{/* one column: its widgets, and the "add" control */}}
+{{define "fb-col"}}<div class="fb-col">
+  <div class="fb-widgets" data-list>{{range .Widgets}}{{template "fb-widget" .}}{{end}}</div>
+  <div class="fb-add">
+    <select data-add-widget aria-label="Widget to add">
+      <option value="text">Text</option>
+      <option value="links">Links</option>
+      <option value="contact">Contact details</option>
+      <option value="social">Social links</option>
+      <option value="logo">Logo</option>
+      <option value="newsletter">Newsletter signup</option>
+    </select>
+    <button type="button" class="ghost" data-act="add-widget">+ Add</button>
+  </div>
+</div>{{end}}
+
+{{/* one widget: its fields depend on its type */}}
+{{define "fb-widget"}}<div class="fb-widget" data-type="{{.Type}}">
+  <div class="mi-fields fb-widget-head">
+    <strong class="fb-title">{{.Label}}</strong>
+    <span class="mi-btns">
+      <button type="button" class="ghost" data-act="left" title="Move to the previous column" aria-label="Move to previous column">←</button>
+      <button type="button" class="ghost" data-act="right" title="Move to the next column" aria-label="Move to next column">→</button>
+      <button type="button" class="ghost" data-act="up" title="Move up" aria-label="Move up">↑</button>
+      <button type="button" class="ghost" data-act="down" title="Move down" aria-label="Move down">↓</button>
+      <button type="button" class="ghost danger" data-act="remove" title="Remove" aria-label="Remove">✕</button>
+    </span>
+  </div>
+  <div class="fb-body">
+  {{if ne .Type "logo"}}<label>Heading <span class="muted">(optional)</span><input data-f="heading" value="{{.Heading}}" maxlength="60"></label>{{end}}
+  {{if eq .Type "text"}}
+    <label>Text {{template "rtbar"}}<textarea data-f="text" rows="5" class="mono" maxlength="5000">{{.Text}}</textarea></label>
+    <span class="hint">Plain text (a blank line starts a new paragraph) or basic HTML. Anything unsafe is removed on save.</span>
+  {{else if eq .Type "links"}}
+    <label class="check"><input type="checkbox" data-f="inline"{{if .Inline}} checked{{end}}> <span>Show the links in a row instead of a list</span></label>
+    <div class="mi-sub fb-links">
+      <div class="mi-list" data-list>{{range .Links}}{{template "fb-link" .}}{{end}}</div>
+      <button type="button" class="ghost" data-act="add" data-tpl="tpl-fb-link">+ Add link</button>
+    </div>
+  {{else if eq .Type "contact"}}
+    <fieldset class="plainset fb-parts"><legend>Show</legend>
+      {{range .Parts}}<label class="chk"><input type="checkbox" data-part="{{.Key}}"{{if .On}} checked{{end}}> {{.Label}}</label>{{end}}
+    </fieldset>
+    <span class="hint">Only details filled in under Site details appear.</span>
+  {{else if eq .Type "social"}}
+    <span class="hint">Shows the social links from Site details.</span>
+  {{else if eq .Type "logo"}}
+    <span class="hint">Your logo from Appearance (or the site's title when there is none), linking to the home page.</span>
+    <label>Tagline <span class="muted">(optional)</span><input data-f="text" value="{{.Text}}" maxlength="300"></label>
+  {{else if eq .Type "newsletter"}}
+    <label>Introduction <span class="muted">(optional)</span><input data-f="text" value="{{.Text}}" maxlength="300"></label>
+    <label>Button label<input data-f="button" value="{{.Button}}" maxlength="300" placeholder="Subscribe"></label>
+    <label>Message shown after signing up<input data-f="success" value="{{.Success}}" maxlength="300" placeholder="Thanks for subscribing!"></label>
+  {{end}}
+  </div>
+</div>{{end}}
+
+{{/* a link in a links widget */}}
+{{define "fb-link"}}<div class="mi-link">
+  <div class="mi-fields">
+    <input data-f="label" value="{{.Label}}" placeholder="Label" maxlength="60" aria-label="Link label">
+    <input data-f="url" value="{{.URL}}" placeholder="/page" list="page-urls" maxlength="2000" aria-label="Link address">
+    <button type="button" class="ghost mi-find" data-act="find" title="Search your pages and posts to fill in the label and address" aria-expanded="false">Find…</button>
+    <label class="chk"><input type="checkbox" data-f="new_tab"{{if .NewTab}} checked{{end}}> New tab</label>
+    {{template "mi-buttons"}}
+  </div>
+</div>{{end}}
+
+{{define "mi-buttons"}}<span class="mi-btns">
+  <button type="button" class="ghost" data-act="up" title="Move up / earlier" aria-label="Move up">↑</button>
+  <button type="button" class="ghost" data-act="down" title="Move down / later" aria-label="Move down">↓</button>
+  <button type="button" class="ghost danger" data-act="remove" title="Remove" aria-label="Remove">✕</button>
+</span>{{end}}

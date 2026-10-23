@@ -371,7 +371,7 @@ func (s *Service) servePage(w http.ResponseWriter, r *http.Request, slug string)
 		hidden: preview || themePreview,
 	})
 	s.write(w, theme, http.StatusOK, preview || themePreview, themes.PageData{
-		Site:        siteInfo(r, theme, st, themePreview),
+		Site:        s.siteInfo(r, theme, st, themePreview),
 		PageTitle:   title,
 		Description: seoTags.Description,
 		SEO:         seoTags,
@@ -395,7 +395,7 @@ func (s *Service) notFound(w http.ResponseWriter, r *http.Request, st content.Se
 	nav, _ := s.nav(r.Context(), r.URL.Path)
 	_, themePreview := s.themeFor(r, st)
 	s.write(w, theme, http.StatusNotFound, themePreview, themes.PageData{
-		Site:      siteInfo(r, theme, st, themePreview),
+		Site:      s.siteInfo(r, theme, st, themePreview),
 		PageTitle: "Page not found",
 		SEO:       buildSEO(seoInput{st: st, base: baseURL(r, st), pageTitle: "Page not found", hidden: true}),
 		Nav:       nav,

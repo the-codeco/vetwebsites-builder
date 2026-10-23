@@ -33,12 +33,15 @@ func TestMenuBuilder(t *testing.T) {
 	editor := e.newUser(admin, "editor@example.com", "editor")
 	anon := e.client()
 
-	// the three sections, with the starter links seeded into the main navigation
+	// the two sections (the footer's links are in the footer builder), with the starter links seeded into the main navigation
 	page := admin.get("/admin/menus")
 	if page.Status != 200 {
 		t.Fatalf("menus page: %d", page.Status)
 	}
-	for _, want := range []string{"Top bar", "Main navigation", "Footer", `data-menu-form`, `tpl-item-main`, `tpl-item-topbar`, `tpl-item-footer`,
+	if strings.Contains(page.Body, `tpl-item-footer`) {
+		t.Error("the menus screen still has a footer menu")
+	}
+	for _, want := range []string{"Top bar", "Main navigation", `data-menu-form`, `tpl-item-main`, `tpl-item-topbar`,
 		`value="Home"`, `value="About"`, `<option value="mega"`, "Freeze", `id="preview"`} {
 		if !strings.Contains(page.Body, want) {
 			t.Errorf("builder page lacks %q", want)
@@ -72,7 +75,7 @@ func TestMenuBuilder(t *testing.T) {
 		"seven columns":           {"main", `[{"kind":"mega","label":"M","columns":[` + strings.TrimSuffix(strings.Repeat(`{"heading":"h","links":[{"label":"a","url":"/a"}]},`, 7), ",") + `]}]`, 400},
 		"javascript heading link": {"main", `[{"kind":"mega","label":"M","columns":[{"heading":"h","url":"javascript:alert(1)","links":[{"label":"a","url":"/a"}]}]}]`, 400},
 		"dropdown in the top bar": {"topbar", `[{"kind":"dropdown","label":"D","children":[{"label":"a","url":"/a"}]}]`, 400},
-		"mega in the footer":      {"footer", `[{"kind":"mega","label":"M","columns":[{"links":[{"label":"a","url":"/a"}]}]}]`, 400},
+		"the old footer menu":     {"footer", `[{"kind":"link","label":"a","url":"/a"}]`, 404},
 		"unknown section":         {"sidebar", `[]`, 404},
 		"too large":               {"main", `[` + strings.Repeat(`{"kind":"link","label":"x","url":"/x"},`, 6000) + `{"kind":"link","label":"y","url":"/y"}]`, 400},
 	}
@@ -93,15 +96,15 @@ func TestMenuBuilder(t *testing.T) {
 		t.Error("the freeze tick must also survive a failed save")
 	}
 
-	// a rich main menu, a frozen top bar and header, an unfrozen footer
+	// a rich main menu, a frozen top bar and header
 	if r := saveMenu(admin, "main", richMain, true); r.Status != 303 {
 		t.Fatalf("save main: %d %s", r.Status, firstLine(r.Body))
 	}
 	if r := saveMenu(admin, "topbar", `[{"kind":"link","label":"Call us","url":"mailto:hi@example.com"},{"kind":"link","label":"Log in","url":"/admin/login","new_tab":true}]`, true); r.Status != 303 {
 		t.Fatalf("save topbar: %d", r.Status)
 	}
-	if r := saveMenu(editor, "footer", `[{"kind":"link","label":"Privacy","url":"/privacy"}]`, false); r.Status != 303 {
-		t.Fatalf("an editor saving the footer: %d", r.Status)
+	if r := saveMenu(editor, "topbar", `[{"kind":"link","label":"Call us","url":"mailto:hi@example.com"},{"kind":"link","label":"Log in","url":"/admin/login","new_tab":true}]`, true); r.Status != 303 {
+		t.Fatalf("an editor saving a menu: %d", r.Status)
 	}
 	if got := e.sql(`SELECT items->3->>'kind' FROM menus WHERE location = 'main'`); got != "dropdown" {
 		t.Errorf("stored structure: %q", got)
@@ -117,13 +120,12 @@ func TestMenuBuilder(t *testing.T) {
 		`href="https://example.com/docs" target="_blank" rel="noopener noreferrer">Docs`,
 		`aria-controls="menu-panel-2">Company`, `aria-controls="menu-panel-3">Products`,
 		`class="menu-mega-grid mega-cols-2"`, `<p class="menu-col-heading">Apps</p>`, `<span class="menu-desc">The first one</span>`,
-		`<nav class="menu-footer" aria-label="Footer">`, `href="/privacy"`,
 	} {
 		if !strings.Contains(home, want) {
 			t.Errorf("home page lacks %q", want)
 		}
 	}
-	for _, gone := range []string{"Secret", "Old page", "Nothing to show", `menu-footer is-sticky`} {
+	for _, gone := range []string{"Secret", "Old page", "Nothing to show", `menu-footer`} {
 		if strings.Contains(home, gone) {
 			t.Errorf("home page shows %q", gone)
 		}
@@ -178,7 +180,7 @@ func TestMenuScriptAndThemes(t *testing.T) {
 	admin := e.newAdmin("admin@example.com")
 	anon := e.client()
 	saveMenu(admin, "main", richMain, true)
-	saveMenu(admin, "footer", `[{"kind":"link","label":"Privacy","url":"/privacy"}]`, true)
+	saveMenu(admin, "topbar", `[{"kind":"link","label":"Privacy","url":"/privacy"}]`, true)
 
 	js := anon.get("/theme/default/assets/menu.js")
 	if js.Status != 200 || !strings.Contains(js.Header.Get("Content-Type"), "javascript") || js.Header.Get("X-Content-Type-Options") != "nosniff" || !strings.Contains(js.Body, "aria-expanded") {
@@ -210,7 +212,7 @@ func TestMenuScriptAndThemes(t *testing.T) {
 					t.Errorf("%s %s: inline style inside a menu", theme, path)
 				}
 			}
-			if !strings.Contains(body, `menu-footer is-sticky`) || !strings.Contains(body, `site-header`) || !strings.Contains(body, ` is-sticky"`) {
+			if !strings.Contains(body, `menu-topbar is-sticky`) || !strings.Contains(body, `site-header`) || !strings.Contains(body, ` is-sticky"`) {
 				t.Errorf("%s %s: frozen sections missing their class", theme, path)
 			}
 		}

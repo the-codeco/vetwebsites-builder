@@ -389,7 +389,7 @@
   });
 
   document.addEventListener('click', function (e) {
-    var btn = e.target.closest && e.target.closest('[data-menu-builder] button[data-act]');
+    var btn = e.target.closest && e.target.closest('[data-menu-builder] button[data-act], [data-footer-builder] button[data-act]');
     if (!btn) return;
     var act = btn.getAttribute('data-act');
     if (act === 'add') {
@@ -400,7 +400,7 @@
       if (added) added.focus();
       return;
     }
-    var row = btn.closest('.mi-link, .mi-col, .mi'); // the innermost row this button belongs to
+    var row = btn.closest('.mi-link, .mi-col, .mi, .fb-widget, .fb-row'); // the innermost row this button belongs to
     if (!row) return;
     if (act === 'find') { toggleFind(row, btn); return; }
     if (act === 'remove') row.remove();
@@ -408,12 +408,12 @@
     else if (act === 'down' && row.nextElementSibling) row.parentNode.insertBefore(row.nextElementSibling, row);
   });
 
-  // "Find…" on a menu row: search the site's pages and posts (listed in the builder's
-  // data-destinations) and fill in the row's label (a section's title) and address.
+  // "Find…" on a menu or footer link row: search the site's pages and posts (listed in the
+  // builder's data-destinations) and fill in the row's label (a section's title) and address.
   var menuDests = null;
   function destinations() {
     if (menuDests) return menuDests;
-    var b = document.querySelector('[data-menu-builder]');
+    var b = document.querySelector('[data-destinations]');
     try { menuDests = JSON.parse(b.getAttribute('data-destinations') || '[]') || []; } catch (err) { menuDests = []; }
     return menuDests;
   }
@@ -497,6 +497,90 @@
     show();
     input.focus();
   }
+
+  // ---- footer builder: rows of columns of widgets ----
+  // Rows and the links inside a links widget use the shared add/up/down/remove buttons above;
+  // this adds widgets, moves them between columns, keeps a row's columns in step with its
+  // "Columns" choice and, on save, writes the whole footer into the hidden "structure" field.
+  function fbCols(row) { return row.querySelectorAll(':scope > .fb-cols > .fb-col'); }
+
+  function fbSetCount(row, n) {
+    var box = row.querySelector(':scope > .fb-cols'), cols = fbCols(row);
+    for (var i = cols.length; i < n; i++) box.appendChild(document.getElementById('tpl-fb-col').content.cloneNode(true));
+    cols = fbCols(row);
+    if (cols.length > n) { // widgets of the columns that go away join the end of the last one kept
+      var keep = cols[n - 1].querySelector(':scope > [data-list]');
+      for (var j = n; j < cols.length; j++) {
+        cols[j].querySelectorAll(':scope > [data-list] > .fb-widget').forEach(function (w) { keep.appendChild(w); });
+        cols[j].remove();
+      }
+    }
+    box.setAttribute('data-cols', n);
+  }
+
+  function fbReadWidget(el) {
+    var f = function (name) { var x = el.querySelector(':scope > .fb-body [data-f="' + name + '"]'); return x ? (x.type === 'checkbox' ? x.checked : x.value) : ''; };
+    var w = { type: el.getAttribute('data-type'), heading: f('heading') || '', text: f('text') || '' };
+    if (w.type === 'links') {
+      w.inline = !!f('inline');
+      w.links = Array.prototype.map.call(el.querySelectorAll(':scope > .fb-body .fb-links > [data-list] > .mi-link'), function (l) {
+        return { label: textOf(l, 'label'), url: textOf(l, 'url'), new_tab: checkOf(l, 'new_tab') };
+      });
+    } else if (w.type === 'contact') {
+      w.parts = Array.prototype.filter.call(el.querySelectorAll(':scope > .fb-body [data-part]'), function (c) { return c.checked; })
+        .map(function (c) { return c.getAttribute('data-part'); });
+    } else if (w.type === 'newsletter') {
+      w.button = f('button'); w.success = f('success');
+    }
+    return w;
+  }
+
+  function fbRead(form) {
+    var val = function (name) { return form.querySelector('[data-fb="' + name + '"]').value; };
+    return {
+      version: 2,
+      bottom: val('bottom'),
+      style: { background: val('background'), text: val('text'), padding: val('padding') },
+      rows: Array.prototype.map.call(form.querySelectorAll('.fb-rows > .fb-row'), function (row) {
+        var head = row.querySelector(':scope > .fb-row-head');
+        return {
+          ratio: head.querySelector('[data-f="ratio"]').value,
+          align: head.querySelector('[data-f="align"]').value,
+          columns: Array.prototype.map.call(fbCols(row), function (col) {
+            return { widgets: Array.prototype.map.call(col.querySelectorAll(':scope > [data-list] > .fb-widget'), fbReadWidget) };
+          })
+        };
+      })
+    };
+  }
+
+  document.addEventListener('submit', function (e) {
+    var form = e.target;
+    if (form.matches && form.matches('[data-footer-form]')) form.elements.structure.value = JSON.stringify(fbRead(form));
+  });
+
+  document.addEventListener('change', function (e) {
+    var sel = e.target;
+    if (sel.matches && sel.matches('.fb-row-head [data-f="count"]')) fbSetCount(sel.closest('.fb-row'), parseInt(sel.value, 10) || 1);
+  });
+
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest && e.target.closest('[data-footer-builder] button[data-act]');
+    if (!btn) return;
+    var act = btn.getAttribute('data-act');
+    if (act === 'add-widget') {
+      var col = btn.closest('.fb-col');
+      var type = col.querySelector(':scope > .fb-add [data-add-widget]').value;
+      var list = col.querySelector(':scope > [data-list]');
+      list.appendChild(document.getElementById('tpl-fb-w-' + type).content.cloneNode(true));
+      var first = list.lastElementChild.querySelector('input, textarea');
+      if (first) first.focus();
+    } else if (act === 'left' || act === 'right') {
+      var w = btn.closest('.fb-widget'), from = w.closest('.fb-col');
+      var to = act === 'left' ? from.previousElementSibling : from.nextElementSibling;
+      if (to) { to.querySelector(':scope > [data-list]').appendChild(w); btn.focus(); }
+    }
+  });
 
   // ---- search & sharing: length counters and a live search-result preview ----
   // Guidance only: nothing here blocks a save. Ranges match internal/seo (title 15-60, description 70-160).

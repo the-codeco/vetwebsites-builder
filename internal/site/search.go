@@ -9,19 +9,17 @@ import (
 
 	"webbuilder/internal/auth"
 	"webbuilder/internal/content"
+	"webbuilder/internal/footer"
 	"webbuilder/internal/search"
 	"webbuilder/internal/themes"
 )
 
 // siteInfo is what every layout receives about the site, including whether to show the search box.
-func siteInfo(r *http.Request, theme *themes.Theme, st content.Settings, preview bool) themes.SiteInfo {
+func (s *Service) siteInfo(r *http.Request, theme *themes.Theme, st content.Settings, preview bool) themes.SiteInfo {
 	info := theme.Info(st.Title, preview)
 	info.Search = st.ShowSearch
 	info.ColorMode = theme.EffectiveColorMode(st.ColorMode)
-	info.Footer = themes.FooterInfo{Bottom: st.Footer.BottomLine(st.Title, time.Now().Year())}
-	for _, c := range st.Footer.Columns {
-		info.Footer.Columns = append(info.Footer.Columns, themes.FooterColumn{Heading: c.Heading, Text: c.Text})
-	}
+	info.Footer = s.footerInfo(r, st)
 	if c := st.Consent; c.Enabled {
 		info.Consent = &themes.ConsentInfo{
 			Text: c.Message(), LinkLabel: c.LinkLabel, LinkURL: c.LinkURL, Ask: c.Ask,
@@ -38,6 +36,51 @@ func siteInfo(r *http.Request, theme *themes.Theme, st content.Settings, preview
 		info.Tracking = &themes.TrackingInfo{GA4: t.GA4, Plausible: t.PlausibleDomain, Wait: !t.NoWait, JS: theme.TrackJS()}
 	}
 	return info
+}
+
+// footerInfo turns the saved footer into what templates show: links marked when they point at
+// this page, a newsletter widget given its form (it signs up like a signup block, as block 0), and
+// contact or social widgets left out when Site details has nothing for them to show.
+func (s *Service) footerInfo(r *http.Request, st content.Settings) themes.FooterInfo {
+	f := st.Footer
+	d := detailsInfo(st.Details)
+	has := map[string]bool{"phone": d.Phone != "", "whatsapp": d.WhatsApp != "", "email": d.Email != "", "address": d.Address != "", "hours": d.Hours != "", "social": len(d.Social) > 0}
+	out := themes.FooterInfo{Bottom: f.BottomLine(st.Title, time.Now().Year()), Classes: f.Style.Classes(), Style: f.Style.CSSVars()}
+	for _, row := range f.Rows {
+		fr := themes.FooterRow{Ratio: row.Ratio, Align: row.Align}
+		for _, col := range row.Columns {
+			var fc themes.FooterColumn
+			for _, w := range col.Widgets {
+				fw := themes.FooterWidget{Type: w.Type, Heading: w.Heading, Text: w.Text, Inline: w.Inline, Button: w.Button, Success: w.Success}
+				for _, l := range w.Links {
+					fw.Links = append(fw.Links, themes.NavLink{Label: l.Label, URL: l.URL, NewTab: l.NewTab, Active: l.URL == r.URL.Path})
+				}
+				switch w.Type {
+				case footer.TypeContact:
+					fw.Show = map[string]bool{}
+					for _, p := range w.Parts {
+						if has[p] {
+							fw.Show[p] = true
+						}
+					}
+					if len(fw.Show) == 0 {
+						continue
+					}
+				case footer.TypeSocial:
+					if !has["social"] {
+						continue
+					}
+				}
+				if w.Type == footer.TypeNewsletter {
+					fw.Form = s.newsletterFormData(r, 0)
+				}
+				fc.Widgets = append(fc.Widgets, fw)
+			}
+			fr.Columns = append(fr.Columns, fc)
+		}
+		out.Rows = append(out.Rows, fr)
+	}
+	return out
 }
 
 // detailsInfo turns the saved contact details into what templates show, with the links made.
@@ -123,7 +166,7 @@ func (s *Service) searchPage(w http.ResponseWriter, r *http.Request) {
 		title = "Search: " + q
 	}
 	s.write(w, theme, status, true, themes.PageData{
-		Site:      siteInfo(r, theme, st, themePreview),
+		Site:      s.siteInfo(r, theme, st, themePreview),
 		PageTitle: title,
 		SEO:       buildSEO(seoInput{st: st, base: baseURL(r, st), pageTitle: title, hidden: true}),
 		Nav:       nav, Content: body, Year: time.Now().Year(),
