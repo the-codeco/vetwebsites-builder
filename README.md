@@ -10,7 +10,8 @@ blocks, write posts, upload images, restyle the whole site, and put it on your o
   FAQ accordions, tabs, video, maps and layouts that hold other blocks (below). Edit in a form
   with a live preview that updates as you type (before you save); reorder, restyle each block (colours, padding, alignment, width).
 - **Menus** — three sections: a top bar, the main navigation and a footer menu. Items can be links, simple
-  dropdowns or **mega menus** (up to 4 columns of links with headings and short descriptions); each can open in
+  dropdowns or **mega menus** (up to 6 sections, each a title — which can be a link — over links with short descriptions);
+  "Find…" searches your pages and posts to fill in a label and address. Each can open in
   a new tab or be hidden without deleting it. Any section can be **frozen** so it stays on screen while visitors
   scroll (a frozen top bar and header stack neatly). Keyboard-accessible, with a hamburger menu on phones, and
   usable even without JavaScript.

@@ -108,6 +108,8 @@ type NavLink struct {
 
 type NavColumn struct {
 	Heading string
+	URL     string // the heading is a link when set
+	Active  bool   // that link is the current page
 	Links   []NavLink
 }
 

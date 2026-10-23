@@ -125,9 +125,12 @@ a { color: var(--color-primary); }
 .mega-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .mega-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .mega-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.mega-cols-5, .mega-cols-6 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .menu-col ul { list-style: none; margin: 0; padding: 0; }
 .menu-col li { margin: 0 0 .55rem; }
 .menu-col-heading { margin: 0 0 .6rem; font-size: .75rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--color-muted); }
+.menu-col-heading a { color: inherit; text-decoration: none; }
+.menu-col-heading a:hover, .menu-col-heading a[aria-current="page"] { color: var(--color-primary); text-decoration: underline; }
 .menu-desc { display: block; font-size: .85rem; color: var(--color-muted); }
 
 /* without JavaScript, panels open on hover and keyboard focus; with it, the script manages them */

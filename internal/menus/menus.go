@@ -1,6 +1,7 @@
 // Package menus is the data model and validation for the site's navigation:
 // three sections (top bar, main navigation, footer), each a list of items that
-// are plain links, simple dropdowns or mega menus (columns of links with headings).
+// are plain links, simple dropdowns or mega menus (columns of links, each column
+// with an optional heading that can itself be a link).
 package menus
 
 import (
@@ -24,7 +25,7 @@ const (
 const (
 	MaxLabel       = 60
 	MaxDescription = 120
-	MaxColumns     = 4
+	MaxColumns     = 6
 	MaxColumnLinks = 8
 	MaxChildren    = 12
 	MaxJSON        = 128 << 10
@@ -39,9 +40,10 @@ type Link struct {
 	Hidden      bool   `json:"hidden,omitempty"`
 }
 
-// Column is one column of a mega menu.
+// Column is one column ("section") of a mega menu. A heading with a URL is a link.
 type Column struct {
 	Heading string `json:"heading,omitempty"`
+	URL     string `json:"url,omitempty"`
 	Links   []Link `json:"links"`
 }
 
@@ -162,7 +164,7 @@ func Validate(sec Section, in []Item) ([]Item, error) {
 			blank = blank && blankLink(l)
 		}
 		for _, c := range it.Columns {
-			blank = blank && clean(c.Heading) == ""
+			blank = blank && clean(c.Heading) == "" && clean(c.URL) == ""
 			for _, l := range c.Links {
 				blank = blank && blankLink(l)
 			}
@@ -202,9 +204,19 @@ func Validate(sec Section, in []Item) ([]Item, error) {
 			}
 			var cols []Column
 			for _, c := range it.Columns {
-				c.Heading = clean(c.Heading)
+				c.Heading, c.URL = clean(c.Heading), clean(c.URL)
 				if tooLong(c.Heading, MaxLabel) {
 					return nil, fmt.Errorf("Column headings can be at most %d characters (“%.20s…”).", MaxLabel, c.Heading)
+				}
+				if c.URL != "" {
+					if c.Heading == "" {
+						return nil, fmt.Errorf("A column in “%s” has an address but no heading to link.", it.Label)
+					}
+					u := blocks.SafeURL(c.URL)
+					if u == "" {
+						return nil, fmt.Errorf("The heading “%s” needs a valid address: a path like /about, or an http(s)://, mailto: or tel: address.", c.Heading)
+					}
+					c.URL = u
 				}
 				links, err := validateLinks(it.Label, c.Links, MaxColumnLinks, true)
 				if err != nil {
@@ -213,7 +225,7 @@ func Validate(sec Section, in []Item) ([]Item, error) {
 				if c.Heading == "" && len(links) == 0 {
 					continue // an empty column
 				}
-				cols = append(cols, Column{Heading: c.Heading, Links: links})
+				cols = append(cols, Column{Heading: c.Heading, URL: c.URL, Links: links})
 			}
 			if len(cols) > MaxColumns {
 				return nil, fmt.Errorf("“%s” can have at most %d columns.", it.Label, MaxColumns)
@@ -232,7 +244,8 @@ func Validate(sec Section, in []Item) ([]Item, error) {
 }
 
 // Visible returns what visitors should see: hidden items and links removed, and
-// dropdowns/mega menus left with nothing to show dropped. The input isn't modified.
+// dropdowns/mega menus left with nothing to show dropped (a mega column with a
+// linked heading still shows). The input isn't modified.
 func Visible(in []Item) []Item {
 	visibleLinks := func(ls []Link) []Link {
 		var out []Link
@@ -257,8 +270,8 @@ func Visible(in []Item) []Item {
 		case KindMega:
 			var cols []Column
 			for _, c := range it.Columns {
-				if links := visibleLinks(c.Links); len(links) > 0 {
-					cols = append(cols, Column{Heading: c.Heading, Links: links})
+				if links := visibleLinks(c.Links); len(links) > 0 || c.URL != "" {
+					cols = append(cols, Column{Heading: c.Heading, URL: c.URL, Links: links})
 				}
 			}
 			if len(cols) == 0 {

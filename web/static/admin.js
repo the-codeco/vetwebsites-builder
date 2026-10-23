@@ -365,6 +365,7 @@
         li.querySelectorAll(':scope > .mi-mega [data-sub="columns"] > [data-list] > .mi-col'), function (col) {
           return {
             heading: textOf(col, 'heading'),
+            url: textOf(col, 'url'),
             links: Array.prototype.map.call(
               col.querySelectorAll(':scope > [data-sub="links"] > [data-list] > .mi-link'), readLink)
           };
@@ -401,10 +402,101 @@
     }
     var row = btn.closest('.mi-link, .mi-col, .mi'); // the innermost row this button belongs to
     if (!row) return;
+    if (act === 'find') { toggleFind(row, btn); return; }
     if (act === 'remove') row.remove();
     else if (act === 'up' && row.previousElementSibling) row.parentNode.insertBefore(row, row.previousElementSibling);
     else if (act === 'down' && row.nextElementSibling) row.parentNode.insertBefore(row.nextElementSibling, row);
   });
+
+  // "Find…" on a menu row: search the site's pages and posts (listed in the builder's
+  // data-destinations) and fill in the row's label (a section's title) and address.
+  var menuDests = null;
+  function destinations() {
+    if (menuDests) return menuDests;
+    var b = document.querySelector('[data-menu-builder]');
+    try { menuDests = JSON.parse(b.getAttribute('data-destinations') || '[]') || []; } catch (err) { menuDests = []; }
+    return menuDests;
+  }
+
+  function closeFind(row) {
+    var box = row.querySelector(':scope > .mi-search');
+    if (!box) return;
+    box.remove();
+    var btn = row.querySelector(':scope > .mi-fields [data-act="find"]');
+    if (btn) btn.setAttribute('aria-expanded', 'false');
+  }
+
+  function toggleFind(row, btn) {
+    if (row.querySelector(':scope > .mi-search')) { closeFind(row); btn.focus(); return; }
+    var box = document.createElement('div');
+    box.className = 'mi-search';
+    var input = document.createElement('input');
+    input.type = 'search';
+    input.placeholder = 'Search pages and posts…';
+    input.setAttribute('aria-label', 'Search pages and posts');
+    var list = document.createElement('ul');
+    list.className = 'mi-results';
+    box.appendChild(input);
+    box.appendChild(list);
+    row.querySelector(':scope > .mi-fields').after(box);
+    btn.setAttribute('aria-expanded', 'true');
+
+    function pick(d) {
+      var name = fieldOf(row, 'heading') ? 'heading' : 'label';
+      fieldOf(row, name).value = d.title;
+      fieldOf(row, 'url').value = d.url;
+      closeFind(row);
+      btn.focus();
+    }
+    function show() {
+      var words = input.value.toLowerCase().split(/\s+/).filter(Boolean);
+      var found = destinations().filter(function (d) {
+        var hay = (d.title + ' ' + d.url).toLowerCase();
+        return words.every(function (w) { return hay.indexOf(w) !== -1; });
+      }).slice(0, 12);
+      list.textContent = '';
+      if (!found.length) {
+        var none = document.createElement('li');
+        none.className = 'mi-r-none';
+        none.textContent = 'No pages or posts match.';
+        list.appendChild(none);
+      }
+      found.forEach(function (d) {
+        var li = document.createElement('li');
+        var b = document.createElement('button');
+        b.type = 'button';
+        var t = document.createElement('span');
+        t.className = 'mi-r-title';
+        t.textContent = d.title;
+        var m = document.createElement('span');
+        m.className = 'mi-r-meta';
+        m.textContent = d.type + (d.draft ? ' (draft)' : '') + ' · ' + d.url;
+        b.appendChild(t);
+        b.appendChild(m);
+        b.addEventListener('click', function () { pick(d); });
+        li.appendChild(b);
+        list.appendChild(li);
+      });
+      return found;
+    }
+    input.addEventListener('input', show);
+    box.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') { e.preventDefault(); closeFind(row); btn.focus(); return; }
+      if (e.target === input && e.key === 'Enter') { // pick the first match; never submit the menu form
+        e.preventDefault();
+        var first = show()[0];
+        if (first) pick(first);
+      } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        var btns = Array.prototype.slice.call(list.querySelectorAll('button'));
+        var at = btns.indexOf(document.activeElement);
+        e.preventDefault();
+        if (e.key === 'ArrowDown') (btns[at + 1] || btns[0] || input).focus();
+        else (at > 0 ? btns[at - 1] : input).focus();
+      }
+    });
+    show();
+    input.focus();
+  }
 
   // ---- search & sharing: length counters and a live search-result preview ----
   // Guidance only: nothing here blocks a save. Ranges match internal/seo (title 15-60, description 70-160).

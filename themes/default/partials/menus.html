@@ -32,8 +32,8 @@
         <div class="menu-mega-grid mega-cols-{{len $it.Columns}}">
           {{range $it.Columns}}
           <div class="menu-col">
-            {{with .Heading}}<p class="menu-col-heading">{{.}}</p>{{end}}
-            <ul>{{range .Links}}<li>{{template "navlink" .}}{{with .Description}}<span class="menu-desc">{{.}}</span>{{end}}</li>{{end}}</ul>
+            {{if .Heading}}{{if .URL}}<p class="menu-col-heading"><a href="{{safeurl .URL}}"{{if .Active}} aria-current="page"{{end}}>{{.Heading}}</a></p>{{else}}<p class="menu-col-heading">{{.Heading}}</p>{{end}}{{end}}
+            {{if .Links}}<ul>{{range .Links}}<li>{{template "navlink" .}}{{with .Description}}<span class="menu-desc">{{.}}</span>{{end}}</li>{{end}}</ul>{{end}}
           </div>
           {{end}}
         </div>

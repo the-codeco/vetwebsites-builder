@@ -1,6 +1,7 @@
 package menus
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -128,7 +129,7 @@ func TestValidateMega(t *testing.T) {
 	for i := range cols {
 		cols[i] = Column{Heading: "H", Links: []Link{link("x")}}
 	}
-	if _, err := Validate(main_, []Item{{Kind: KindMega, Label: "Wide", Columns: cols}}); err == nil || !strings.Contains(err.Error(), "at most 4 columns") {
+	if _, err := Validate(main_, []Item{{Kind: KindMega, Label: "Wide", Columns: cols}}); err == nil || !strings.Contains(err.Error(), fmt.Sprintf("at most %d columns", MaxColumns)) {
 		t.Errorf("too many columns: %v", err)
 	}
 	many := make([]Link, MaxColumnLinks+1)
@@ -226,5 +227,30 @@ func TestVisible(t *testing.T) {
 	// the saved data is untouched: hiding is reversible
 	if len(in[2].Children) != 2 || len(in[5].Columns) != 2 || len(in[5].Columns[0].Links) != 2 || reflect.ValueOf(in).Pointer() != snapshot {
 		t.Error("Visible modified its input")
+	}
+}
+
+func TestMegaHeadingLinks(t *testing.T) {
+	out, err := Validate(main_, []Item{{Kind: KindMega, Label: "Services", Columns: []Column{
+		{Heading: " Surgery ", URL: " /surgery "}, // a linked title alone is a column
+		{Heading: "Care", Links: []Link{{Label: "Dental", URL: "/dental"}}},
+	}}})
+	if err != nil || len(out[0].Columns) != 2 || out[0].Columns[0].Heading != "Surgery" || out[0].Columns[0].URL != "/surgery" {
+		t.Fatalf("%+v %v", out, err)
+	}
+	for name, col := range map[string]Column{
+		"address without heading": {URL: "/x", Links: []Link{{Label: "a", URL: "/a"}}},
+		"unsafe address":          {Heading: "H", URL: "javascript:alert(1)"},
+	} {
+		if _, err := Validate(main_, []Item{{Kind: KindMega, Label: "M", Columns: []Column{col}}}); err == nil {
+			t.Errorf("%s accepted", name)
+		}
+	}
+	vis := Visible([]Item{{Kind: KindMega, Label: "M", Columns: []Column{
+		{Heading: "Linked", URL: "/l", Links: []Link{{Label: "h", URL: "/h", Hidden: true}}},
+		{Heading: "Plain", Links: []Link{{Label: "h", URL: "/h", Hidden: true}}},
+	}}})
+	if len(vis) != 1 || len(vis[0].Columns) != 1 || vis[0].Columns[0].Heading != "Linked" {
+		t.Errorf("visible: %+v", vis)
 	}
 }

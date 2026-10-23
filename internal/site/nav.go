@@ -27,7 +27,8 @@ func navSection(m menus.Menu, path string) themes.NavSection {
 			}
 		case menus.KindMega:
 			for _, c := range it.Columns {
-				col := themes.NavColumn{Heading: c.Heading}
+				col := themes.NavColumn{Heading: c.Heading, URL: c.URL, Active: c.URL != "" && c.URL == path}
+				ni.Within = ni.Within || col.Active
 				for _, l := range c.Links {
 					nl := navLink(l, path)
 					ni.Within = ni.Within || nl.Active
