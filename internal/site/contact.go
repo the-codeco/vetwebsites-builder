@@ -52,38 +52,50 @@ func (s *Service) contactSubmit(w http.ResponseWriter, r *http.Request) {
 	}
 	done := from + "?sent=" + strconv.FormatInt(blockID, 10) + "#contact-" + strconv.FormatInt(blockID, 10)
 
-	// A real visitor never sees the "website" field. Pretend it worked so bots don't adapt.
-	if r.PostFormValue("website") != "" {
-		http.Redirect(w, r, done, http.StatusSeeOther)
+	if res := s.acceptContact(r); res.Problem != "" {
+		s.formProblem(w, r, res.Status, res.Problem, from)
 		return
 	}
+	http.Redirect(w, r, done, http.StatusSeeOther)
+}
+
+// submitResult is how a form submission ended: Problem is a message for the visitor (with the HTTP status to
+// send it under), empty on success. Silent marks a bot's submission, which is answered as if it had worked.
+type submitResult struct {
+	Status  int
+	Problem string
+	Silent  bool
+}
+
+// acceptContact checks and stores a contact message from an already parsed form, and emails a copy.
+func (s *Service) acceptContact(r *http.Request) submitResult {
+	// A real visitor never sees the "website" field. Pretend it worked so bots don't adapt.
+	if r.PostFormValue("website") != "" {
+		return submitResult{Silent: true}
+	}
 	if !s.Contact.CheckToken(r.PostFormValue("t"), time.Now()) {
-		s.formProblem(w, r, http.StatusBadRequest, "This form has expired or was sent too quickly. Please go back, reload the page and try again.", from)
-		return
+		return submitResult{http.StatusBadRequest, "This form has expired or was sent too quickly. Please go back, reload the page and try again.", false}
 	}
 	in, problem := contact.Validate(contact.Input{
 		Name: r.PostFormValue("name"), Email: r.PostFormValue("email"),
 		Subject: r.PostFormValue("subject"), Body: r.PostFormValue("message"),
 	})
 	if problem != "" {
-		s.formProblem(w, r, http.StatusBadRequest, problem, from)
-		return
+		return submitResult{http.StatusBadRequest, problem, false}
 	}
 	if !s.Contact.Allow(s.Contact.ClientIP(r)) {
-		s.formProblem(w, r, http.StatusTooManyRequests, "Too many messages have been sent from your connection. Please try again later.", from)
-		return
+		return submitResult{http.StatusTooManyRequests, "Too many messages have been sent from your connection. Please try again later.", false}
 	}
 	id, err := s.Contact.Save(r.Context(), in)
 	if err != nil {
 		log.Printf("contact: %v", err)
-		s.formProblem(w, r, http.StatusInternalServerError, "Sorry, your message couldn't be saved. Please try again in a moment.", from)
-		return
+		return submitResult{http.StatusInternalServerError, "Sorry, your message couldn't be saved. Please try again in a moment.", false}
 	}
 	st, err := s.settings(r.Context())
 	if err == nil && s.Contact.Mail.Configured() {
 		go s.emailCopy(st.Title, baseURL(r, st)+"/admin/messages/"+strconv.FormatInt(id, 10), in)
 	}
-	http.Redirect(w, r, done, http.StatusSeeOther)
+	return submitResult{}
 }
 
 // emailCopy sends the notification. It runs after the visitor has been answered, and a

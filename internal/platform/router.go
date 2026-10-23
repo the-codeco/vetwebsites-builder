@@ -37,6 +37,7 @@ func (p *Platform) routes() http.Handler {
 		w.Write([]byte("ok"))
 	})
 	top.HandleFunc("GET /{$}", p.landing)
+	top.HandleFunc(FormsBase+"{token}/{rest...}", p.remoteForms) // the published copies' forms (public, cross-origin)
 
 	// a website's editor, its media (the editor shows pictures from /media/), and its live preview
 	pass := func(w http.ResponseWriter, r *http.Request, rt *Runtime) { rt.App.Handler.ServeHTTP(w, r) }

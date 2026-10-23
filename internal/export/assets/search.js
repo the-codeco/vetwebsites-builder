@@ -1,12 +1,19 @@
-// Search for a static copy of the site. The words of every page and post are in search-index.json (built when the site was
-// published); this finds them in the visitor's own browser, so no server is involved. The address carries the question
-// (search/?q=...), exactly as on the live site.
+// Search for a published copy of the website. The question is sent to the builder (the address in the search form's
+// data-wb-search), which searches the website's own database the way the live site does. If the builder can't be
+// reached, or none is set up, the words of every page and post in search-index.json (written when the site was built)
+// are searched in the visitor's own browser instead. The address carries the question (search/?q=...), exactly as on
+// the live site.
 (function () {
   'use strict';
   var form = document.querySelector('.search-form');
   if (!form) return;
   var script = document.currentScript;
-  var indexURL = script && script.src ? script.src.replace(/search\.js(\?.*)?$/, 'search-index.json') : '/search-index.json';
+  var base = '', indexURL = '/search-index.json';
+  if (script && script.src) {
+    base = new URL(script.src).pathname.replace(/\/search\.js$/, '');
+    indexURL = script.src.replace(/search\.js(\?.*)?$/, 'search-index.json');
+  }
+  var remote = form.getAttribute('data-wb-search');
   var PER_PAGE = 10;
 
   var params = new URLSearchParams(location.search);
@@ -29,9 +36,84 @@
 
   if (!q) { note('Type a word or phrase above to search pages and posts.'); return; }
 
+  // show one page of results. Each hit is {path, title, kind, parts: [{t: text, m: true when matched}]}; the text is
+  // only ever put on the page as text, never as markup
+  function show(hits, total, pages) {
+    box.textContent = '';
+    if (!total) { note('No results for “' + q + '”'); return; }
+    page = Math.min(page, pages);
+    note(total + (total === 1 ? ' result for “' : ' results for “') + q + '”');
+    var ol = document.createElement('ol');
+    ol.className = 'search-results';
+    hits.forEach(function (h) {
+      var li = document.createElement('li');
+      var a = document.createElement('a');
+      a.className = 'search-title';
+      a.href = h.path;
+      a.textContent = h.title;
+      var kind = document.createElement('span');
+      kind.className = 'search-kind';
+      kind.textContent = h.kind === 'post' ? 'Post' : 'Page';
+      var url = document.createElement('p');
+      url.className = 'search-url';
+      url.textContent = h.path;
+      var snip = document.createElement('p');
+      snip.className = 'search-snippet';
+      (h.parts || []).forEach(function (part) {
+        if (part.m) {
+          var m = document.createElement('mark');
+          m.textContent = part.t;
+          snip.appendChild(m);
+        } else {
+          snip.appendChild(document.createTextNode(part.t));
+        }
+      });
+      li.appendChild(a); li.appendChild(document.createTextNode(' ')); li.appendChild(kind); li.appendChild(url); li.appendChild(snip);
+      ol.appendChild(li);
+    });
+    box.appendChild(ol);
+    if (pages > 1) {
+      var nav = document.createElement('nav');
+      nav.className = 'pager';
+      nav.setAttribute('aria-label', 'Search pages');
+      var link = function (label, p, rel) {
+        var a = document.createElement('a');
+        var qs = new URLSearchParams({ q: q });
+        if (p > 1) qs.set('page', String(p));
+        a.href = location.pathname + '?' + qs.toString();
+        a.textContent = label;
+        a.rel = rel;
+        return a;
+      };
+      if (page > 1) nav.appendChild(link('← Previous', page - 1, 'prev'));
+      var span = document.createElement('span');
+      span.textContent = 'Page ' + page + ' of ' + pages;
+      nav.appendChild(span);
+      if (page < pages) nav.appendChild(link('Next →', page + 1, 'next'));
+      box.appendChild(nav);
+    }
+  }
+
+  // --- on the builder ---
+  function searchOnBuilder() {
+    var qs = new URLSearchParams({ q: q });
+    if (page > 1) qs.set('page', String(page));
+    return fetch(remote + '?' + qs.toString(), { headers: { Accept: 'application/json' }, credentials: 'omit' })
+      .then(function (r) {
+        if (r.status === 429) { box.textContent = ''; note('You’ve searched a lot in a short time. Please wait a minute and try again.'); return; }
+        if (!r.ok) throw new Error('search');
+        return r.json().then(function (res) {
+          page = res.page || page;
+          show((res.items || []).map(function (it) {
+            return { path: base + it.path, title: it.title, kind: it.kind, parts: it.snippet };
+          }), res.total || 0, res.pages || 1);
+        });
+      });
+  }
+
+  // --- in the browser, from the index file ---
   function words(s) { return (s.toLowerCase().match(/[\p{L}\p{N}]+/gu) || []); }
   var terms = words(q);
-  if (!terms.length) { note('No results for “' + q + '”'); return; }
 
   function snippet(text) {
     var lower = text.toLowerCase(), at = -1, i;
@@ -41,9 +123,8 @@
     return (start > 0 ? '…' : '') + text.slice(start, end) + (end < text.length ? '…' : '');
   }
 
-  // put <mark> around the matched words without ever treating the text as markup
-  function highlight(el, text) {
-    var lower = text.toLowerCase(), pos = 0;
+  function parts(text) {
+    var lower = text.toLowerCase(), pos = 0, out = [];
     while (pos < text.length) {
       var next = -1, len = 0;
       terms.forEach(function (t) {
@@ -51,76 +132,42 @@
         if (i >= 0 && (next < 0 || i < next)) { next = i; len = t.length; }
       });
       if (next < 0) break;
-      el.appendChild(document.createTextNode(text.slice(pos, next)));
-      var m = document.createElement('mark');
-      m.textContent = text.slice(next, next + len);
-      el.appendChild(m);
+      out.push({ t: text.slice(pos, next) });
+      out.push({ t: text.slice(next, next + len), m: true });
       pos = next + len;
     }
-    el.appendChild(document.createTextNode(text.slice(pos)));
+    out.push({ t: text.slice(pos) });
+    return out;
   }
 
-  fetch(indexURL, { credentials: 'omit' }).then(function (r) {
-    if (!r.ok) throw new Error('index');
-    return r.json();
-  }).then(function (index) {
-    var hits = [];
-    index.forEach(function (e) {
-      var title = (e.t || '').toLowerCase(), text = (e.x || '').toLowerCase(), score = 0;
-      for (var i = 0; i < terms.length; i++) {
-        var inTitle = title.indexOf(terms[i]) >= 0, inText = text.indexOf(terms[i]) >= 0;
-        if (!inTitle && !inText) return;
-        score += (inTitle ? 5 : 0) + (inText ? 1 : 0);
-      }
-      hits.push({ e: e, score: score });
+  function searchInBrowser() {
+    if (!terms.length) { show([], 0, 1); return Promise.resolve(); }
+    return fetch(indexURL, { credentials: 'omit' }).then(function (r) {
+      if (!r.ok) throw new Error('index');
+      return r.json();
+    }).then(function (index) {
+      var hits = [];
+      index.forEach(function (e) {
+        var title = (e.t || '').toLowerCase(), text = (e.x || '').toLowerCase(), score = 0;
+        for (var i = 0; i < terms.length; i++) {
+          var inTitle = title.indexOf(terms[i]) >= 0, inText = text.indexOf(terms[i]) >= 0;
+          if (!inTitle && !inText) return;
+          score += (inTitle ? 5 : 0) + (inText ? 1 : 0);
+        }
+        hits.push({ e: e, score: score });
+      });
+      hits.sort(function (a, b) { return b.score - a.score; });
+      var pages = Math.max(Math.ceil(hits.length / PER_PAGE), 1);
+      page = Math.min(page, pages);
+      show(hits.slice((page - 1) * PER_PAGE, page * PER_PAGE).map(function (h) {
+        return { path: h.e.p, title: h.e.t, kind: h.e.k, parts: parts(snippet(h.e.x || '')) };
+      }), hits.length, pages);
     });
-    hits.sort(function (a, b) { return b.score - a.score; });
-    if (!hits.length) { note('No results for “' + q + '”'); return; }
-    var pages = Math.ceil(hits.length / PER_PAGE);
-    page = Math.min(page, pages);
-    note(hits.length + (hits.length === 1 ? ' result for “' : ' results for “') + q + '”');
-    var ol = document.createElement('ol');
-    ol.className = 'search-results';
-    hits.slice((page - 1) * PER_PAGE, page * PER_PAGE).forEach(function (h) {
-      var li = document.createElement('li');
-      var a = document.createElement('a');
-      a.className = 'search-title';
-      a.href = h.e.p;
-      a.textContent = h.e.t;
-      var kind = document.createElement('span');
-      kind.className = 'search-kind';
-      kind.textContent = h.e.k === 'post' ? 'Post' : 'Page';
-      var url = document.createElement('p');
-      url.className = 'search-url';
-      url.textContent = h.e.p;
-      var snip = document.createElement('p');
-      snip.className = 'search-snippet';
-      highlight(snip, snippet(h.e.x || ''));
-      li.appendChild(a); li.appendChild(document.createTextNode(' ')); li.appendChild(kind); li.appendChild(url); li.appendChild(snip);
-      ol.appendChild(li);
-    });
-    box.appendChild(ol);
-    if (pages > 1) {
-      var nav = document.createElement('nav');
-      nav.className = 'pager';
-      nav.setAttribute('aria-label', 'Search pages');
-      function link(label, p, rel) {
-        var a = document.createElement('a');
-        var qs = new URLSearchParams({ q: q });
-        if (p > 1) qs.set('page', String(p));
-        a.href = location.pathname + '?' + qs.toString();
-        a.textContent = label;
-        a.rel = rel;
-        return a;
-      }
-      if (page > 1) nav.appendChild(link('← Previous', page - 1, 'prev'));
-      var span = document.createElement('span');
-      span.textContent = 'Page ' + page + ' of ' + pages;
-      nav.appendChild(span);
-      if (page < pages) nav.appendChild(link('Next →', page + 1, 'next'));
-      box.appendChild(nav);
-    }
-  }).catch(function () {
+  }
+
+  var done = remote ? searchOnBuilder().catch(searchInBrowser) : searchInBrowser();
+  done.catch(function () {
+    box.textContent = '';
     note('Search is not available right now.');
   });
 })();

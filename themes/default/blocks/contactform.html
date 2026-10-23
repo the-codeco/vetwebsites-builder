@@ -4,7 +4,7 @@
 {{with .Extra}}{{if .Sent}}
 <p class="form-notice" id="contact-{{$.ID}}" role="status">{{or $.Props.success "Thanks! Your message has been sent."}}</p>
 {{else if .Token}}
-<form class="contact-form" id="contact-{{$.ID}}" method="post" action="/contact">
+<form class="contact-form" id="contact-{{$.ID}}" method="post" action="/contact" data-success="{{or $.Props.success "Thanks! Your message has been sent."}}">
   <input type="hidden" name="t" value="{{.Token}}">
   <input type="hidden" name="from" value="{{.Path}}">
   <input type="hidden" name="block" value="{{$.ID}}">

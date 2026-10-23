@@ -56,6 +56,64 @@
     if (f && f.contentWindow) f.contentWindow.location.reload();
   });
 
+  // ---- page editor: show a block's edits in the preview while they are typed, before they are saved ----
+  // The form is sent to the server as a draft (nothing is saved); then the block's own piece of the preview is
+  // swapped for the freshly drawn one, so the rest of the preview, its scroll position and its menus stay as they are.
+  (function () {
+    var frame = document.getElementById('preview');
+    var csrf = document.querySelector('meta[name="csrf"]');
+    if (!frame || !csrf || !document.getElementById('blocks')) return;
+    var timers = {}, latest = {};
+
+    function formOf(el) {
+      var f = el && el.closest ? el.closest('details.blk form') : null;
+      return f && /^\/admin\/blocks\/\d+$/.test(f.getAttribute('hx-post') || '') ? f : null;
+    }
+
+    function refresh(id) {
+      var win = frame.contentWindow, doc = frame.contentDocument;
+      if (!win || !doc) return;
+      fetch(win.location.href, { credentials: 'same-origin', cache: 'no-store' })
+        .then(function (r) { return r.ok ? r.text() : Promise.reject(); })
+        .then(function (html) {
+          var fresh = new DOMParser().parseFromString(html, 'text/html').getElementById('block-' + id);
+          var old = doc.getElementById('block-' + id);
+          if (fresh && old) old.replaceWith(doc.importNode(fresh, true));
+          else win.location.reload(); // not on this page (or not drawn yet): start the preview again
+        })
+        .catch(function () {});
+    }
+
+    function send(form, id) {
+      var n = latest[id] = (latest[id] || 0) + 1;
+      fetch('/admin/blocks/' + id + '/draft', {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'X-CSRF-Token': csrf.content },
+        body: new URLSearchParams(new FormData(form))
+      }).then(function (r) { if (r.ok && n === latest[id]) refresh(id); }).catch(function () {});
+    }
+
+    function schedule(form) {
+      var id = form.getAttribute('hx-post').split('/').pop();
+      clearTimeout(timers[id]);
+      timers[id] = setTimeout(function () { send(form, id); }, 300);
+    }
+
+    ['input', 'change'].forEach(function (type) {
+      document.addEventListener(type, function (e) {
+        var form = formOf(e.target);
+        if (form) schedule(form);
+      });
+    });
+    // adding, removing or moving an item of a list changes the form without typing in it
+    document.addEventListener('click', function (e) {
+      var b = e.target.closest && e.target.closest('[data-rep]');
+      var form = b && formOf(b);
+      if (form) schedule(form);
+    });
+  })();
+
+
   // Keep block cards open across list swaps (move/delete/add replace the whole list).
   var open = [];
   document.addEventListener('htmx:beforeRequest', function () {
@@ -164,6 +222,7 @@
     var form = target.closest('form');
     var alt = form && form.querySelector('input[name="p.alt"]');
     if (alt && !alt.value) alt.value = item.getAttribute('data-media-alt') || '';
+    target.dispatchEvent(new Event('input', { bubbles: true })); // the live preview listens for typing
     dialog.close();
   }
 

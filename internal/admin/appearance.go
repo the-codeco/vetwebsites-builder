@@ -276,6 +276,7 @@ func (h *Handler) appearanceTokens(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	active := h.Engine.Get(st.ActiveTheme)
+	r.ParseForm() // the editor's forms arrive already parsed by the CSRF check; a request that carries its token in a header does not
 	tokens, problem := parseTokens(active, r.PostForm)
 	if problem == "" {
 		problem = h.unknownUploadedFont(r.Context(), active, tokens)
@@ -377,6 +378,7 @@ func (h *Handler) appearanceDark(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "this theme has no dark palette", http.StatusBadRequest)
 		return
 	}
+	r.ParseForm()
 	dark, problem := parseDark(active, r.PostForm)
 	if problem != "" {
 		h.renderAppearance(w, r, 400, "", problem, r.PostForm)

@@ -67,43 +67,44 @@ func (s *Service) subscribeSubmit(w http.ResponseWriter, r *http.Request) {
 	id := strconv.FormatInt(blockID, 10)
 	done := from + "?subscribed=" + id + "#newsletter-" + id
 
+	if res := s.acceptSubscribe(r); res.Problem != "" {
+		s.infoPage(w, r, res.Status, "Not subscribed", "<p>"+html.EscapeString(res.Problem)+`</p><p><a href="`+html.EscapeString(from)+`">← Back</a></p>`)
+		return
+	}
+	// the same answer whether or not the address was already on the list
+	http.Redirect(w, r, done, http.StatusSeeOther)
+}
+
+// acceptSubscribe checks a signup from an already parsed form and stores it, emailing the confirmation when one is needed.
+func (s *Service) acceptSubscribe(r *http.Request) submitResult {
 	// A real visitor never sees the "website" field. Pretend it worked so bots don't adapt.
 	if r.PostFormValue("website") != "" {
-		http.Redirect(w, r, done, http.StatusSeeOther)
-		return
-	}
-	problem := func(status int, msg string) {
-		s.infoPage(w, r, status, "Not subscribed", "<p>"+html.EscapeString(msg)+`</p><p><a href="`+html.EscapeString(from)+`">← Back</a></p>`)
+		return submitResult{Silent: true}
 	}
 	if !s.Newsletter.CheckToken(r.PostFormValue("t"), time.Now()) {
-		problem(http.StatusBadRequest, "This form has expired or was sent too quickly. Please go back, reload the page and try again.")
-		return
+		return submitResult{http.StatusBadRequest, "This form has expired or was sent too quickly. Please go back, reload the page and try again.", false}
 	}
 	email, ok := newsletter.Normalize(r.PostFormValue("email"))
 	if !ok {
-		problem(http.StatusBadRequest, "Please enter a valid email address.")
-		return
+		return submitResult{http.StatusBadRequest, "Please enter a valid email address.", false}
 	}
 	if !s.Newsletter.Allow(s.Newsletter.ClientIP(r)) {
-		problem(http.StatusTooManyRequests, "Too many signups have been sent from your connection. Please try again later.")
-		return
+		return submitResult{http.StatusTooManyRequests, "Too many signups have been sent from your connection. Please try again later.", false}
 	}
 	st, err := s.settings(r.Context())
 	if err != nil {
-		serverError(w, err)
-		return
+		log.Printf("newsletter: %v", err)
+		return submitResult{http.StatusInternalServerError, "Sorry, we couldn't save your signup. Please try again in a moment.", false}
 	}
 	token, err := s.Newsletter.Subscribe(r.Context(), email, s.mustConfirm(st.Domain))
 	if err != nil {
 		log.Printf("newsletter: %v", err)
-		problem(http.StatusInternalServerError, "Sorry, we couldn't save your signup. Please try again in a moment.")
-		return
+		return submitResult{http.StatusInternalServerError, "Sorry, we couldn't save your signup. Please try again in a moment.", false}
 	}
 	if token != "" {
 		go s.emailConfirmation(st.Title, baseURL(r, st), token, email)
 	}
-	// the same answer whether or not the address was already on the list
-	http.Redirect(w, r, done, http.StatusSeeOther)
+	return submitResult{}
 }
 
 // emailConfirmation runs after the visitor has been answered; a failure only goes to the log.

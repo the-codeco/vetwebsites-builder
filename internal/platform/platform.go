@@ -66,7 +66,10 @@ func New(ctx context.Context, cfg config.Config, pool *pgxpool.Pool) (*Platform,
 		return nil, err
 	}
 	p.startPublisher()
-	p.Handler = secure.Middleware(cfg.TrustProxy)(http.NewCrossOriginProtection().Handler(p.loadSession(p.routes())))
+	// the published copies' forms are sent from another origin by design; remoteForms checks the origin itself
+	cop := http.NewCrossOriginProtection()
+	cop.AddInsecureBypassPattern(FormsBase)
+	p.Handler = secure.Middleware(cfg.TrustProxy)(cop.Handler(p.loadSession(p.routes())))
 	return p, nil
 }
 

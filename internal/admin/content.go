@@ -32,6 +32,7 @@ func (h *Handler) registerContent(mux *http.ServeMux, authed func(http.HandlerFu
 	// every change to a page's blocks first saves a restore point (see history)
 	mux.Handle("POST /admin/pages/{id}/blocks", authed(h.history(h.blockAdd, false)))
 	mux.Handle("POST /admin/blocks/{id}", authed(h.history(h.blockSave, true)))
+	mux.Handle("POST /admin/blocks/{id}/draft", authed(h.blockDraft))
 	mux.Handle("POST /admin/blocks/{id}/move", authed(h.history(h.blockMove, true)))
 	mux.Handle("POST /admin/blocks/{id}/children", authed(h.history(h.blockAddChild, true)))
 	mux.Handle("POST /admin/blocks/{id}/slot", authed(h.history(h.blockSlot, true)))
@@ -359,6 +360,9 @@ func (h *Handler) pageEdit(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
+	if h.Drafts != nil { // opening the editor starts from what is saved: forget edits that were typed but never saved
+		h.Drafts.ClearUser(auth.CurrentIdentity(r).UserID)
+	}
 	notice := ""
 	switch {
 	case r.URL.Query().Get("saved") == "1":
@@ -564,12 +568,48 @@ func (h *Handler) blockSave(w http.ResponseWriter, r *http.Request) {
 		serverError(w, err)
 		return
 	}
+	if h.Drafts != nil {
+		h.Drafts.Clear(auth.CurrentIdentity(r).UserID, id)
+	}
 	if b.Type == blocks.LayoutType { // its columns may have changed, and blocks may have moved between them
 		h.respondList(w, r, b.PageID, b.ID)
 		return
 	}
 	h.previewRefresh(w)
 	h.partial(w, 200, "blockcard", newBlockView(b, b.ID, "Saved", library{}))
+}
+
+// blockDraft takes a block's form as it is being typed, without saving it, so the live preview can show it. The draft
+// is the person's own: only their preview shows it, and it goes when they save the block or open the editor again.
+func (h *Handler) blockDraft(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathID(r)
+	if !ok || h.Drafts == nil {
+		http.NotFound(w, r)
+		return
+	}
+	b, err := h.Content.Block(r.Context(), id)
+	if errors.Is(err, content.ErrNotFound) {
+		http.NotFound(w, r)
+		return
+	}
+	if err != nil {
+		serverError(w, err)
+		return
+	}
+	bt, known := blocks.Get(b.Type)
+	if !known || b.Type == blocks.ReusableType {
+		http.Error(w, "This block has no draft", http.StatusBadRequest)
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Bad form", http.StatusBadRequest)
+		return
+	}
+	props := bt.Clean(formValues(bt.Fields, "p.", r.PostForm))
+	style := blocks.CleanStyle(formValues(blocks.StyleFields(), "s.", r.PostForm))
+	h.Drafts.Set(auth.CurrentIdentity(r).UserID, id, props, style)
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // blockAddChild adds a block to one column of a layout. New blocks in a column start with no padding of their

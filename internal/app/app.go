@@ -16,6 +16,7 @@ import (
 	"webbuilder/internal/analytics"
 	"webbuilder/internal/auth"
 	"webbuilder/internal/backup"
+	"webbuilder/internal/blocks"
 	"webbuilder/internal/campaign"
 	"webbuilder/internal/config"
 	"webbuilder/internal/contact"
@@ -43,8 +44,9 @@ type App struct {
 	campaigns  *campaign.Service
 	backups    *backup.Service
 	content    *content.Store
+	site       *site.Service
 
-	backupKeep     int
+	backupKeep    int
 	backupPersonal bool
 	closers        []io.Closer
 }
@@ -138,7 +140,9 @@ func NewWith(ctx context.Context, cfg config.Config, pool *pgxpool.Pool, opt Opt
 	newsletterSvc := newsletter.New(pool, mail, authn.ClientIP)
 	campaignSvc := campaign.New(pool, mail)
 
+	drafts := blocks.NewDrafts() // unsaved block edits: the editor writes them, the live preview shows them
 	adminH, err := admin.New(admin.Deps{
+		Drafts: drafts,
 		Auth: authn, Content: contentStore, Media: mediaSvc, Engine: engine,
 		Domain: domainSvc, Checker: domain.NewChecker(), SetupToken: cfg.SetupToken,
 		Analytics: stats, Contact: contactSvc, Newsletter: newsletterSvc, Campaigns: campaignSvc,
@@ -161,6 +165,7 @@ func NewWith(ctx context.Context, cfg config.Config, pool *pgxpool.Pool, opt Opt
 	if err := contentStore.ReindexAllPages(ctx); err != nil {
 		return nil, err
 	}
+	siteSvc.Drafts = drafts
 	siteSvc.Contact = contactSvc
 	siteSvc.Search = search.New(pool, authn.ClientIP)
 	siteSvc.Newsletter = newsletterSvc
@@ -185,10 +190,13 @@ func NewWith(ctx context.Context, cfg config.Config, pool *pgxpool.Pool, opt Opt
 	internal := http.NewServeMux()
 	internal.HandleFunc("GET /tls-check", domainSvc.TLSCheck)
 
-	return &App{Handler: handler, Internal: internal, content: contentStore, auth: authStore, analytics: stats, newsletter: newsletterSvc, campaigns: campaignSvc,
+	return &App{Handler: handler, Internal: internal, site: siteSvc, content: contentStore, auth: authStore, analytics: stats, newsletter: newsletterSvc, campaigns: campaignSvc,
 		backups: backupSvc, backupKeep: cfg.BackupKeep, backupPersonal: cfg.BackupPersonal,
 		closers: []io.Closer{stats, mediaSvc, siteSvc, backupSvc}}, nil
 }
+
+// FormAPI serves the contact and newsletter forms of a published static copy of the site (see site.Service.FormAPI).
+func (a *App) FormAPI() http.Handler { return a.site.FormAPI() }
 
 // FlushAnalytics writes any page views still waiting in memory. They are normally saved every few
 // seconds; this is for tests and for anything that needs the numbers right now.

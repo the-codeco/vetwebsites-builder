@@ -50,6 +50,8 @@ type Service struct {
 	Contact *contact.Service
 	// Newsletter receives newsletter signups. Set by the app after New; nil disables them.
 	Newsletter *newsletter.Service
+	// Drafts are unsaved block edits, shown only to the person who typed them (the editor's live preview).
+	Drafts *blocks.Drafts
 	// Search answers the site's search box. Set by the app after New; nil disables it.
 	Search *search.Service
 }
@@ -342,7 +344,11 @@ func (s *Service) servePage(w http.ResponseWriter, r *http.Request, slug string)
 		}
 		return nil
 	}
-	for _, b := range page.Blocks {
+	shown := page.Blocks
+	if id := auth.CurrentIdentity(r); id != nil && s.Drafts != nil {
+		shown = s.Drafts.Apply(id.UserID, shown) // the editor's unsaved edits, for the person typing them only
+	}
+	for _, b := range shown {
 		html, err := theme.RenderBlockTree(b, extraFor)
 		if err != nil {
 			log.Printf("site: %v", err) // one broken block shouldn't take the page down

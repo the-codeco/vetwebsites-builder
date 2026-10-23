@@ -1,5 +1,5 @@
 .env
-media/
+/media/
 *.exe
 .env.*
 !.env.example

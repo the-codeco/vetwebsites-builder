@@ -8,7 +8,7 @@ blocks, write posts, upload images, restyle the whole site, and put it on your o
   follow your system, and keyboard-friendly controls. Editors only see what they may use.
 - **Pages from blocks** — hero, text, image, gallery, columns, button, latest posts, spacer, plus pricing tables, testimonials,
   FAQ accordions, tabs, video, maps and layouts that hold other blocks (below). Edit in a form
-  with a live preview; reorder, restyle each block (colours, padding, alignment, width).
+  with a live preview that updates as you type (before you save); reorder, restyle each block (colours, padding, alignment, width).
 - **Menus** — three sections: a top bar, the main navigation and a footer menu. Items can be links, simple
   dropdowns or **mega menus** (up to 4 columns of links with headings and short descriptions); each can open in
   a new tab or be hidden without deleting it. Any section can be **frozen** so it stays on screen while visitors

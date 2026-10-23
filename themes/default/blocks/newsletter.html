@@ -4,7 +4,7 @@
 {{with .Extra}}{{if .Sent}}
 <p class="form-notice" id="newsletter-{{$.ID}}" role="status">{{or $.Props.success "Thanks for subscribing!"}}{{if .Confirm}} Please check your inbox and confirm your address.{{end}}</p>
 {{else if .Token}}
-<form class="newsletter-form" id="newsletter-{{$.ID}}" method="post" action="/subscribe">
+<form class="newsletter-form" id="newsletter-{{$.ID}}" method="post" action="/subscribe" data-success="{{or $.Props.success "Thanks for subscribing!"}}">
   <input type="hidden" name="t" value="{{.Token}}">
   <input type="hidden" name="from" value="{{.Path}}">
   <input type="hidden" name="block" value="{{$.ID}}">

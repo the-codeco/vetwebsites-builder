@@ -31,6 +31,9 @@ import (
 	"webbuilder/internal/rewrite"
 )
 
+//go:embed assets/forms.js
+var formsJS []byte
+
 //go:embed assets/search.js
 var searchJS []byte
 
@@ -103,6 +106,9 @@ type builder struct {
 	warnings []string
 	csp      string // the site's own security policy, as its home page sent it
 	redirs   []Redirect
+
+	pageForms bool // the page being finished has a form wired to the builder
+	anyForms  bool // some page does, so forms.js is written
 }
 
 // Build exports the website into dir (which must be empty or not exist).
@@ -147,6 +153,11 @@ func Build(ctx context.Context, src Source, opt Options, dir string) (*Result, e
 	}
 	if err := b.searchFiles(ctx); err != nil {
 		return nil, err
+	}
+	if b.anyForms {
+		if err := b.writeFile("forms.js", formsJS); err != nil {
+			return nil, err
+		}
 	}
 	redirs, err := src.Redirects(ctx)
 	if err != nil {
@@ -406,20 +417,29 @@ func (b *builder) savePage(addr, pth string, body []byte) error {
 // page gets its script.
 func (b *builder) finishHTML(src []byte, searchPage bool) []byte {
 	urls := rewrite.URLs(b.mapURL)
+	b.pageForms = false
 	out := rewrite.Tags(src, func(tag string, attrs []xhtml.Attribute) ([]xhtml.Attribute, bool) {
 		attrs, changed := urls(tag, attrs)
 		attrs, wired := b.wireForms(tag, attrs)
 		return attrs, changed || wired
 	}, func(css []byte) []byte { return rewrite.CSSWith(css, b.mapURL) })
 	if searchPage {
-		tag := `<script src="` + b.base + `/search.js" defer></script>`
-		if i := bytes.LastIndex(out, []byte("</body>")); i >= 0 {
-			out = append(out[:i], append([]byte(tag+"\n"), out[i:]...)...)
-		} else {
-			out = append(out, []byte(tag)...)
-		}
+		out = addScript(out, b.base+"/search.js")
+	}
+	if b.pageForms {
+		out = addScript(out, b.base+"/forms.js")
+		b.anyForms = true
 	}
 	return out
+}
+
+// addScript puts a deferred script at the end of a page.
+func addScript(page []byte, src string) []byte {
+	tag := `<script src="` + src + `" defer></script>`
+	if i := bytes.LastIndex(page, []byte("</body>")); i >= 0 {
+		return append(page[:i], append([]byte(tag+"\n"), page[i:]...)...)
+	}
+	return append(page, []byte(tag)...)
 }
 
 // wireForms points the contact and newsletter forms at the builder server, which stores and sends what visitors submit.
@@ -460,10 +480,14 @@ func (b *builder) wireForms(tag string, attrs []xhtml.Attribute) ([]xhtml.Attrib
 			kind = "contact"
 		case "/subscribe":
 			kind = "subscribe"
+		case "/search":
+			// the search form still goes to the search page of the copy; the script there asks the builder
+			return append(attrs, xhtml.Attribute{Key: "data-wb-search", Val: strings.TrimRight(b.opt.BuilderURL, "/") + "/f/" + b.opt.SiteToken + "/search"}), true
 		default:
 			return attrs, false
 		}
 		attrs[i].Val = strings.TrimRight(b.opt.BuilderURL, "/") + "/f/" + b.opt.SiteToken + "/" + kind
+		b.pageForms = true
 		return append(attrs, xhtml.Attribute{Key: "data-wb-form", Val: kind}), true
 	}
 	return attrs, false

@@ -14,6 +14,7 @@ import (
 	"webbuilder/internal/analytics"
 	"webbuilder/internal/auth"
 	"webbuilder/internal/backup"
+	"webbuilder/internal/blocks"
 	"webbuilder/internal/campaign"
 	"webbuilder/internal/contact"
 	"webbuilder/internal/content"
@@ -50,6 +51,8 @@ type Deps struct {
 	// BackupKeep and BackupPersonal describe the scheduled backups, so the Backup screen can say what they are.
 	BackupKeep     int
 	BackupPersonal bool
+	// Drafts holds block edits that are typed but not saved, for the live preview (shared with the site, which shows them).
+	Drafts *blocks.Drafts
 	// Mail sends the password reset emails; with no mail settings, resets are made by an admin instead.
 	Mail mailer.Mailer
 	// MultiTenant says a platform runs this website and does the logging in: the identity arrives with each request,
