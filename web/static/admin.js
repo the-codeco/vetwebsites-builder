@@ -520,12 +520,17 @@
     } else if (kind === 'mega') {
       item.columns = Array.prototype.map.call(
         li.querySelectorAll(':scope > .mi-mega [data-sub="columns"] > [data-list] > .mi-col'), function (col) {
-          return {
-            heading: textOf(col, 'heading'),
-            url: textOf(col, 'url'),
-            links: Array.prototype.map.call(
-              col.querySelectorAll(':scope > [data-sub="links"] > [data-list] > .mi-link'), readLink)
-          };
+          var type = col.getAttribute('data-type') || 'links';
+          var sec = function (name) { var el = col.querySelector(':scope > .mi-sec [data-s="' + name + '"]'); return el ? el.value : ''; };
+          var out = { type: type, heading: textOf(col, 'heading'), url: textOf(col, 'url'), links: [] };
+          if (type === 'links') {
+            out.links = Array.prototype.map.call(col.querySelectorAll(':scope > [data-sub="links"] > [data-list] > .mi-link'), readLink);
+          } else if (type === 'image') {
+            out.image = sec('image'); out.alt = sec('alt'); out.caption = sec('caption');
+          } else if (type === 'text') {
+            out.text = sec('text');
+          }
+          return out;
         });
     }
     return item;
@@ -542,6 +547,9 @@
     var sel = e.target;
     if (sel.matches && sel.matches('.mi > .mi-fields select[data-f="kind"]')) {
       sel.closest('.mi').setAttribute('data-kind', sel.value);
+    }
+    if (sel.matches && sel.matches('.mi-col > .mi-fields select[data-f="type"]')) {
+      sel.closest('.mi-col').setAttribute('data-type', sel.value);
     }
   });
 

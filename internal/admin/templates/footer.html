@@ -53,6 +53,7 @@
     <iframe id="preview" src="{{.PreviewBase}}/#site-footer" title="Site preview"></iframe>
   </div>
 </div>
+{{template "pickerdialog"}}
 {{end}}
 
 {{/* one row: its layout controls, then its columns side by side */}}
@@ -109,8 +110,8 @@
   <div class="fb-body">
   {{if ne .Type "logo"}}<label>Heading <span class="muted">(optional)</span><input data-f="heading" value="{{.Heading}}" maxlength="60"></label>{{end}}
   {{if eq .Type "text"}}
-    <label>Text {{template "rtbar"}}<textarea data-f="text" rows="5" class="mono" maxlength="5000">{{.Text}}</textarea></label>
-    <span class="hint">Plain text (a blank line starts a new paragraph) or basic HTML. Anything unsafe is removed on save.</span>
+    <label>Text {{template "rtbar"}}<textarea data-f="text" rows="5" class="mono" maxlength="5000" data-richtext>{{.Text}}</textarea></label>
+    <span class="hint">Format with the buttons above (without JavaScript: plain text, or basic HTML). Anything unsafe is removed on save.</span>
   {{else if eq .Type "links"}}
     <label class="check"><input type="checkbox" data-f="inline"{{if .Inline}} checked{{end}}> <span>Show the links in a row instead of a list</span></label>
     <div class="mi-sub fb-links">

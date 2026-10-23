@@ -1,4 +1,4 @@
-/* ===================================================================
+/* ==========================================================================
    Admin styles. Design tokens first; light by default, dark when the system asks.
    No inline styles anywhere: the admin runs under a strict Content-Security-Policy.
    ========================================================================== */
@@ -356,6 +356,10 @@ ul.checks li span { font-size: .9rem; color: var(--muted); }
 .mi-panel { margin: 8px 0 0 12px; padding-left: 12px; border-left: 3px solid var(--line-strong); }
 .mi-panel .hint { margin: 0 0 6px; }
 .mi-cols { display: grid; gap: 8px; }
+.mi-sec { display: grid; gap: 6px; margin-top: 8px; }
+.mi-sec label { margin: 0; }
+.mi-col:not([data-type="image"]) > .mi-sec-image, .mi-col:not([data-type="text"]) > .mi-sec-text,
+.mi-col:not([data-type="links"]) > .mi-sec-links { display: none; }
 .mi[data-kind="link"] > .mi-panel { display: none; }
 .mi[data-kind="dropdown"] > .mi-mega, .mi[data-kind="mega"] > .mi-dropdown { display: none; }
 .mi:not([data-kind="link"]) > .mi-fields .mi-url, .mi:not([data-kind="link"]) > .mi-fields .chk-newtab,
@@ -509,7 +513,7 @@ fieldset.plainset input { margin-top: 4px; }
 .fb-add select { flex: 1 1 auto; min-width: 0; height: 30px; }
 .fb-add button { height: 30px; margin: 0; padding: 0 9px; white-space: nowrap; }
 .fb-look { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
-=======
+
 /* ==========================================================================
    Rich text editor (Tiptap): see web/static/admin.js
    ========================================================================== */

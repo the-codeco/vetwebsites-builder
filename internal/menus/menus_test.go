@@ -254,3 +254,45 @@ func TestMegaHeadingLinks(t *testing.T) {
 		t.Errorf("visible: %+v", vis)
 	}
 }
+
+func TestMegaSectionTypes(t *testing.T) {
+	link := func(n string) Link { return Link{Label: n, URL: "/" + n} }
+	out, err := Validate(main_, []Item{{Kind: KindMega, Label: "Services", Columns: []Column{
+		{Heading: "Old", Links: []Link{link("a")}}, // saved before types: a list of links
+		{Type: SectionImage, Heading: "Surgery", URL: "/surgery", Image: " /media/2026/10/a.jpg ", Alt: " A cat ", Caption: "Our theatre", Links: []Link{link("dropped")}},
+		{Type: SectionText, Heading: "Hours", Text: `Open <b>daily</b><script>alert(1)</script>`},
+		{Type: SectionImage, Image: "/b.jpg", URL: "/boarding"}, // no title: the picture is the link
+		{Type: SectionImage},           // empty: dropped
+		{Type: SectionText, Text: " "}, // empty: dropped
+	}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	cols := out[0].Columns
+	if len(cols) != 4 || cols[3].URL != "/boarding" || cols[0].Type != SectionLinks || len(cols[0].Links) != 1 {
+		t.Fatalf("%+v", cols)
+	}
+	if img := cols[1]; img.Type != SectionImage || img.Image != "/media/2026/10/a.jpg" || img.Alt != "A cat" || img.Caption != "Our theatre" || img.Links != nil {
+		t.Errorf("image: %+v", img)
+	}
+	if txt := cols[2]; txt.Type != SectionText || strings.Contains(txt.Text, "script") || !strings.Contains(txt.Text, "<b>daily</b>") {
+		t.Errorf("text: %+v", txt)
+	}
+	for name, c := range map[string]Column{
+		"image without a picture": {Type: SectionImage, Heading: "H"},
+		"unsafe picture":          {Type: SectionImage, Image: "javascript:alert(1)"},
+		"mailto picture":          {Type: SectionImage, Image: "mailto:a@b.c"},
+		"long caption":            {Type: SectionImage, Image: "/x.jpg", Caption: strings.Repeat("c", MaxCaption+1)},
+		"long text":               {Type: SectionText, Text: strings.Repeat("t", MaxSectionText+1)},
+		"unknown type":            {Type: "video", Heading: "H"},
+	} {
+		if _, err := Validate(main_, []Item{{Kind: KindMega, Label: "M", Columns: []Column{c}}}); err == nil {
+			t.Errorf("%s accepted", name)
+		}
+	}
+	// pictures and text have nothing to hide, so they always show
+	vis := Visible([]Item{{Kind: KindMega, Label: "M", Columns: []Column{{Type: SectionImage, Image: "/x.jpg"}, {Type: SectionText, Text: "<p>t</p>"}}}})
+	if len(vis) != 1 || len(vis[0].Columns) != 2 {
+		t.Errorf("visible: %+v", vis)
+	}
+}

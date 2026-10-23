@@ -31,9 +31,11 @@
       <div class="menu-panel menu-mega" id="menu-panel-{{$i}}">
         <div class="menu-mega-grid mega-cols-{{len $it.Columns}}">
           {{range $it.Columns}}
-          <div class="menu-col">
+          <div class="menu-col menu-col-{{.Type}}">
             {{if .Heading}}{{if .URL}}<p class="menu-col-heading"><a href="{{safeurl .URL}}"{{if .Active}} aria-current="page"{{end}}>{{.Heading}}</a></p>{{else}}<p class="menu-col-heading">{{.Heading}}</p>{{end}}{{end}}
-            {{if .Links}}<ul>{{range .Links}}<li>{{template "navlink" .}}{{with .Description}}<span class="menu-desc">{{.}}</span>{{end}}</li>{{end}}</ul>{{end}}
+            {{if eq .Type "image"}}<figure class="menu-figure">{{if .URL}}<a href="{{safeurl .URL}}"{{if .Heading}} tabindex="-1" aria-hidden="true"{{end}}>{{end}}<img src="{{.Image}}" {{srcset .Image "(min-width: 1100px) 300px, 100vw"}} alt="{{.Alt}}" loading="lazy">{{if .URL}}</a>{{end}}{{with .Caption}}<figcaption>{{.}}</figcaption>{{end}}</figure>
+            {{- else if eq .Type "text"}}{{with .Text}}<div class="prose menu-col-text">{{richtext .}}</div>{{end}}
+            {{- else if .Links}}<ul>{{range .Links}}<li>{{template "navlink" .}}{{with .Description}}<span class="menu-desc">{{.}}</span>{{end}}</li>{{end}}</ul>{{end}}
           </div>
           {{end}}
         </div>

@@ -106,11 +106,17 @@ type NavLink struct {
 	Button                  bool // drawn as a button (only top-level links can be)
 }
 
+// NavColumn is one section of a mega menu. Type is "links", "image" or "text".
 type NavColumn struct {
+	Type    string
 	Heading string
-	URL     string // the heading is a link when set
+	URL     string // the heading (and an image section's picture) links here when set
 	Active  bool   // that link is the current page
 	Links   []NavLink
+	Image   string // image sections
+	Alt     string
+	Caption string
+	Text    string // text sections: basic HTML, sanitised again when drawn
 }
 
 // NavItem is a top-level entry: Kind is "link", "dropdown" or "mega".

@@ -218,3 +218,48 @@ func TestMenuScriptAndThemes(t *testing.T) {
 		}
 	}
 }
+
+func TestMegaMenuImageAndTextSections(t *testing.T) {
+	e := newEnv(t)
+	admin := e.newAdmin("admin@example.com")
+	anon := e.client()
+
+	page := admin.get("/admin/menus").Body
+	for _, want := range []string{`<option value="image"`, `<option value="text"`, `data-s="image"`, `textarea data-s="text" rows="5" class="mono" maxlength="5000" data-richtext`, `id="media-picker"`} {
+		if !strings.Contains(page, want) {
+			t.Errorf("menus page lacks %s", want)
+		}
+	}
+	if body := admin.get("/admin/footer").Body; !strings.Contains(body, `data-richtext`) || !strings.Contains(body, `id="media-picker"`) {
+		t.Error("the footer's text widget uses the visual editor")
+	}
+
+	mega := `[{"kind":"mega","label":"Services","columns":[
+		{"type":"links","heading":"Care","links":[{"label":"Dental","url":"/dental"}]},
+		{"type":"image","heading":"Surgery","url":"/surgery","image":"/media/2026/10/a.jpg","alt":"Our theatre","caption":"Modern and calm"},
+		{"type":"image","image":"/media/2026/10/b.jpg","alt":"Kennels","url":"/boarding"},
+		{"type":"text","heading":"Emergencies","text":"<p>Call <strong>021 555 0101</strong> <a href=\"javascript:alert(1)\" onclick=\"x()\">now</a></p><script>alert(2)</script>"}]}]`
+	if r := saveMenu(admin, "main", mega, false); r.Status != 303 {
+		t.Fatalf("save: %d %s", r.Status, regexp.MustCompile(`(?s)role="alert">.*?<p>(.*?)</p>`).FindStringSubmatch(r.Body))
+	}
+	body := anon.get("/surgery").Body
+	for _, want := range []string{
+		`class="menu-mega-grid mega-cols-4"`, `menu-col menu-col-links`, `menu-col menu-col-image`, `menu-col menu-col-text`,
+		`<a href="/surgery" aria-current="page">Surgery</a>`, `<a href="/surgery" tabindex="-1" aria-hidden="true"><img src="/media/2026/10/a.jpg"`, `alt="Our theatre" loading="lazy">`,
+		`<figcaption>Modern and calm</figcaption>`,
+		`<a href="/boarding"><img src="/media/2026/10/b.jpg"`, // no title: the picture is the link
+		`<p class="menu-col-heading">Emergencies</p>`, `<strong>021 555 0101</strong>`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("mega menu lacks %s", want)
+		}
+	}
+	for _, not := range []string{"javascript:", "onclick", "<script>alert"} {
+		if strings.Contains(body, not) {
+			t.Errorf("mega menu shows %q", not)
+		}
+	}
+	if r := saveMenu(admin, "main", `[{"kind":"mega","label":"M","columns":[{"type":"image","heading":"No picture"}]}]`, false); r.Status != 400 {
+		t.Errorf("an image section without a picture: %d", r.Status)
+	}
+}
