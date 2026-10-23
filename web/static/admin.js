@@ -696,6 +696,8 @@
         .map(function (c) { return c.getAttribute('data-part'); });
     } else if (w.type === 'newsletter') {
       w.button = f('button'); w.success = f('success');
+    } else if (w.type === 'logo') {
+      w.logo = f('logo');
     }
     return w;
   }

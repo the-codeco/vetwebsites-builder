@@ -126,7 +126,11 @@
   {{else if eq .Type "social"}}
     <span class="hint">Shows the social links from Site details.</span>
   {{else if eq .Type "logo"}}
-    <span class="hint">Your logo from Appearance (or the site's title when there is none), linking to the home page.</span>
+    <label>Which logo <select data-f="logo">
+      <option value=""{{if ne .Logo "alternative"}} selected{{end}}>Main logo</option>
+      <option value="alternative"{{if eq .Logo "alternative"}} selected{{end}}>Alternative logo (for dark backgrounds)</option>
+    </select></label>
+    <span class="hint">Your logo from <a href="/admin/appearance">Appearance</a>, linking to the home page. Without an alternative logo the main one is used, and without either, the site's title.</span>
     <label>Tagline <span class="muted">(optional)</span><input data-f="text" value="{{.Text}}" maxlength="300"></label>
   {{else if eq .Type "newsletter"}}
     <label>Introduction <span class="muted">(optional)</span><input data-f="text" value="{{.Text}}" maxlength="300"></label>

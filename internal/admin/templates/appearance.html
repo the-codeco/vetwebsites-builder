@@ -23,6 +23,9 @@
         <label>Logo size
           <select name="logo_height">{{range .Data.LogoHeights}}<option value="{{.Key}}"{{if .Selected}} selected{{end}}>{{.Label}}</option>{{end}}</select></label>
         <label class="check"><input type="checkbox" name="hide_title"{{if .Data.Brand.HideTitle}} checked{{end}}> Show only the logo, not the site title beside it</label>
+        <label>Alternative logo <span class="muted">(optional)</span>
+          <span class="colorrow"><input type="text" name="alt_logo" value="{{.Data.Brand.AltLogo}}" maxlength="2000" placeholder="/media/logo-light.png or https://…"><button type="button" class="ghost" data-pick>Choose…</button></span></label>
+        <span class="hint">A second version of your logo for places where the main one doesn't show up well, such as a light logo on a dark <a href="/admin/footer">footer</a>. Pick it in the footer's Logo widget. It uses the same description and size as the main logo.</span>
         <label>Browser tab icon <span class="muted">(a small square picture)</span>
           <span class="colorrow"><input type="text" name="icon" value="{{.Data.Brand.Icon}}" maxlength="2000" placeholder="/media/icon.png"><button type="button" class="ghost" data-pick>Choose…</button></span></label>
         <button>Save</button>

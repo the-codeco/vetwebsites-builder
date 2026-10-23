@@ -417,7 +417,7 @@ func logoHeights(b content.Brand) []logoHeight {
 	return out
 }
 
-// appearanceBrand saves the logo and the browser-tab icon. Both must be pictures from the media library or an
+// appearanceBrand saves the logo, the alternative logo and the browser-tab icon. All must be pictures from the media library or an
 // https address; anything else is refused rather than quietly dropped, so the owner sees why nothing changed.
 func (h *Handler) appearanceBrand(w http.ResponseWriter, r *http.Request) {
 	b := content.Brand{
@@ -426,10 +426,14 @@ func (h *Handler) appearanceBrand(w http.ResponseWriter, r *http.Request) {
 		LogoHeight: r.PostFormValue("logo_height"),
 		HideTitle:  r.PostFormValue("hide_title") == "on",
 		Icon:       strings.TrimSpace(r.PostFormValue("icon")),
+		AltLogo:    strings.TrimSpace(r.PostFormValue("alt_logo")),
 	}
 	switch {
 	case b.Logo != "" && blocks.SafeImageURL(b.Logo) == "":
 		h.renderAppearance(w, r, 400, "", "The logo must be a picture from the media library (such as /media/logo.png) or an https:// address.", nil)
+		return
+	case b.AltLogo != "" && blocks.SafeImageURL(b.AltLogo) == "":
+		h.renderAppearance(w, r, 400, "", "The alternative logo must be a picture from the media library (such as /media/logo-light.png) or an https:// address.", nil)
 		return
 	case b.Icon != "" && blocks.SafeImageURL(b.Icon) == "":
 		h.renderAppearance(w, r, 400, "", "The tab icon must be a picture from the media library or an https:// address.", nil)

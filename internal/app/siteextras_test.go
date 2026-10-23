@@ -28,7 +28,7 @@ func TestLogoAndTabIcon(t *testing.T) {
 	for _, theme := range []string{"", "?theme=journal", "?theme=midnight"} {
 		body := admin.get("/" + theme).Body
 		for _, want := range []string{
-			`<a class="site-title site-brand" href="/"><img class="site-logo" src="/media/logo.png" alt="" height="64"><span>My Site</span></a>`,
+			`<a class="site-title site-brand" href="/"><img class="site-logo logo-lg" src="/media/logo.png" alt="" height="64"><span>My Site</span></a>`,
 			`<link rel="icon" href="/media/icon.png">`,
 		} {
 			if !strings.Contains(body, want) {

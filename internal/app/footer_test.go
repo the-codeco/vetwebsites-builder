@@ -242,3 +242,63 @@ func TestFooterStoredByHandIsStillCleanedWhenShown(t *testing.T) {
 		t.Error("the clean parts are shown")
 	}
 }
+
+func TestFooterAlternativeLogo(t *testing.T) {
+	e := newEnv(t)
+	admin := e.newAdmin("admin@example.com")
+	anon := e.client()
+
+	if body := admin.get("/admin/appearance").Body; !strings.Contains(body, `name="alt_logo"`) {
+		t.Error("Appearance offers an alternative logo")
+	}
+	if body := admin.get("/admin/footer").Body; !strings.Contains(body, `<option value="alternative"`) {
+		t.Error("the logo widget offers the alternative logo")
+	}
+	if r := admin.post("/admin/appearance/brand", url.Values{"logo": {"/media/logo.png"}, "alt_logo": {"javascript:alert(1)"}}); r.Status != 400 {
+		t.Errorf("an unsafe alternative logo: %d", r.Status)
+	}
+	two := `{"rows":[{"columns":[{"widgets":[{"type":"logo","logo":"alternative"}]},{"widgets":[{"type":"logo"}]}]}]}`
+	saveFooter(admin, two)
+
+	// no logos yet: both show the title
+	if body := anon.get("/").Body; strings.Count(body, `<span class="footer-logo-title">My Site</span>`) != 2 {
+		t.Error("without logos the widgets show the site title")
+	}
+	// only the main logo: the alternative widget falls back to it
+	admin.post("/admin/appearance/brand", url.Values{"logo": {"/media/logo.png"}, "logo_alt": {"Linden Vets"}})
+	if body := anon.get("/").Body; strings.Count(body, `<a class="footer-logo" href="/"><img class="logo-md" src="/media/logo.png" alt="Linden Vets"`) != 2 {
+		t.Error("without an alternative logo the main one is used")
+	}
+	// both: each widget shows the one it asked for, and the header keeps the main logo
+	if r := admin.post("/admin/appearance/brand", url.Values{"logo": {"/media/logo.png"}, "logo_alt": {"Linden Vets"}, "alt_logo": {"/media/logo-light.png"}}); r.Status != 303 {
+		t.Fatalf("save brand: %d", r.Status)
+	}
+	if !strings.Contains(admin.get("/admin/appearance").Body, `value="/media/logo-light.png"`) {
+		t.Error("Appearance shows the saved alternative logo")
+	}
+	for _, theme := range []string{"", "?theme=journal", "?theme=midnight"} {
+		body := anon.get("/" + theme).Body
+		if !strings.Contains(body, `<a class="footer-logo" href="/"><img class="logo-md" src="/media/logo-light.png" alt="Linden Vets"`) || !strings.Contains(body, `<a class="footer-logo" href="/"><img class="logo-md" src="/media/logo.png"`) {
+			t.Errorf("theme %q: each footer logo widget shows its own logo", theme)
+		}
+		if !strings.Contains(body, `class="site-logo logo-md" src="/media/logo.png"`) || strings.Contains(body, `src="/media/logo-light.png" alt="" height`) {
+			t.Errorf("theme %q: the header keeps the main logo", theme)
+		}
+	}
+	// the chosen logo size applies to the header and to both footer logos
+	admin.post("/admin/appearance/brand", url.Values{"logo": {"/media/logo.png"}, "logo_alt": {"Linden Vets"}, "alt_logo": {"/media/logo-light.png"}, "logo_height": {"sm"}})
+	if body := anon.get("/").Body; strings.Count(body, `class="logo-sm"`) != 2 || !strings.Contains(body, `class="site-logo logo-sm"`) {
+		t.Error("the logo size is on every logo")
+	}
+	css := anon.get("/theme/default/theme.css")
+	for _, want := range []string{`.site-logo.logo-sm, .footer-logo img.logo-sm { height: 32px; }`, `.site-logo.logo-lg, .footer-logo img.logo-lg { height: 64px; }`} {
+		if !strings.Contains(css.Body, want) {
+			t.Errorf("theme.css (%d) lacks %s", css.Status, want)
+		}
+	}
+	// it is part of backups
+	raw := []byte(admin.downloadBackup(false).Body)
+	if site := string(unzip(t, raw)["site.json"]); !strings.Contains(site, `"alt_logo": "/media/logo-light.png"`) {
+		t.Error("the backup holds the alternative logo")
+	}
+}

@@ -179,8 +179,10 @@ type SearchItem struct {
 // BrandInfo is the logo and tab icon for the header.
 type BrandInfo struct {
 	Logo, Alt, Icon string
-	Height          int  // logo height in pixels
-	ShowTitle       bool // the site title is shown beside the logo (always true without a logo)
+	AltLogo         string // the owner's second logo (for dark backgrounds), used where they pick it
+	Height          int    // logo height in pixels
+	Size            string // the same as a size key ("sm", "md" or "lg"): templates add the class logo-<Size>, which sets the height
+	ShowTitle       bool   // the site title is shown beside the logo (always true without a logo)
 }
 
 // SocialLink is one social profile.
@@ -237,6 +239,7 @@ type FooterWidget struct {
 	Show                map[string]bool
 	Button, Success     string
 	Form                NewsletterForm
+	Logo                string // logo widgets: the picture to show ("" draws the site title)
 }
 
 // ConsentInfo is what the cookie notice shows.

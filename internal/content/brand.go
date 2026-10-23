@@ -22,6 +22,9 @@ type Brand struct {
 	LogoHeight    string // "sm", "md" or "lg"
 	HideTitle     bool   // show only the logo, not the site title beside it
 	Icon          string // the small picture on the browser tab
+	// AltLogo is a second version of the logo, such as a light one for a dark footer. It is used
+	// only where the owner picks it (the footer's logo widget).
+	AltLogo string
 }
 
 // HeightPixels is the logo's height in the header.
@@ -37,6 +40,7 @@ func (b Brand) HeightPixels() int {
 func (b Brand) clean() Brand {
 	b.Logo = blocks.SafeImageURL(truncateRunes(strings.TrimSpace(b.Logo), 2000))
 	b.Icon = blocks.SafeImageURL(truncateRunes(strings.TrimSpace(b.Icon), 2000))
+	b.AltLogo = blocks.SafeImageURL(truncateRunes(strings.TrimSpace(b.AltLogo), 2000))
 	b.LogoAlt = strings.TrimSpace(truncateRunes(strings.Join(strings.Fields(b.LogoAlt), " "), MaxLogoAlt))
 	ok := false
 	for _, h := range LogoHeights {
@@ -67,6 +71,9 @@ func (b Brand) asJSON() map[string]any {
 	if b.Icon != "" {
 		m["icon"] = b.Icon
 	}
+	if b.AltLogo != "" {
+		m["alt_logo"] = b.AltLogo
+	}
 	return m
 }
 
@@ -77,6 +84,7 @@ func brandFrom(m map[string]any) Brand {
 	b.LogoHeight, _ = m["height"].(string)
 	b.HideTitle, _ = m["hide_title"].(bool)
 	b.Icon, _ = m["icon"].(string)
+	b.AltLogo, _ = m["alt_logo"].(string)
 	return b.clean()
 }
 

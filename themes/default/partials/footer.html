@@ -18,7 +18,7 @@
       {{if and $w.Show.social $d.Social}}<li class="details-links">{{range $d.Social}}<a href="{{.URL}}" rel="noopener">{{.Label}}</a> {{end}}</li>{{end}}
     </ul>
     {{- else if eq $w.Type "social"}}{{with $w.Heading}}<h2>{{.}}</h2>{{end}}{{with $d.Social}}<ul class="footer-links is-inline footer-social-links">{{range .}}<li><a href="{{.URL}}" rel="noopener">{{.Label}}</a></li>{{end}}</ul>{{end}}
-    {{- else if eq $w.Type "logo"}}<a class="footer-logo" href="/">{{if $b.Logo}}<img src="{{$b.Logo}}" alt="{{$b.Alt}}" height="{{$b.Height}}">{{else}}<span class="footer-logo-title">{{$title}}</span>{{end}}</a>{{with $w.Text}}<p class="footer-tagline">{{.}}</p>{{end}}
+    {{- else if eq $w.Type "logo"}}<a class="footer-logo" href="/">{{if $w.Logo}}<img class="logo-{{$b.Size}}" src="{{$w.Logo}}" alt="{{$b.Alt}}" height="{{$b.Height}}">{{else}}<span class="footer-logo-title">{{$title}}</span>{{end}}</a>{{with $w.Text}}<p class="footer-tagline">{{.}}</p>{{end}}
     {{- else if eq $w.Type "newsletter"}}{{with $w.Heading}}<h2>{{.}}</h2>{{end}}{{with $w.Text}}<p>{{.}}</p>{{end}}
       {{- with $w.Form}}{{if .Sent}}<p class="form-notice" id="newsletter-0" role="status">{{or $w.Success "Thanks for subscribing!"}}{{if .Confirm}} Please check your inbox and confirm your address.{{end}}</p>
       {{- else if .Token}}<form class="newsletter-form" id="newsletter-0" method="post" action="/subscribe" data-success="{{or $w.Success "Thanks for subscribing!"}}">

@@ -363,7 +363,7 @@ html:not(.js) .has-panel:hover > .menu-panel, html:not(.js) .has-panel:focus-wit
 .footer-links a:hover, .footer-links a[aria-current] { text-decoration: underline; }
 .site-footer:not(.has-fg) .footer-links a[aria-current] { color: var(--color-primary); }
 .footer-logo { display: inline-block; text-decoration: none; color: var(--footer-fg, var(--color-text)); }
-.footer-logo img { display: block; width: auto; max-width: 100%; }
+.footer-logo img { display: block; width: auto; max-width: min(100%, 20rem); object-fit: contain; object-position: left center; }
 .footer-logo-title { font-size: 1.25rem; font-weight: 700; }
 .footer-tagline { margin: .5em 0 0; }
 .footer-newsletter .newsletter-form { margin: 0; }
@@ -376,7 +376,12 @@ html:not(.js) .has-panel:hover > .menu-panel, html:not(.js) .has-panel:focus-wit
 
 /* logo, menu buttons, contact details */
 .site-brand { display: inline-flex; align-items: center; gap: .6rem; }
-.site-logo { display: block; width: auto; max-width: 14rem; object-fit: contain; }
+.site-logo { display: block; width: auto; max-width: min(100%, 20rem); object-fit: contain; object-position: left center; }
+/* the owner's "Logo size" (Appearance), for the header and footer logos; the general img rule would otherwise
+   let a logo grow to its own size */
+.site-logo.logo-sm, .footer-logo img.logo-sm { height: 32px; }
+.site-logo.logo-md, .footer-logo img.logo-md { height: 44px; }
+.site-logo.logo-lg, .footer-logo img.logo-lg { height: 64px; }
 .menu-list a.btn, .menu-topbar a.btn, .menu-footer a.btn { padding: .4em 1em; color: var(--color-primary-text); background: var(--color-primary); border-radius: var(--radius); text-decoration: none; font-weight: 600; }
 .menu-list a.btn:hover, .menu-topbar a.btn:hover, .menu-footer a.btn:hover { text-decoration: none; filter: brightness(1.1); }
 .details { list-style: none; margin: 0; padding: 0; display: grid; gap: .6em; }

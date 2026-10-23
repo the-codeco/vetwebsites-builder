@@ -26,7 +26,7 @@ func (s *Service) siteInfo(r *http.Request, theme *themes.Theme, st content.Sett
 			Version: themes.Fingerprint([]byte(fmt.Sprint(c.Ask, "|", c.Message(), "|", c.LinkLabel, "|", c.LinkURL))),
 		}
 	}
-	info.Brand = themes.BrandInfo{Logo: st.Brand.Logo, Alt: st.Brand.LogoAlt, Icon: st.Brand.Icon, Height: st.Brand.HeightPixels(), ShowTitle: st.Brand.Logo == "" || !st.Brand.HideTitle}
+	info.Brand = themes.BrandInfo{Logo: st.Brand.Logo, Alt: st.Brand.LogoAlt, Icon: st.Brand.Icon, AltLogo: st.Brand.AltLogo, Height: st.Brand.HeightPixels(), ShowTitle: st.Brand.Logo == "" || !st.Brand.HideTitle, Size: st.Brand.LogoHeight}
 	if info.Brand.Alt == "" {
 		info.Brand.Alt = st.Title
 	}
@@ -73,6 +73,12 @@ func (s *Service) footerInfo(r *http.Request, st content.Settings) themes.Footer
 				}
 				if w.Type == footer.TypeNewsletter {
 					fw.Form = s.newsletterFormData(r, 0)
+				}
+				if w.Type == footer.TypeLogo { // the alternative logo when asked for and set, else the main one
+					fw.Logo = st.Brand.Logo
+					if w.Logo == footer.LogoAlternative && st.Brand.AltLogo != "" {
+						fw.Logo = st.Brand.AltLogo
+					}
 				}
 				fc.Widgets = append(fc.Widgets, fw)
 			}

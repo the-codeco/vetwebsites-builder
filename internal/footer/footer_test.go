@@ -150,3 +150,18 @@ func TestStyle(t *testing.T) {
 		t.Errorf("unsafe colour: %q", v)
 	}
 }
+
+func TestLogoWidgetChoice(t *testing.T) {
+	out, err := Validate(Footer{Rows: []Row{row(
+		col(Widget{Type: TypeLogo, Logo: LogoAlternative}),
+		col(Widget{Type: TypeLogo, Logo: "something else"}), // unknown: the main logo
+		col(Widget{Type: TypeText, Logo: LogoAlternative}),  // only logo widgets choose
+	)}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := out.Rows[0].Columns
+	if c[0].Widgets[0].Logo != LogoAlternative || c[1].Widgets[0].Logo != "" || c[2].Widgets[0].Logo != "" {
+		t.Errorf("%+v", c)
+	}
+}

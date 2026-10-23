@@ -98,7 +98,7 @@ type Link struct {
 //	links       Heading, Links, Inline (in a row instead of a list)
 //	contact     Heading, Parts (which site details to show)
 //	social      Heading (the social links from Site details)
-//	logo        Text (a short tagline under the logo)
+//	logo        Text (a short tagline under the logo), Logo ("alternative" for the alternative logo)
 //	newsletter  Heading, Text (introduction), Button, Success
 type Widget struct {
 	Type    string   `json:"type"`
@@ -109,7 +109,11 @@ type Widget struct {
 	Parts   []string `json:"parts,omitempty"`
 	Button  string   `json:"button,omitempty"`
 	Success string   `json:"success,omitempty"`
+	Logo    string   `json:"logo,omitempty"` // logo widgets: "" (the main logo) or LogoAlternative
 }
+
+// LogoAlternative picks the alternative logo (Appearance → Logo) in a logo widget.
+const LogoAlternative = "alternative"
 
 // Column is one column of a row.
 type Column struct {
@@ -327,6 +331,9 @@ func validateWidget(w Widget, where string) (Widget, error) {
 	case TypeLogo:
 		if out.Text, err = short(w.Text, "tagline"); err != nil {
 			return Widget{}, err
+		}
+		if w.Logo == LogoAlternative {
+			out.Logo = LogoAlternative
 		}
 	case TypeNewsletter:
 		out.Heading = heading
