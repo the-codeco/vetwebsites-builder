@@ -473,3 +473,29 @@ fieldset.plainset input { margin-top: 4px; }
 .pb-actions { display: flex; gap: .5rem; align-items: center; }
 .progress-card progress { width: 100%; height: 1rem; }
 .alert-line { padding: .5rem .75rem; border-left: 4px solid #d29922; background: rgba(210, 153, 34, .12); }
+
+/* ==========================================================================
+   Rich text editor (Tiptap): see web/static/admin.js
+   ========================================================================== */
+.tt-source { display: none; }
+.tt-wrap { margin: 4px 0; border: 1px solid var(--line-strong); border-radius: 9px; background: var(--card); font-weight: 400; }
+.tt-wrap:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.tt-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 6px; border-bottom: 1px solid var(--line); background: var(--bg); border-radius: 9px 9px 0 0; }
+.tt-bar button { height: 28px; margin: 0; padding: 0 9px; font-size: .82rem; }
+.tt-bar button.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.tt-bar button:disabled { opacity: .4; cursor: default; }
+.tt-sep { width: 1px; height: 18px; margin: 0 4px; background: var(--line-strong); }
+.tt-editor .tt-content { min-height: 180px; max-height: 60vh; overflow-y: auto; padding: 10px 12px; font-size: .92rem; line-height: 1.55; outline: none; cursor: text; }
+.tt-content > *:first-child { margin-top: 0; }
+.tt-content > *:last-child { margin-bottom: 0; }
+.tt-content p, .tt-content ul, .tt-content ol, .tt-content blockquote { margin: 0 0 .7em; }
+.tt-content h2 { font-size: 1.25rem; margin: .9em 0 .4em; }
+.tt-content h3 { font-size: 1.08rem; margin: .8em 0 .35em; }
+.tt-content ul, .tt-content ol { padding-left: 1.4em; }
+.tt-content blockquote { padding-left: 12px; border-left: 3px solid var(--line-strong); color: var(--muted); }
+.tt-content a { color: var(--accent); text-decoration: underline; }
+.tt-content img { max-width: 100%; height: auto; border-radius: 6px; }
+.tt-content img.ProseMirror-selectednode { outline: 2px solid var(--accent); }
+.tt-content hr { border: 0; border-top: 1px solid var(--line-strong); }
+.tt-content code { padding: 1px 4px; border-radius: 4px; background: var(--bg); }
+.tt-content pre { padding: 8px 10px; border-radius: 6px; background: var(--bg); overflow-x: auto; }

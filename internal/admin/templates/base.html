@@ -9,6 +9,7 @@
 {{if .User}}<meta name="csrf" content="{{.CSRF}}">{{end}}
 <link rel="stylesheet" href="/static/admin.css">
 <script src="/static/htmx.min.js" defer></script>
+<script src="/static/tiptap.js" defer></script>
 <script src="/static/admin.js" defer></script>
 </head>
 <body class="{{if .User}}app{{else}}auth{{end}}"{{if .User}} hx-headers='{"X-CSRF-Token": "{{.CSRF}}"}'{{end}}>
