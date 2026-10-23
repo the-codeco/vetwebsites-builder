@@ -279,6 +279,7 @@ func (s *Service) cleanSettings(in Settings, menuList []Menu, w *warnings) Setti
 		Brand:      content.CleanBrand(in.Brand),
 		Details:    content.CleanDetails(in.Details),
 		Tracking:   content.CleanTracking(in.Tracking),
+		Layout:     content.CleanLayout(in.Layout),
 		Tokens:     map[string]map[string]string{},
 	}
 	if out.Title == "" {

@@ -67,6 +67,7 @@ type SiteInfo struct {
 	TrackJS      string        // the analytics loader (used only when Tracking is set)
 	Footer       FooterInfo    // the footer the owner built
 	Brand        BrandInfo     // the logo and browser-tab icon
+	Header       HeaderInfo    // the owner's header style, when it isn't the theme's own
 	Details      DetailsInfo   // the contact details
 	Tracking     *TrackingInfo // analytics services to load, nil when there are none (or the visitor is logged in)
 	Search       bool          // show the search box (the site owner can turn it off)
@@ -183,6 +184,17 @@ type BrandInfo struct {
 	Height          int    // logo height in pixels
 	Size            string // the same as a size key ("sm", "md" or "lg"): templates add the class logo-<Size>, which sets the height
 	ShowTitle       bool   // the site title is shown beside the logo (always true without a logo)
+}
+
+// HeaderInfo is the header arrangement the owner chose (Appearance → Header). Custom is false for the theme's own
+// header; otherwise Style is "stacked" or "centered", Place is "beside" or "behind" and Height is the banner's
+// height in pixels.
+type HeaderInfo struct {
+	Custom         bool
+	Style, Tagline string
+	Banners        []string
+	Place          string
+	Height         int
 }
 
 // SocialLink is one social profile.

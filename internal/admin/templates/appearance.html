@@ -32,6 +32,58 @@
       </form>
     </div>
 
+    {{with .Data.Layout}}
+    <div class="card" id="header">
+      <h2>Header</h2>
+      <p class="muted">How the top of every page is arranged. The theme's own header has the logo with the menu beside it; the other two put the menu in a full-width bar.</p>
+      <form method="post" action="/admin/appearance/header">
+        <input type="hidden" name="csrf" value="{{$.CSRF}}">
+        <fieldset class="plainset">
+          <legend>Style</legend>
+          {{$style := .Header.Style}}{{range .HeaderStyles}}<label class="check"><input type="radio" name="header_style" value="{{.Key}}"{{if eq .Key $style}} checked{{end}}> <span>{{.Label}}</span></label>{{end}}
+        </fieldset>
+        <label>Tagline <span class="muted">(optional; shown under the logo or title, not in the theme's own header)</span>
+          <input name="tagline" value="{{.Header.Tagline}}" maxlength="120" placeholder="Caring for your animals"></label>
+        <fieldset class="plainset">
+          <legend>Banner pictures <span class="muted">(the logo-and-banner style; more than one cross-fade every few seconds)</span></legend>
+          {{range $i, $b := .Banners}}<label>Picture {{inc $i}}
+            <span class="colorrow"><input type="text" name="banner_{{inc $i}}" value="{{$b}}" maxlength="2000" placeholder="/media/banner.jpg"><button type="button" class="ghost" data-pick>Choose…</button></span></label>{{end}}
+          <div class="details-row">
+            <label>Place <select name="banner_place">{{$pl := .Header.BannerPlace}}{{range .BannerPlaces}}<option value="{{.Key}}"{{if eq .Key $pl}} selected{{end}}>{{.Label}}</option>{{end}}</select></label>
+            <label>Height <select name="banner_height">{{$bh := .Header.BannerHeight}}{{range .BannerHeights}}<option value="{{.Key}}"{{if eq .Key $bh}} selected{{end}}>{{.Label}} ({{.Pixels}} px)</option>{{end}}</select></label>
+          </div>
+        </fieldset>
+        <fieldset class="plainset">
+          <legend>Menu bar colours <span class="muted">(empty means the theme's)</span></legend>
+          <div class="details-row">
+            <label>Bar <span class="colorrow"><input type="text" name="bar_background" value="{{.Header.BarBackground}}" pattern="#[0-9a-fA-F]{6}" maxlength="7" placeholder="#rrggbb" data-color-text><input type="color" value="{{or .Header.BarBackground "#f4f5f8"}}" aria-label="Pick the bar colour" data-color-pick></span></label>
+            <label>Links <span class="colorrow"><input type="text" name="bar_text" value="{{.Header.BarText}}" pattern="#[0-9a-fA-F]{6}" maxlength="7" placeholder="#rrggbb" data-color-text><input type="color" value="{{or .Header.BarText "#1f2430"}}" aria-label="Pick the link colour" data-color-pick></span></label>
+            <label>Current page <span class="colorrow"><input type="text" name="bar_active" value="{{.Header.BarActive}}" pattern="#[0-9a-fA-F]{6}" maxlength="7" placeholder="#rrggbb" data-color-text><input type="color" value="{{or .Header.BarActive "#3b5bdb"}}" aria-label="Pick the current page colour" data-color-pick></span></label>
+          </div>
+        </fieldset>
+        <button>Save header</button>
+      </form>
+    </div>
+
+    <div class="card" id="layout">
+      <h2>Page layout</h2>
+      <p class="muted">Full width, or the whole page — header, content and footer — in a centred box on a background.</p>
+      <form method="post" action="/admin/appearance/layout">
+        <input type="hidden" name="csrf" value="{{$.CSRF}}">
+        <label class="check"><input type="checkbox" name="boxed"{{if .Boxed}} checked{{end}}> <span><strong>Boxed</strong> — a centred page on a background (phones always use the full width)</span></label>
+        <label>Page width <span class="muted">(pixels, {{.MinWidth}}–{{.MaxWidth}}; boxed only)</span>
+          <input type="number" name="width" value="{{.Width}}" min="{{.MinWidth}}" max="{{.MaxWidth}}" step="10"></label>
+        <label>Background colour <span class="muted">(behind the box; empty means the theme's)</span>
+          <span class="colorrow"><input type="text" name="background" value="{{.Background}}" pattern="#[0-9a-fA-F]{6}" maxlength="7" placeholder="#rrggbb" data-color-text><input type="color" value="{{or .Background "#bbbbbb"}}" aria-label="Pick the background colour" data-color-pick></span></label>
+        <label>Background picture <span class="muted">(optional)</span>
+          <span class="colorrow"><input type="text" name="image" value="{{.Image}}" maxlength="2000" placeholder="/media/background.jpg"><button type="button" class="ghost" data-pick>Choose…</button></span></label>
+        <label>Picture <select name="image_mode">{{$m := .ImageMode}}{{range .ImageModes}}<option value="{{.Key}}"{{if eq .Key $m}} selected{{end}}>{{.Label}}</option>{{end}}</select></label>
+        <span class="hint">On a full-width page the picture shows behind the content, so choose text colours that stay readable on it.</span>
+        <button>Save layout</button>
+      </form>
+    </div>
+    {{end}}
+
     <div class="card">
       <h2>Your own fonts</h2>
       <p class="muted">Upload a font as a WOFF2 file (up to 600 KB) and it appears in the font lists under “Colours, fonts and spacing”. Fonts are served from your own site, so visitors' browsers make no requests to anyone else. Upload a Regular file and, if you like, a Bold file with the same name. Only upload fonts you have the licence to use on a website.</p>

@@ -76,8 +76,8 @@ func (s *Service) load(ctx context.Context, personal bool) (Content, error) {
 
 	var c Content
 	st := &c.Settings
-	if err := tx.QueryRow(ctx, `SELECT title, active_theme, tokens, custom_css, seo, show_search, color_mode, consent, footer, brand, details, tracking FROM site_settings WHERE id = 1`).
-		Scan(&st.Title, &st.ActiveTheme, &st.Tokens, &st.CustomCSS, &st.SEO, &st.ShowSearch, &st.ColorMode, &st.Consent, &st.Footer, &st.Brand, &st.Details, &st.Tracking); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT title, active_theme, tokens, custom_css, seo, show_search, color_mode, consent, footer, brand, details, tracking, layout FROM site_settings WHERE id = 1`).
+		Scan(&st.Title, &st.ActiveTheme, &st.Tokens, &st.CustomCSS, &st.SEO, &st.ShowSearch, &st.ColorMode, &st.Consent, &st.Footer, &st.Brand, &st.Details, &st.Tracking, &st.Layout); err != nil {
 		return c, err
 	}
 

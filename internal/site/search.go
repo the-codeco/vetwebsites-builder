@@ -31,6 +31,9 @@ func (s *Service) siteInfo(r *http.Request, theme *themes.Theme, st content.Sett
 		info.Brand.Alt = st.Title
 	}
 	info.Details = detailsInfo(st.Details)
+	if h := st.Layout.Header; h.Style != content.HeaderInline {
+		info.Header = themes.HeaderInfo{Custom: true, Style: h.Style, Tagline: h.Tagline, Banners: h.Banners, Place: h.BannerPlace, Height: h.BannerPixels()}
+	}
 	// analytics are never loaded for someone who is logged in: the owner's own visits are not visitors
 	if t := st.Tracking; t.Any() && auth.CurrentIdentity(r) == nil && !preview {
 		info.Tracking = &themes.TrackingInfo{GA4: t.GA4, Plausible: t.PlausibleDomain, Wait: !t.NoWait, JS: theme.TrackJS()}

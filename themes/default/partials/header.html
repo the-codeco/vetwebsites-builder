@@ -1,0 +1,27 @@
+{{/*
+  The site header when the owner picks a header style other than the theme's own (Appearance → Header):
+  "stacked" (the logo and tagline with a banner beside or behind it, then the menu as a bar) or "centered"
+  (the menu as a bar on top, then a large centred logo or title). Layouts use it as
+  {{if .Site.Header.Custom}}{{template "site-header" .}}{{else}}…their own header…{{end}}.
+*/}}
+{{define "site-header"}}{{$h := .Site.Header}}{{if eq $h.Style "centered"}}
+<header class="site-header header-centered{{if .Nav.Main.Sticky}} is-sticky{{end}}">
+  {{template "header-bar" .}}
+  <div class="header-brand header-brand-center">{{template "site-brand" .}}{{with $h.Tagline}}<p class="header-tagline">{{.}}</p>{{end}}</div>
+</header>
+{{else}}
+<header class="site-header header-stacked{{if .Nav.Main.Sticky}} is-sticky{{end}}">
+  <div class="header-top banner-{{$h.Place}}{{if $h.Banners}} has-banner{{end}}" style="--banner-h: {{$h.Height}}px">
+    {{if and $h.Banners (eq $h.Place "behind")}}{{template "header-banner" $h}}{{end}}
+    <div class="header-brand">{{template "site-brand" .}}{{with $h.Tagline}}<p class="header-tagline">{{.}}</p>{{end}}</div>
+    {{if and $h.Banners (eq $h.Place "beside")}}{{template "header-banner" $h}}{{end}}
+  </div>
+  {{template "header-bar" .}}
+</header>
+{{end}}{{end}}
+
+{{/* the menu as a full-width bar, with the search box and the dark-mode switch at its end */}}
+{{define "header-bar"}}<div class="header-bar"><div class="header-bar-inner">{{template "menu-main" .}}{{template "site-search" .}}{{template "color-toggle" .}}</div></div>{{end}}
+
+{{/* the header's pictures: more than one cross-fade (menu.js), the first shows without JavaScript */}}
+{{define "header-banner"}}<div class="header-banner"{{if gt (len .Banners) 1}} data-rotate{{end}} aria-hidden="true">{{range $i, $b := .Banners}}<img src="{{$b}}" {{srcset $b "100vw"}} alt=""{{if eq $i 0}} class="is-on"{{else}} loading="lazy"{{end}}>{{end}}</div>{{end}}

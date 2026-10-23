@@ -104,6 +104,36 @@ a { color: var(--color-primary); }
 .site-footer.footer-pad-lg .site-footer-inner { padding-block: calc(var(--space) * 2.5); }
 .site-footer.has-bg { border-top-color: transparent; }
 
+/* header styles the owner can choose (Appearance → Header): "stacked" (logo and banner, menu bar below) and
+   "centered" (menu bar on top, a large centred logo or title below). The bar's colours come from --bar-*. */
+.header-top { position: relative; display: flex; align-items: stretch; min-height: var(--banner-h, 0px); max-width: var(--content-width); margin: 0 auto; }
+.header-top.banner-behind { max-width: none; }
+.header-brand { position: relative; z-index: 1; flex: 0 0 auto; display: flex; flex-direction: column; justify-content: center; gap: .25rem; padding: var(--space) calc(var(--space) * 2); }
+.banner-behind .header-brand { width: 100%; max-width: var(--content-width); margin: 0 auto; }
+.banner-behind.has-banner .site-title, .banner-behind.has-banner .header-tagline { color: #fff; text-shadow: 0 1px 6px rgba(0, 0, 0, .65); }
+.header-tagline { margin: 0; color: var(--color-muted); font-size: 1rem; }
+.header-banner { position: relative; flex: 1 1 auto; min-width: 0; overflow: hidden; }
+.banner-behind .header-banner { position: absolute; inset: 0; z-index: 0; }
+.header-banner img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 1.5s ease; }
+.header-banner img.is-on { opacity: 1; }
+.header-bar { position: relative; background: var(--bar-bg, var(--color-surface)); }
+.header-bar-inner { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space); max-width: var(--content-width); margin: 0 auto; padding: .25rem calc(var(--space) * 2); }
+.header-bar-inner .menu-main { flex: 1 1 auto; }
+.header-bar .menu-item > a, .header-bar .menu-toggle { color: var(--bar-fg, var(--color-text)); font-weight: 600; border-radius: 0; }
+.header-bar .menu-item > a:hover, .header-bar .menu-toggle:hover, .header-bar .menu-item.open > .menu-toggle { background: color-mix(in srgb, currentColor 14%, transparent); }
+.header-bar .menu-item > a[aria-current], .header-bar .menu-item.is-current > .menu-toggle { background: var(--bar-active, transparent); color: var(--bar-fg, var(--color-primary)); }
+.header-bar .menu-burger { color: var(--bar-fg, var(--color-text)); border-color: color-mix(in srgb, currentColor 35%, transparent); }
+.header-bar .color-toggle, .header-bar .site-search-btn { color: var(--bar-fg, var(--color-text)); }
+.header-brand-center { align-items: center; text-align: center; padding: calc(var(--space) * 2.5) calc(var(--space) * 2) calc(var(--space) * 2); }
+.header-brand-center .site-title { font-size: 2.4rem; }
+.header-brand-center .header-tagline { font-size: 1.15rem; }
+@media (max-width: 700px) {
+  .header-top.banner-beside { flex-direction: column; }
+  .banner-beside .header-banner { flex: 0 0 auto; height: calc(var(--banner-h, 0px) * .6); }
+  .header-brand-center .site-title { font-size: 1.8rem; }
+}
+@media (prefers-reduced-motion: reduce) { .header-banner img { transition: none; } }
+
 .menu-main { display: flex; align-items: center; }
 .menu-list { list-style: none; margin: 0; padding: 0; display: flex; align-items: center; gap: calc(var(--space) * .25); }
 .menu-item > a, .menu-toggle { display: inline-flex; align-items: center; gap: .4rem; padding: .5rem .8rem; color: var(--color-text); text-decoration: none; background: none; border: 0; font: inherit; cursor: pointer; border-radius: var(--radius); }

@@ -441,7 +441,12 @@ func (s *Service) siteCSS(w http.ResponseWriter, r *http.Request) {
 	for _, f := range fonts {
 		faces = append(faces, themes.FontFace{Family: f.Family, Slug: content.FontToken(f.Family), Weight: f.Weight, URL: "/fonts/" + f.FileName()})
 	}
-	css := theme.CSS(st.TokensFor(theme.Name), st.CustomCSS, st.ColorMode, faces)
+	// the page layout's rules go just before the owner's custom CSS, so custom CSS can still change them
+	custom := st.CustomCSS
+	if lc := st.Layout.CSS(); lc != "" {
+		custom = "/* page layout (Appearance) */\n" + lc + "\n" + custom
+	}
+	css := theme.CSS(st.TokensFor(theme.Name), custom, st.ColorMode, faces)
 	sum := sha256.Sum256([]byte(css))
 	etag := `"` + hex.EncodeToString(sum[:8]) + `"`
 	h := w.Header()

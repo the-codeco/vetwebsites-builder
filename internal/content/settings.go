@@ -22,6 +22,8 @@ type Settings struct {
 	Brand    Brand
 	Details  Details
 	Tracking Tracking
+	// Layout is the page frame (full width or boxed, the background) and the header arrangement.
+	Layout Layout
 }
 
 // TokensFor returns the saved overrides for one theme (never nil).
@@ -34,10 +36,11 @@ func (s Settings) TokensFor(theme string) map[string]string {
 
 func (s *Store) Settings(ctx context.Context) (Settings, error) {
 	var st Settings
-	var raw, seo, consent, footer, brand, details, tracking map[string]any
+	var raw, seo, consent, footer, brand, details, tracking, layout map[string]any
 	err := s.pool.QueryRow(ctx,
-		`SELECT title, domain, active_theme, tokens, custom_css, seo, show_search, color_mode, consent, footer, brand, details, tracking FROM site_settings WHERE id = 1`).
-		Scan(&st.Title, &st.Domain, &st.ActiveTheme, &raw, &st.CustomCSS, &seo, &st.ShowSearch, &st.ColorMode, &consent, &footer, &brand, &details, &tracking)
+		`SELECT title, domain, active_theme, tokens, custom_css, seo, show_search, color_mode, consent, footer, brand, details, tracking, layout FROM site_settings WHERE id = 1`).
+		Scan(&st.Title, &st.Domain, &st.ActiveTheme, &raw, &st.CustomCSS, &seo, &st.ShowSearch, &st.ColorMode, &consent, &footer, &brand, &details, &tracking, &layout)
+	st.Layout = layoutFrom(layout)
 	st.Consent = consentFrom(consent)
 	st.Footer = footerFrom(footer)
 	st.Brand, st.Details, st.Tracking = brandFrom(brand), detailsFrom(details), trackingFrom(tracking)
