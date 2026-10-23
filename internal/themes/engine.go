@@ -126,11 +126,11 @@ type NavColumn struct {
 type NavItem struct {
 	Kind, Label, URL string
 	NewTab           bool
-	Button           bool // drawn as a button
+	Button           bool         // drawn as a button
 	Social           []SocialLink // the social icons ("social" items)
-	Side             string // top bar only: "left" or "right"
-	Active           bool // this link is the current page
-	Within           bool // a link inside its panel is the current page
+	Side             string       // top bar only: "left" or "right"
+	Active           bool         // this link is the current page
+	Within           bool         // a link inside its panel is the current page
 	Children         []NavLink
 	Columns          []NavColumn
 }
@@ -644,7 +644,9 @@ const (
 )
 
 // ValidColorSwitch reports whether p is one of the places the switch can be.
-func ValidColorSwitch(p string) bool { return p == SwitchFloating || p == SwitchFooter || p == SwitchOff }
+func ValidColorSwitch(p string) bool {
+	return p == SwitchFloating || p == SwitchFooter || p == SwitchOff
+}
 
 // HasDark reports whether the theme ships a dark palette. A theme that is dark already
 // (Midnight) has none: there is nothing to switch to.
