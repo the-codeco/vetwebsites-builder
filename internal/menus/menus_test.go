@@ -1,6 +1,7 @@
 package menus
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -12,8 +13,8 @@ var (
 )
 
 func TestSectionsAreDefined(t *testing.T) {
-	want := map[string]bool{"topbar": false, "main": true, "footer": false}
-	if len(Sections) != 3 {
+	want := map[string]bool{"topbar": false, "main": true} // the footer's links are part of the footer builder now
+	if len(Sections) != 2 {
 		t.Fatalf("%d sections", len(Sections))
 	}
 	for _, s := range Sections {
@@ -128,7 +129,7 @@ func TestValidateMega(t *testing.T) {
 	for i := range cols {
 		cols[i] = Column{Heading: "H", Links: []Link{link("x")}}
 	}
-	if _, err := Validate(main_, []Item{{Kind: KindMega, Label: "Wide", Columns: cols}}); err == nil || !strings.Contains(err.Error(), "at most 4 columns") {
+	if _, err := Validate(main_, []Item{{Kind: KindMega, Label: "Wide", Columns: cols}}); err == nil || !strings.Contains(err.Error(), fmt.Sprintf("at most %d columns", MaxColumns)) {
 		t.Errorf("too many columns: %v", err)
 	}
 	many := make([]Link, MaxColumnLinks+1)
@@ -226,6 +227,73 @@ func TestVisible(t *testing.T) {
 	// the saved data is untouched: hiding is reversible
 	if len(in[2].Children) != 2 || len(in[5].Columns) != 2 || len(in[5].Columns[0].Links) != 2 || reflect.ValueOf(in).Pointer() != snapshot {
 		t.Error("Visible modified its input")
+	}
+}
+
+func TestMegaHeadingLinks(t *testing.T) {
+	out, err := Validate(main_, []Item{{Kind: KindMega, Label: "Services", Columns: []Column{
+		{Heading: " Surgery ", URL: " /surgery "}, // a linked title alone is a column
+		{Heading: "Care", Links: []Link{{Label: "Dental", URL: "/dental"}}},
+	}}})
+	if err != nil || len(out[0].Columns) != 2 || out[0].Columns[0].Heading != "Surgery" || out[0].Columns[0].URL != "/surgery" {
+		t.Fatalf("%+v %v", out, err)
+	}
+	for name, col := range map[string]Column{
+		"address without heading": {URL: "/x", Links: []Link{{Label: "a", URL: "/a"}}},
+		"unsafe address":          {Heading: "H", URL: "javascript:alert(1)"},
+	} {
+		if _, err := Validate(main_, []Item{{Kind: KindMega, Label: "M", Columns: []Column{col}}}); err == nil {
+			t.Errorf("%s accepted", name)
+		}
+	}
+	vis := Visible([]Item{{Kind: KindMega, Label: "M", Columns: []Column{
+		{Heading: "Linked", URL: "/l", Links: []Link{{Label: "h", URL: "/h", Hidden: true}}},
+		{Heading: "Plain", Links: []Link{{Label: "h", URL: "/h", Hidden: true}}},
+	}}})
+	if len(vis) != 1 || len(vis[0].Columns) != 1 || vis[0].Columns[0].Heading != "Linked" {
+		t.Errorf("visible: %+v", vis)
+	}
+}
+
+func TestMegaSectionTypes(t *testing.T) {
+	link := func(n string) Link { return Link{Label: n, URL: "/" + n} }
+	out, err := Validate(main_, []Item{{Kind: KindMega, Label: "Services", Columns: []Column{
+		{Heading: "Old", Links: []Link{link("a")}}, // saved before types: a list of links
+		{Type: SectionImage, Heading: "Surgery", URL: "/surgery", Image: " /media/2026/10/a.jpg ", Alt: " A cat ", Caption: "Our theatre", Links: []Link{link("dropped")}},
+		{Type: SectionText, Heading: "Hours", Text: `Open <b>daily</b><script>alert(1)</script>`},
+		{Type: SectionImage, Image: "/b.jpg", URL: "/boarding"}, // no title: the picture is the link
+		{Type: SectionImage},           // empty: dropped
+		{Type: SectionText, Text: " "}, // empty: dropped
+	}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	cols := out[0].Columns
+	if len(cols) != 4 || cols[3].URL != "/boarding" || cols[0].Type != SectionLinks || len(cols[0].Links) != 1 {
+		t.Fatalf("%+v", cols)
+	}
+	if img := cols[1]; img.Type != SectionImage || img.Image != "/media/2026/10/a.jpg" || img.Alt != "A cat" || img.Caption != "Our theatre" || img.Links != nil {
+		t.Errorf("image: %+v", img)
+	}
+	if txt := cols[2]; txt.Type != SectionText || strings.Contains(txt.Text, "script") || !strings.Contains(txt.Text, "<b>daily</b>") {
+		t.Errorf("text: %+v", txt)
+	}
+	for name, c := range map[string]Column{
+		"image without a picture": {Type: SectionImage, Heading: "H"},
+		"unsafe picture":          {Type: SectionImage, Image: "javascript:alert(1)"},
+		"mailto picture":          {Type: SectionImage, Image: "mailto:a@b.c"},
+		"long caption":            {Type: SectionImage, Image: "/x.jpg", Caption: strings.Repeat("c", MaxCaption+1)},
+		"long text":               {Type: SectionText, Text: strings.Repeat("t", MaxSectionText+1)},
+		"unknown type":            {Type: "video", Heading: "H"},
+	} {
+		if _, err := Validate(main_, []Item{{Kind: KindMega, Label: "M", Columns: []Column{c}}}); err == nil {
+			t.Errorf("%s accepted", name)
+		}
+	}
+	// pictures and text have nothing to hide, so they always show
+	vis := Visible([]Item{{Kind: KindMega, Label: "M", Columns: []Column{{Type: SectionImage, Image: "/x.jpg"}, {Type: SectionText, Text: "<p>t</p>"}}}})
+	if len(vis) != 1 || len(vis[0].Columns) != 2 {
+		t.Errorf("visible: %+v", vis)
 	}
 }
 

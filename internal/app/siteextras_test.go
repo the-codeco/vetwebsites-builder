@@ -28,7 +28,7 @@ func TestLogoAndTabIcon(t *testing.T) {
 	for _, theme := range []string{"", "?theme=journal", "?theme=midnight"} {
 		body := admin.get("/" + theme).Body
 		for _, want := range []string{
-			`<a class="site-title site-brand" href="/"><img class="site-logo" src="/media/logo.png" alt="" height="64"><span>My Site</span></a>`,
+			`<a class="site-title site-brand" href="/"><img class="site-logo logo-lg" src="/media/logo.png" alt="" height="64"><span>My Site</span></a>`,
 			`<link rel="icon" href="/media/icon.png">`,
 		} {
 			if !strings.Contains(body, want) {
@@ -116,7 +116,7 @@ func TestSiteDetailsAndTheDetailsBlock(t *testing.T) {
 	anon := e.client()
 	year := "©"
 
-	if body := admin.get("/admin/details").Body; !strings.Contains(body, `name="phone"`) || !strings.Contains(body, `name="social_instagram"`) || !strings.Contains(body, `name="in_footer"`) {
+	if body := admin.get("/admin/details").Body; !strings.Contains(body, `name="phone"`) || !strings.Contains(body, `name="social_instagram"`) || strings.Contains(body, `name="in_footer"`) {
 		t.Error("the site details screen")
 	}
 	if !strings.Contains(admin.get("/admin/").Body, `href="/admin/details"`) {
@@ -168,25 +168,19 @@ func TestSiteDetailsAndTheDetailsBlock(t *testing.T) {
 		t.Error("its own heading")
 	}
 
-	// the footer, only when asked
-	if strings.Contains(anon.get("/").Body, "footer-details") {
+	// the footer, only when a contact widget is put there (beside a text widget)
+	if strings.Contains(anon.get("/").Body, "footer-contact") {
 		t.Error("not in the footer by default")
 	}
-	form.Set("in_footer", "on")
-	admin.post("/admin/details", form)
+	saveFooter(admin, `{"rows":[{"columns":[{"widgets":[{"type":"text","heading":"Hours","text":"Open"}]},{"widgets":[{"type":"contact","parts":["phone","whatsapp","email","address","hours","social"]}]}]}]}`)
 	for _, theme := range []string{"", "?theme=journal", "?theme=midnight"} {
 		body := admin.get("/" + theme).Body
-		if !strings.Contains(body, `footer-details`) || !strings.Contains(body, `27215550123`) || !strings.Contains(body, "mailto:hello@example.com") {
+		if !strings.Contains(body, `footer-contact`) || !strings.Contains(body, `27215550123`) || !strings.Contains(body, "mailto:hello@example.com") || !strings.Contains(body, `footer-cols-2`) {
 			t.Errorf("theme %q: the footer shows the details", theme)
 		}
 		if !strings.Contains(body, year) {
 			t.Errorf("theme %q: the bottom line is still there", theme)
 		}
-	}
-	// the editable footer columns and the details sit together
-	admin.post("/admin/appearance/footer", url.Values{"footer_heading_1": {"Hours"}, "footer_text_1": {"Open"}})
-	if body := anon.get("/").Body; !strings.Contains(body, `footer-cols footer-cols-1`) || !strings.Contains(body, "footer-details") {
-		t.Error("columns and details together")
 	}
 
 	// bad values are reported against their field, and nothing is saved
@@ -329,7 +323,8 @@ func TestBrandDetailsAndTrackingSurviveABackupRestore(t *testing.T) {
 	admin := e.newAdmin("admin@example.com")
 	anon := e.client()
 	admin.post("/admin/appearance/brand", url.Values{"logo": {"/media/logo.png"}, "logo_alt": {"Acme"}, "logo_height": {"sm"}, "icon": {"/media/i.png"}})
-	admin.post("/admin/details", url.Values{"phone": {"+27 21 555 0123"}, "email": {"a@example.com"}, "in_footer": {"on"}, "social_facebook": {"https://facebook.com/a"}})
+	admin.post("/admin/details", url.Values{"phone": {"+27 21 555 0123"}, "email": {"a@example.com"}, "social_facebook": {"https://facebook.com/a"}})
+	saveFooter(admin, `{"rows":[{"columns":[{"widgets":[{"type":"contact","parts":["phone","email"]}]}]}]}`)
 	admin.post("/admin/analytics/tracking", url.Values{"ga4": {"G-ABC123XYZ"}})
 	read := func() string {
 		return e.sql(`SELECT brand::text||'|'||details::text||'|'||tracking::text FROM site_settings`)
@@ -352,7 +347,7 @@ func TestBrandDetailsAndTrackingSurviveABackupRestore(t *testing.T) {
 	if after := read(); after != before {
 		t.Errorf("settings changed:\n%s\n%s", before, after)
 	}
-	if body := anon.get("/").Body; !strings.Contains(body, "site-logo") || !strings.Contains(body, "footer-details") || !strings.Contains(body, "track.js") {
+	if body := anon.get("/").Body; !strings.Contains(body, "site-logo") || !strings.Contains(body, "footer-contact") || !strings.Contains(body, "track.js") {
 		t.Error("the restored site shows them")
 	}
 }

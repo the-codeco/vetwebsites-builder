@@ -1,7 +1,7 @@
 {{define "content"}}
 <div class="card">
   <h1>Site details</h1>
-  <p class="muted">Your phone number, address, opening hours and social links, written once. Add a “Contact details” block to any page to show them, or tick the box below to show them in the footer of every page. Change them here and every place follows.</p>
+  <p class="muted">Your phone number, address, opening hours and social links, written once. Add a “Contact details” block to any page to show them, or a “Contact details” widget to the <a href="/admin/footer">footer</a>. Change them here and every place follows.</p>
   <form method="post" action="/admin/details">
     <input type="hidden" name="csrf" value="{{.CSRF}}">
     <label>Phone <span class="muted">(becomes a tap-to-call link)</span>
@@ -24,7 +24,6 @@
       {{with index $.Data.Errors (printf "social_%s" $key)}}<p class="field-error">{{.}}</p>{{end}}
       {{end}}
     </fieldset>
-    <label class="check"><input type="checkbox" name="in_footer"{{if .Data.D.InFooter}} checked{{end}}> Show these details in the footer of every page</label>
     <button>Save</button>
   </form>
 </div>

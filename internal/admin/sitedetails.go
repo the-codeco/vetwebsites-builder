@@ -52,7 +52,7 @@ func (h *Handler) detailsSave(w http.ResponseWriter, r *http.Request) {
 	in := content.Details{
 		Phone: strings.TrimSpace(r.PostFormValue("phone")), WhatsApp: strings.TrimSpace(r.PostFormValue("whatsapp")),
 		Email: strings.TrimSpace(r.PostFormValue("email")), Address: r.PostFormValue("address"), Hours: r.PostFormValue("hours"),
-		InFooter: r.PostFormValue("in_footer") == "on", Social: map[string]string{},
+		Social: map[string]string{},
 	}
 	for _, n := range content.Networks {
 		if v := strings.TrimSpace(r.PostFormValue("social_" + n.Key)); v != "" {

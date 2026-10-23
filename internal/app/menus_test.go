@@ -33,12 +33,15 @@ func TestMenuBuilder(t *testing.T) {
 	editor := e.newUser(admin, "editor@example.com", "editor")
 	anon := e.client()
 
-	// the three sections, with the starter links seeded into the main navigation
+	// the two sections (the footer's links are in the footer builder), with the starter links seeded into the main navigation
 	page := admin.get("/admin/menus")
 	if page.Status != 200 {
 		t.Fatalf("menus page: %d", page.Status)
 	}
-	for _, want := range []string{"Top bar", "Main navigation", "Footer", `data-menu-form`, `tpl-item-main`, `tpl-item-topbar`, `tpl-item-footer`,
+	if strings.Contains(page.Body, `tpl-item-footer`) {
+		t.Error("the menus screen still has a footer menu")
+	}
+	for _, want := range []string{"Top bar", "Main navigation", `data-menu-form`, `tpl-item-main`, `tpl-item-topbar`,
 		`value="Home"`, `value="About"`, `<option value="mega"`, "Freeze", `id="preview"`} {
 		if !strings.Contains(page.Body, want) {
 			t.Errorf("builder page lacks %q", want)
@@ -69,9 +72,10 @@ func TestMenuBuilder(t *testing.T) {
 		"javascript in dropdown":  {"main", `[{"kind":"dropdown","label":"D","children":[{"label":"x","url":"javascript:alert(1)"}]}]`, 400},
 		"data url in mega":        {"main", `[{"kind":"mega","label":"M","columns":[{"links":[{"label":"x","url":"data:text/html,x"}]}]}]`, 400},
 		"link without a label":    {"main", `[{"kind":"link","label":"","url":"/x"}]`, 400},
-		"five columns":            {"main", `[{"kind":"mega","label":"M","columns":[` + strings.TrimSuffix(strings.Repeat(`{"heading":"h","links":[{"label":"a","url":"/a"}]},`, 5), ",") + `]}]`, 400},
+		"seven columns":           {"main", `[{"kind":"mega","label":"M","columns":[` + strings.TrimSuffix(strings.Repeat(`{"heading":"h","links":[{"label":"a","url":"/a"}]},`, 7), ",") + `]}]`, 400},
+		"javascript heading link": {"main", `[{"kind":"mega","label":"M","columns":[{"heading":"h","url":"javascript:alert(1)","links":[{"label":"a","url":"/a"}]}]}]`, 400},
 		"dropdown in the top bar": {"topbar", `[{"kind":"dropdown","label":"D","children":[{"label":"a","url":"/a"}]}]`, 400},
-		"mega in the footer":      {"footer", `[{"kind":"mega","label":"M","columns":[{"links":[{"label":"a","url":"/a"}]}]}]`, 400},
+		"the old footer menu":     {"footer", `[{"kind":"link","label":"a","url":"/a"}]`, 404},
 		"unknown section":         {"sidebar", `[]`, 404},
 		"too large":               {"main", `[` + strings.Repeat(`{"kind":"link","label":"x","url":"/x"},`, 6000) + `{"kind":"link","label":"y","url":"/y"}]`, 400},
 	}
@@ -92,15 +96,15 @@ func TestMenuBuilder(t *testing.T) {
 		t.Error("the freeze tick must also survive a failed save")
 	}
 
-	// a rich main menu, a frozen top bar and header, an unfrozen footer
+	// a rich main menu, a frozen top bar and header
 	if r := saveMenu(admin, "main", richMain, true); r.Status != 303 {
 		t.Fatalf("save main: %d %s", r.Status, firstLine(r.Body))
 	}
 	if r := saveMenu(admin, "topbar", `[{"kind":"link","label":"Call us","url":"mailto:hi@example.com"},{"kind":"link","label":"Log in","url":"/admin/login","new_tab":true}]`, true); r.Status != 303 {
 		t.Fatalf("save topbar: %d", r.Status)
 	}
-	if r := saveMenu(editor, "footer", `[{"kind":"link","label":"Privacy","url":"/privacy"}]`, false); r.Status != 303 {
-		t.Fatalf("an editor saving the footer: %d", r.Status)
+	if r := saveMenu(editor, "topbar", `[{"kind":"link","label":"Call us","url":"mailto:hi@example.com"},{"kind":"link","label":"Log in","url":"/admin/login","new_tab":true}]`, true); r.Status != 303 {
+		t.Fatalf("an editor saving a menu: %d", r.Status)
 	}
 	if got := e.sql(`SELECT items->3->>'kind' FROM menus WHERE location = 'main'`); got != "dropdown" {
 		t.Errorf("stored structure: %q", got)
@@ -116,13 +120,12 @@ func TestMenuBuilder(t *testing.T) {
 		`href="https://example.com/docs" target="_blank" rel="noopener noreferrer">Docs`,
 		`aria-controls="menu-panel-2">Company`, `aria-controls="menu-panel-3">Products`,
 		`class="menu-mega-grid mega-cols-2"`, `<p class="menu-col-heading">Apps</p>`, `<span class="menu-desc">The first one</span>`,
-		`<nav class="menu-footer" aria-label="Footer">`, `href="/privacy"`,
 	} {
 		if !strings.Contains(home, want) {
 			t.Errorf("home page lacks %q", want)
 		}
 	}
-	for _, gone := range []string{"Secret", "Old page", "Nothing to show", `menu-footer is-sticky`} {
+	for _, gone := range []string{"Secret", "Old page", "Nothing to show", `menu-footer`} {
 		if strings.Contains(home, gone) {
 			t.Errorf("home page shows %q", gone)
 		}
@@ -177,7 +180,7 @@ func TestMenuScriptAndThemes(t *testing.T) {
 	admin := e.newAdmin("admin@example.com")
 	anon := e.client()
 	saveMenu(admin, "main", richMain, true)
-	saveMenu(admin, "footer", `[{"kind":"link","label":"Privacy","url":"/privacy"}]`, true)
+	saveMenu(admin, "topbar", `[{"kind":"link","label":"Privacy","url":"/privacy"}]`, true)
 
 	js := anon.get("/theme/default/assets/menu.js")
 	if js.Status != 200 || !strings.Contains(js.Header.Get("Content-Type"), "javascript") || js.Header.Get("X-Content-Type-Options") != "nosniff" || !strings.Contains(js.Body, "aria-expanded") {
@@ -209,9 +212,54 @@ func TestMenuScriptAndThemes(t *testing.T) {
 					t.Errorf("%s %s: inline style inside a menu", theme, path)
 				}
 			}
-			if !strings.Contains(body, `menu-footer is-sticky`) || !strings.Contains(body, `site-header`) || !strings.Contains(body, ` is-sticky"`) {
+			if !strings.Contains(body, `menu-topbar is-sticky`) || !strings.Contains(body, `site-header`) || !strings.Contains(body, ` is-sticky"`) {
 				t.Errorf("%s %s: frozen sections missing their class", theme, path)
 			}
 		}
+	}
+}
+
+func TestMegaMenuImageAndTextSections(t *testing.T) {
+	e := newEnv(t)
+	admin := e.newAdmin("admin@example.com")
+	anon := e.client()
+
+	page := admin.get("/admin/menus").Body
+	for _, want := range []string{`<option value="image"`, `<option value="text"`, `data-s="image"`, `textarea data-s="text" rows="5" class="mono" maxlength="5000" data-richtext`, `id="media-picker"`} {
+		if !strings.Contains(page, want) {
+			t.Errorf("menus page lacks %s", want)
+		}
+	}
+	if body := admin.get("/admin/footer").Body; !strings.Contains(body, `data-richtext`) || !strings.Contains(body, `id="media-picker"`) {
+		t.Error("the footer's text widget uses the visual editor")
+	}
+
+	mega := `[{"kind":"mega","label":"Services","columns":[
+		{"type":"links","heading":"Care","links":[{"label":"Dental","url":"/dental"}]},
+		{"type":"image","heading":"Surgery","url":"/surgery","image":"/media/2026/10/a.jpg","alt":"Our theatre","caption":"Modern and calm"},
+		{"type":"image","image":"/media/2026/10/b.jpg","alt":"Kennels","url":"/boarding"},
+		{"type":"text","heading":"Emergencies","text":"<p>Call <strong>021 555 0101</strong> <a href=\"javascript:alert(1)\" onclick=\"x()\">now</a></p><script>alert(2)</script>"}]}]`
+	if r := saveMenu(admin, "main", mega, false); r.Status != 303 {
+		t.Fatalf("save: %d %s", r.Status, regexp.MustCompile(`(?s)role="alert">.*?<p>(.*?)</p>`).FindStringSubmatch(r.Body))
+	}
+	body := anon.get("/surgery").Body
+	for _, want := range []string{
+		`class="menu-mega-grid mega-cols-4"`, `menu-col menu-col-links`, `menu-col menu-col-image`, `menu-col menu-col-text`,
+		`<a href="/surgery" aria-current="page">Surgery</a>`, `<a href="/surgery" tabindex="-1" aria-hidden="true"><img src="/media/2026/10/a.jpg"`, `alt="Our theatre" loading="lazy">`,
+		`<figcaption>Modern and calm</figcaption>`,
+		`<a href="/boarding"><img src="/media/2026/10/b.jpg"`, // no title: the picture is the link
+		`<p class="menu-col-heading">Emergencies</p>`, `<strong>021 555 0101</strong>`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("mega menu lacks %s", want)
+		}
+	}
+	for _, not := range []string{"javascript:", "onclick", "<script>alert"} {
+		if strings.Contains(body, not) {
+			t.Errorf("mega menu shows %q", not)
+		}
+	}
+	if r := saveMenu(admin, "main", `[{"kind":"mega","label":"M","columns":[{"type":"image","heading":"No picture"}]}]`, false); r.Status != 400 {
+		t.Errorf("an image section without a picture: %d", r.Status)
 	}
 }

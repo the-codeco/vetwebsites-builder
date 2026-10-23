@@ -1,14 +1,36 @@
-{{/* The footer content the owner wrote: columns (heading + text), and the contact details when they asked for them there. */}}
-{{define "footer-columns"}}{{$d := .Site.Details}}{{$details := and $d.InFooter (not $d.Empty)}}{{if or .Site.Footer.Columns $details}}<div class="footer-cols footer-cols-{{len .Site.Footer.Columns}}">
-{{range .Site.Footer.Columns}}  <section class="footer-col">{{with .Heading}}<h2>{{.}}</h2>{{end}}{{with .Text}}<div class="prose">{{richtext .}}</div>{{end}}</section>
-{{end}}{{if $details}}  <section class="footer-col footer-details"><h2>Contact</h2>
-    <ul class="details">
-      {{with $d.Phone}}<li><a href="{{safeurl $d.PhoneLink}}">{{.}}</a></li>{{end}}
-      {{with $d.WhatsApp}}<li><a href="{{safeurl $d.WhatsAppLink}}" rel="noopener">WhatsApp {{.}}</a></li>{{end}}
-      {{with $d.Email}}<li><a href="mailto:{{.}}">{{.}}</a></li>{{end}}
-      {{with $d.Address}}<li class="details-lines">{{.}}</li>{{end}}
-      {{with $d.Hours}}<li class="details-lines">{{.}}</li>{{end}}
-      {{with $d.Social}}<li class="details-links">{{range .}}<a href="{{.URL}}" rel="noopener">{{.Label}}</a> {{end}}</li>{{end}}
+{{/*
+  The footer the owner built (Admin → Footer): rows of columns, each a list of widgets.
+  Layouts place it inside <footer class="site-footer{{.Site.Footer.Classes}}" style="{{.Site.Footer.Style}}">,
+  followed by the bottom line.
+*/}}
+{{define "footer-columns"}}{{$d := .Site.Details}}{{$b := .Site.Brand}}{{$title := .Site.Title}}{{range $ri, $row := .Site.Footer.Rows}}
+<div class="footer-row footer-cols-{{len $row.Columns}} footer-ratio-{{$row.Ratio}} footer-align-{{$row.Align}}">
+{{range $ci, $col := $row.Columns}}  <div class="footer-col">
+{{range $wi, $w := $col.Widgets}}    <section class="footer-widget footer-{{$w.Type}}">
+    {{- if eq $w.Type "text"}}{{with $w.Heading}}<h2>{{.}}</h2>{{end}}{{with $w.Text}}<div class="prose">{{richtext .}}</div>{{end}}
+    {{- else if eq $w.Type "links"}}{{with $w.Heading}}<h2>{{.}}</h2>{{end}}<ul class="footer-links{{if $w.Inline}} is-inline{{end}}">{{range $w.Links}}<li><a href="{{safeurl .URL}}"{{if .Active}} aria-current="page"{{end}}{{if .NewTab}} target="_blank" rel="noopener noreferrer"{{end}}>{{.Label}}</a></li>{{end}}</ul>
+    {{- else if eq $w.Type "contact"}}{{with $w.Heading}}<h2>{{.}}</h2>{{end}}<ul class="details">
+      {{if and $w.Show.phone $d.Phone}}<li><a href="{{safeurl $d.PhoneLink}}">{{$d.Phone}}</a></li>{{end}}
+      {{if and $w.Show.whatsapp $d.WhatsApp}}<li><a href="{{safeurl $d.WhatsAppLink}}" rel="noopener">WhatsApp {{$d.WhatsApp}}</a></li>{{end}}
+      {{if and $w.Show.email $d.Email}}<li><a href="mailto:{{$d.Email}}">{{$d.Email}}</a></li>{{end}}
+      {{if and $w.Show.address $d.Address}}<li class="details-lines">{{$d.Address}}</li>{{end}}
+      {{if and $w.Show.hours $d.Hours}}<li class="details-lines">{{$d.Hours}}</li>{{end}}
+      {{if and $w.Show.social $d.Social}}<li class="details-links">{{range $d.Social}}<a href="{{.URL}}" rel="noopener">{{.Label}}</a> {{end}}</li>{{end}}
     </ul>
-  </section>
-{{end}}</div>{{end}}{{end}}
+    {{- else if eq $w.Type "social"}}{{with $w.Heading}}<h2>{{.}}</h2>{{end}}{{with $d.Social}}<ul class="footer-links is-inline footer-social-links">{{range .}}<li><a href="{{.URL}}" rel="noopener">{{.Label}}</a></li>{{end}}</ul>{{end}}
+    {{- else if eq $w.Type "logo"}}<a class="footer-logo" href="/">{{if $w.Logo}}<img class="logo-{{$b.Size}}" src="{{$w.Logo}}" alt="{{$b.Alt}}" height="{{$b.Height}}">{{else}}<span class="footer-logo-title">{{$title}}</span>{{end}}</a>{{with $w.Text}}<p class="footer-tagline">{{.}}</p>{{end}}
+    {{- else if eq $w.Type "newsletter"}}{{with $w.Heading}}<h2>{{.}}</h2>{{end}}{{with $w.Text}}<p>{{.}}</p>{{end}}
+      {{- with $w.Form}}{{if .Sent}}<p class="form-notice" id="newsletter-0" role="status">{{or $w.Success "Thanks for subscribing!"}}{{if .Confirm}} Please check your inbox and confirm your address.{{end}}</p>
+      {{- else if .Token}}<form class="newsletter-form" id="newsletter-0" method="post" action="/subscribe" data-success="{{or $w.Success "Thanks for subscribing!"}}">
+        <input type="hidden" name="t" value="{{.Token}}">
+        <input type="hidden" name="from" value="{{.Path}}">
+        <input type="hidden" name="block" value="0">
+        <p class="hp" aria-hidden="true"><label>Leave this field empty <input name="website" tabindex="-1" autocomplete="off"></label></p>
+        <label class="sr-only" for="nl-email-footer-{{$ri}}-{{$ci}}-{{$wi}}">Email address</label>
+        <input id="nl-email-footer-{{$ri}}-{{$ci}}-{{$wi}}" type="email" name="email" required maxlength="254" autocomplete="email" placeholder="you@example.com">
+        <button class="btn btn-primary" type="submit">{{or $w.Button "Subscribe"}}</button>
+      </form>{{end}}{{end}}
+    {{- end}}</section>
+{{end}}  </div>
+{{end}}</div>
+{{end}}{{end}}

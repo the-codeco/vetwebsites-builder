@@ -2,7 +2,7 @@
 <datalist id="page-urls">{{range .Data.PageURLs}}<option value="{{.}}">{{end}}</datalist>
 
 <div class="editor">
-  <div class="editor-main" data-menu-builder>
+  <div class="editor-main" data-menu-builder data-destinations="{{.Data.Destinations}}">
     {{range .Data.Sections}}
     {{$sec := .Section}}
     <div class="card menu-card" id="menu-{{.Key}}">
@@ -46,6 +46,7 @@
     <template id="tpl-mlink">{{template "mi-link" (linkctx blanklink true)}}</template>
     <template id="tpl-col">{{template "mi-col" blankcol}}</template>
   </div>
+  {{template "pickerdialog"}}
 
   <div class="editor-preview">
     <div class="preview-bar"><span>Live preview — saved menus</span><a href="{{.PreviewBase}}/" target="_blank" rel="noopener">Open site ↗</a></div>
@@ -70,6 +71,7 @@
       <option value="right"{{if ne .Side "left"}} selected{{end}}>Right</option>
     </select>{{end}}
     <input data-f="url" class="mi-url" value="{{.URL}}" placeholder="/about" list="page-urls" maxlength="2000" aria-label="Address">
+    <button type="button" class="ghost mi-find" data-act="find" title="Search your pages and posts to fill in the label and address" aria-expanded="false">Find…</button>
     <label class="chk chk-newtab"><input type="checkbox" data-f="new_tab"{{if .NewTab}} checked{{end}}> New tab</label>
     <label class="chk chk-newtab" title="Show this link as a button"><input type="checkbox" data-f="button"{{if .Button}} checked{{end}}> Button</label>
     <label class="chk"><input type="checkbox" data-f="hidden"{{if .Hidden}} checked{{end}}> Hide</label>
@@ -86,10 +88,10 @@
     </div>
   </div>
   <div class="mi-panel mi-mega">
-    <p class="hint">Opens a wide panel of up to 4 columns, each with a heading and links.</p>
+    <p class="hint">Opens a wide panel of up to 6 sections. Each has a title (which can be a link) over a list of links, a picture or some text.</p>
     <div class="mi-sub" data-sub="columns">
       <div class="mi-list mi-cols" data-list>{{range .Columns}}{{template "mi-col" .}}{{end}}</div>
-      <button type="button" class="ghost" data-act="add" data-tpl="tpl-col">+ Add column</button>
+      <button type="button" class="ghost" data-act="add" data-tpl="tpl-col">+ Add section</button>
     </div>
   </div>
   {{end}}
@@ -100,6 +102,7 @@
   <div class="mi-fields">
     <input data-f="label" value="{{.Label}}" placeholder="Label" maxlength="60" aria-label="Link label">
     <input data-f="url" value="{{.URL}}" placeholder="/page" list="page-urls" maxlength="2000" aria-label="Link address">
+    <button type="button" class="ghost mi-find" data-act="find" title="Search your pages and posts to fill in the label and address" aria-expanded="false">Find…</button>
     {{if .Desc}}<input data-f="description" class="mi-desc" value="{{.Description}}" placeholder="Short description (optional)" maxlength="120" aria-label="Description">{{end}}
     <label class="chk"><input type="checkbox" data-f="new_tab"{{if .NewTab}} checked{{end}}> New tab</label>
     <label class="chk"><input type="checkbox" data-f="hidden"{{if .Hidden}} checked{{end}}> Hide</label>
@@ -107,15 +110,31 @@
   </div>
 </div>{{end}}
 
-{{/* one column of a mega menu */}}
-{{define "mi-col"}}<div class="mi-col">
+{{/* one section (column) of a mega menu: a title, optionally linked, over its links, a picture or some text */}}
+{{define "mi-col"}}<div class="mi-col" data-type="{{if .Type}}{{.Type}}{{else}}links{{end}}">
   <div class="mi-fields">
-    <input data-f="heading" value="{{.Heading}}" placeholder="Column heading" maxlength="60" aria-label="Column heading">
+    <select data-f="type" aria-label="Section type">
+      <option value="links"{{if or (eq .Type "links") (eq .Type "")}} selected{{end}}>Links</option>
+      <option value="image"{{if eq .Type "image"}} selected{{end}}>Image</option>
+      <option value="text"{{if eq .Type "text"}} selected{{end}}>Text</option>
+    </select>
+    <input data-f="heading" value="{{.Heading}}" placeholder="Section title" maxlength="60" aria-label="Section title">
+    <input data-f="url" value="{{.URL}}" placeholder="Title links to (optional)" list="page-urls" maxlength="2000" aria-label="Section title address">
+    <button type="button" class="ghost mi-find" data-act="find" title="Search your pages and posts to fill in the label and address" aria-expanded="false">Find…</button>
     {{template "mi-buttons"}}
   </div>
-  <div class="mi-sub" data-sub="links">
+  <div class="mi-sub mi-sec-links" data-sub="links">
     <div class="mi-list" data-list>{{range .Links}}{{template "mi-link" (linkctx . true)}}{{end}}</div>
     <button type="button" class="ghost" data-act="add" data-tpl="tpl-mlink">+ Add link</button>
+  </div>
+  <div class="mi-sec mi-sec-image">
+    <label>Picture <span class="colorrow"><input type="text" data-s="image" value="{{.Image}}" maxlength="2000" placeholder="/media/photo.jpg or https://…"><button type="button" class="ghost" data-pick>Choose…</button></span></label>
+    <label>Image description <span class="muted">(for people who can't see it)</span><input data-s="alt" value="{{.Alt}}" maxlength="120"></label>
+    <label>Caption <span class="muted">(optional)</span><input data-s="caption" value="{{.Caption}}" maxlength="300"></label>
+    <span class="hint">When the title links somewhere, the picture links there too.</span>
+  </div>
+  <div class="mi-sec mi-sec-text">
+    <label>Text {{template "rtbar"}}<textarea data-s="text" rows="5" class="mono" maxlength="5000" data-richtext>{{.Text}}</textarea></label>
   </div>
 </div>{{end}}
 

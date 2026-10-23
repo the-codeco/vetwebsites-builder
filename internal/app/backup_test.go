@@ -183,7 +183,7 @@ func buildSite(t *testing.T, e *testEnv, admin *client) (img1, img2 uploaded) {
 		('hello', 'Hello world', 'First', '<p>Giraffe in the <em>body</em></p>', $1, 'published', '2026-03-04 05:06:07+00'),
 		('draft-post', 'A draft', '', '<p>Not yet</p>', '', 'draft', NULL)`, img2.URL)
 	e.pool.Exec(context.Background(), `INSERT INTO post_categories (post_id, category_id) SELECT p.id, c.id FROM posts p, categories c WHERE p.slug = 'hello'`)
-	e.pool.Exec(context.Background(), `UPDATE menus SET items = '[{"kind":"link","label":"Gallery","url":"/gallery"},{"kind":"link","label":"Privacy","url":"/privacy","new_tab":true}]', sticky = true WHERE location = 'footer'`)
+	admin.post("/admin/footer", url.Values{"structure": {`{"version":2,"bottom":"© {year} Demo","style":{"background":"#102030","padding":"lg"},"rows":[{"align":"center","columns":[{"widgets":[{"type":"links","inline":true,"links":[{"label":"Gallery","url":"/gallery"},{"label":"Privacy","url":"/privacy","new_tab":true}]}]}]}]}`}})
 
 	admin.post("/admin/appearance/title", url.Values{"title": {"Backup Demo Co"}})
 	admin.post("/admin/appearance/tokens", url.Values{"t.color-primary": {"#aa3300"}, "t.radius": {"12px"}})

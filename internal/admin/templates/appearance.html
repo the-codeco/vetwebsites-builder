@@ -23,6 +23,9 @@
         <label>Logo size
           <select name="logo_height">{{range .Data.LogoHeights}}<option value="{{.Key}}"{{if .Selected}} selected{{end}}>{{.Label}}</option>{{end}}</select></label>
         <label class="check"><input type="checkbox" name="hide_title"{{if .Data.Brand.HideTitle}} checked{{end}}> Show only the logo, not the site title beside it</label>
+        <label>Alternative logo <span class="muted">(optional)</span>
+          <span class="colorrow"><input type="text" name="alt_logo" value="{{.Data.Brand.AltLogo}}" maxlength="2000" placeholder="/media/logo-light.png or https://…"><button type="button" class="ghost" data-pick>Choose…</button></span></label>
+        <span class="hint">A second version of your logo for places where the main one doesn't show up well, such as a light logo on a dark <a href="/admin/footer">footer</a>. Pick it in the footer's Logo widget. It uses the same description and size as the main logo.</span>
         <label>Browser tab icon <span class="muted">(a small square picture)</span>
           <span class="colorrow"><input type="text" name="icon" value="{{.Data.Brand.Icon}}" maxlength="2000" placeholder="/media/icon.png"><button type="button" class="ghost" data-pick>Choose…</button></span></label>
         <button>Save</button>
@@ -103,23 +106,7 @@
 
     <div class="card">
       <h2>Footer</h2>
-      <p class="muted">Content shown at the bottom of every page, above the bottom line: opening hours, an address, a few links, a short about. Fill in up to four columns; empty ones are left out. Text can be plain (a blank line starts a new paragraph) or basic HTML such as <code>&lt;a href="/contact"&gt;</code>. Anything unsafe is removed on save. Links for the footer menu are set under Menus.</p>
-      <form method="post" action="/admin/appearance/footer">
-        <input type="hidden" name="csrf" value="{{.CSRF}}">
-        {{range $i, $c := .Data.FooterCols}}{{$n := inc $i}}
-        <fieldset class="plainset">
-          <legend>Column {{$n}}</legend>
-          <label>Heading <span class="muted">(optional)</span>
-            <input name="footer_heading_{{$n}}" value="{{$c.Heading}}" maxlength="60"></label>
-          <label>Text
-            <textarea name="footer_text_{{$n}}" rows="5" class="mono" maxlength="5000">{{$c.Text}}</textarea></label>
-        </fieldset>
-        {{end}}
-        <label>Bottom line <span class="muted">(optional)</span>
-          <input name="footer_bottom" value="{{.Data.FooterBottom}}" maxlength="300" placeholder="{{.Data.FooterHint}}"></label>
-        <span class="hint"><code>{year}</code> becomes the current year and <code>{title}</code> your site's title.</span>
-        <button>Save footer</button>
-      </form>
+      <p class="muted">The footer — its columns, links, colours and bottom line — is built under <a href="/admin/footer">Footer</a>.</p>
     </div>
 
     <div class="card">

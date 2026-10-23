@@ -1,6 +1,8 @@
 package admin
 
 import (
+	"context"
+	"encoding/json"
 	"net/http"
 
 	"webbuilder/internal/auth"
@@ -23,6 +25,17 @@ type sectionView struct {
 type menusData struct {
 	Sections []sectionView
 	PageURLs []string
+	// Destinations is the JSON list behind the "Find" search: every page and post
+	// with its address, so picking one fills in a menu row's label and URL.
+	Destinations string
+}
+
+// destination is one search result in the menu builder.
+type destination struct {
+	Title string `json:"title"`
+	URL   string `json:"url"`
+	Type  string `json:"type"` // "Page", "Post" or "Blog"
+	Draft bool   `json:"draft,omitempty"`
 }
 
 // menuOverride re-shows what someone typed after a validation error.
@@ -59,20 +72,44 @@ func (h *Handler) renderMenus(w http.ResponseWriter, r *http.Request, status int
 		}
 		views = append(views, v)
 	}
-	pages, err := h.Content.ListPages(r.Context())
+	urls, dests, err := h.linkTargets(r.Context())
 	if err != nil {
 		serverError(w, err)
 		return
 	}
-	urls := []string{"/blog"}
-	for _, p := range pages {
-		urls = append(urls, pagePath(p.Slug))
-	}
 	id := auth.CurrentIdentity(r)
 	h.render(w, r, status, "menus", pageData{
 		Title: "Menus", User: id, CSRF: id.CSRF, Notice: notice, Error: errMsg, Wide: true,
-		Data: menusData{Sections: views, PageURLs: urls},
+		Data: menusData{Sections: views, PageURLs: urls, Destinations: dests},
 	})
+}
+
+// linkTargets are the site's own addresses for link fields: the plain list behind an address box's
+// suggestions, and the JSON behind "Find…" (every page and post with its title).
+func (h *Handler) linkTargets(ctx context.Context) (urls []string, destJSON string, err error) {
+	pages, err := h.Content.ListPages(ctx)
+	if err != nil {
+		return nil, "", err
+	}
+	posts, err := h.Content.ListPosts(ctx)
+	if err != nil {
+		return nil, "", err
+	}
+	urls = []string{"/blog"}
+	var dests []destination
+	for _, p := range pages {
+		urls = append(urls, pagePath(p.Slug))
+		dests = append(dests, destination{Title: p.Title, URL: pagePath(p.Slug), Type: "Page", Draft: p.Status != "published"})
+	}
+	dests = append(dests, destination{Title: "Blog", URL: "/blog", Type: "Blog"})
+	for _, p := range posts {
+		dests = append(dests, destination{Title: p.Title, URL: "/blog/" + p.Slug, Type: "Post", Draft: p.Status != "published"})
+	}
+	data, err := json.Marshal(dests)
+	if err != nil {
+		return nil, "", err
+	}
+	return urls, string(data), nil
 }
 
 func (h *Handler) menusPage(w http.ResponseWriter, r *http.Request) {

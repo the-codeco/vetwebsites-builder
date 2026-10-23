@@ -227,7 +227,7 @@ func (s *Service) inspect(ctx context.Context, ra io.ReaderAt, size int64) (*Arc
 
 	w := &warnings{}
 	a := &Archive{Manifest: man}
-	a.Content.Settings = s.cleanSettings(c.Settings, w)
+	a.Content.Settings = s.cleanSettings(c.Settings, c.Menus, w)
 
 	imgs, err := s.checkImages(ctx, files, man, c.Media, w)
 	if err != nil {
@@ -260,14 +260,22 @@ func clip(s string, max int) string {
 	return s
 }
 
-func (s *Service) cleanSettings(in Settings, w *warnings) Settings {
+func (s *Service) cleanSettings(in Settings, menuList []Menu, w *warnings) Settings {
+	// a backup from before the footer builder kept the footer's links as a menu: they move into the footer
+	var footerMenu []menus.Item
+	for _, m := range menuList {
+		if m.Location == menus.FooterKey {
+			footerMenu = m.Items
+			break // the first one, as cleanMenus keeps the first of each
+		}
+	}
 	out := Settings{
 		Title:      strings.TrimSpace(clip(in.Title, 100)),
 		ShowSearch: in.ShowSearch,
 		CustomCSS:  in.CustomCSS,
 		SEO:        content.CleanSEO(in.SEO),
 		Consent:    content.CleanConsent(in.Consent),
-		Footer:     content.CleanFooter(in.Footer),
+		Footer:     content.CleanFooter(in.Footer, footerMenu, content.CleanDetails(in.Details)["in_footer"] == true),
 		Brand:      content.CleanBrand(in.Brand),
 		Details:    content.CleanDetails(in.Details),
 		Tracking:   content.CleanTracking(in.Tracking),
@@ -691,6 +699,9 @@ func cleanMenus(in []Menu, w *warnings) []Menu {
 	var out []Menu
 	seen := map[string]bool{}
 	for _, m := range in {
+		if m.Location == menus.FooterKey {
+			continue // moved into the footer by cleanSettings
+		}
 		sec, ok := menus.SectionByKey(m.Location)
 		if !ok || seen[m.Location] {
 			w.add("A menu called %q isn't one this site has and was left out.", trunc(m.Location, 40))

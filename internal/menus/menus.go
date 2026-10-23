@@ -1,6 +1,8 @@
 // Package menus is the data model and validation for the site's navigation:
-// three sections (top bar, main navigation, footer), each a list of items that
-// are plain links, simple dropdowns or mega menus (columns of links with headings).
+// two sections (top bar, main navigation), each a list of items that
+// are plain links, simple dropdowns or mega menus (columns, or "sections", each a
+// list of links, a picture or some text, under an optional heading that can itself
+// be a link).
 package menus
 
 import (
@@ -25,13 +27,22 @@ const (
 	KindSearch = "search"
 )
 
+// Mega menu section types. A section saved before types existed is a list of links.
+const (
+	SectionLinks = "links"
+	SectionImage = "image"
+	SectionText  = "text"
+)
+
 // Limits keep menus usable and requests bounded.
 const (
 	MaxLabel       = 60
 	MaxDescription = 120
-	MaxColumns     = 4
+	MaxColumns     = 6
 	MaxColumnLinks = 8
 	MaxChildren    = 12
+	MaxSectionText = 5000 // a text section's rich text
+	MaxCaption     = 300
 	MaxJSON        = 128 << 10
 )
 
@@ -44,10 +55,21 @@ type Link struct {
 	Hidden      bool   `json:"hidden,omitempty"`
 }
 
-// Column is one column of a mega menu.
+// Column is one column ("section") of a mega menu. A heading with a URL is a link (and, in an
+// image section, so is the picture). Which other fields are used depends on Type:
+//
+//	links  Links
+//	image  Image, Alt, Caption
+//	text   Text (basic HTML, cleaned like a block's rich text)
 type Column struct {
+	Type    string `json:"type,omitempty"` // "" means links
 	Heading string `json:"heading,omitempty"`
+	URL     string `json:"url,omitempty"`
 	Links   []Link `json:"links"`
+	Image   string `json:"image,omitempty"`
+	Alt     string `json:"alt,omitempty"`
+	Caption string `json:"caption,omitempty"`
+	Text    string `json:"text,omitempty"`
 }
 
 // Item is a top-level entry. A link has a URL; a dropdown has Children; a mega
@@ -100,9 +122,11 @@ var Sections = []Section{
 		Help: "A slim bar above the header. Put links (a phone number, a login), your social icons or the search icon on its left or its right."},
 	{Key: "main", Label: "Main navigation", Nested: true, Icons: true, MaxItems: 12,
 		Help: "The site's main menu. Items can be plain links, simple dropdowns, mega menus with columns of links, or the search icon."},
-	{Key: "footer", Label: "Footer", MaxItems: 12,
-		Help: "Links shown at the bottom of every page. Links only."},
 }
+
+// FooterKey is where the footer menu was kept before links moved into the footer builder
+// (package footer). Old data and backups may still carry it; it is upgraded, never shown.
+const FooterKey = "footer"
 
 func SectionByKey(key string) (Section, bool) {
 	for _, s := range Sections {
@@ -197,7 +221,7 @@ func Validate(sec Section, in []Item) ([]Item, error) {
 			blank = blank && blankLink(l)
 		}
 		for _, c := range it.Columns {
-			blank = blank && clean(c.Heading) == ""
+			blank = blank && clean(c.Heading) == "" && clean(c.URL) == "" && clean(c.Image) == "" && blocks.PlainText(c.Text) == ""
 			for _, l := range c.Links {
 				blank = blank && blankLink(l)
 			}
@@ -237,18 +261,58 @@ func Validate(sec Section, in []Item) ([]Item, error) {
 			}
 			var cols []Column
 			for _, c := range it.Columns {
-				c.Heading = clean(c.Heading)
+				c.Heading, c.URL = clean(c.Heading), clean(c.URL)
 				if tooLong(c.Heading, MaxLabel) {
 					return nil, fmt.Errorf("Column headings can be at most %d characters (“%.20s…”).", MaxLabel, c.Heading)
 				}
-				links, err := validateLinks(it.Label, c.Links, MaxColumnLinks, true)
-				if err != nil {
-					return nil, err
+				if c.URL != "" {
+					if c.Heading == "" && c.Type != SectionImage { // an image section's picture can be the link on its own
+						return nil, fmt.Errorf("A column in “%s” has an address but no heading to link.", it.Label)
+					}
+					u := blocks.SafeURL(c.URL)
+					if u == "" {
+						return nil, fmt.Errorf("The heading “%s” needs a valid address: a path like /about, or an http(s)://, mailto: or tel: address.", c.Heading)
+					}
+					c.URL = u
 				}
-				if c.Heading == "" && len(links) == 0 {
-					continue // an empty column
+				col := Column{Type: c.Type, Heading: c.Heading, URL: c.URL}
+				switch c.Type {
+				case "", SectionLinks:
+					links, err := validateLinks(it.Label, c.Links, MaxColumnLinks, true)
+					if err != nil {
+						return nil, err
+					}
+					if c.Heading == "" && len(links) == 0 {
+						continue // an empty column
+					}
+					col.Type, col.Links = SectionLinks, links
+				case SectionImage:
+					col.Alt, col.Caption = clean(c.Alt), clean(c.Caption)
+					if clean(c.Image) == "" && c.Heading == "" && col.Caption == "" {
+						continue // an empty section
+					}
+					if col.Image = blocks.SafeImageURL(clean(c.Image)); col.Image == "" {
+						return nil, fmt.Errorf("An image section in “%s” needs a picture: choose one from the library, or give a /media/… or https:// address.", it.Label)
+					}
+					switch {
+					case tooLong(col.Alt, MaxLabel*2):
+						return nil, fmt.Errorf("Image descriptions can be at most %d characters (“%s”).", MaxLabel*2, it.Label)
+					case tooLong(col.Caption, MaxCaption):
+						return nil, fmt.Errorf("Captions can be at most %d characters (“%s”).", MaxCaption, it.Label)
+					}
+				case SectionText:
+					if tooLong(c.Text, MaxSectionText) {
+						return nil, fmt.Errorf("Text sections can be at most %d characters (“%s”).", MaxSectionText, it.Label)
+					}
+					col.Text = blocks.NormalizeRichText(c.Text)
+					if c.Heading == "" && blocks.PlainText(col.Text) == "" {
+						continue // an empty section
+					}
+				default:
+					return nil, fmt.Errorf("A section in “%s” has an unknown type.", it.Label)
 				}
-				cols = append(cols, Column{Heading: c.Heading, Links: links})
+				col.Links = nilIfEmpty(col.Links)
+				cols = append(cols, col)
 			}
 			if len(cols) > MaxColumns {
 				return nil, fmt.Errorf("“%s” can have at most %d columns.", it.Label, MaxColumns)
@@ -269,8 +333,16 @@ func Validate(sec Section, in []Item) ([]Item, error) {
 	return out, nil
 }
 
+func nilIfEmpty(ls []Link) []Link {
+	if len(ls) == 0 {
+		return nil
+	}
+	return ls
+}
+
 // Visible returns what visitors should see: hidden items and links removed, and
-// dropdowns/mega menus left with nothing to show dropped. The input isn't modified.
+// dropdowns/mega menus left with nothing to show dropped (a mega column with a
+// linked heading, a picture or text still shows). The input isn't modified.
 func Visible(in []Item) []Item {
 	visibleLinks := func(ls []Link) []Link {
 		var out []Link
@@ -295,8 +367,13 @@ func Visible(in []Item) []Item {
 		case KindMega:
 			var cols []Column
 			for _, c := range it.Columns {
-				if links := visibleLinks(c.Links); len(links) > 0 {
-					cols = append(cols, Column{Heading: c.Heading, Links: links})
+				if c.Type == SectionImage || c.Type == SectionText { // these have nothing to hide
+					cols = append(cols, c)
+					continue
+				}
+				if links := visibleLinks(c.Links); len(links) > 0 || c.URL != "" {
+					c.Links = links
+					cols = append(cols, c)
 				}
 			}
 			if len(cols) == 0 {

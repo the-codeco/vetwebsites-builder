@@ -356,9 +356,23 @@ ul.checks li span { font-size: .9rem; color: var(--muted); }
 .mi-panel { margin: 8px 0 0 12px; padding-left: 12px; border-left: 3px solid var(--line-strong); }
 .mi-panel .hint { margin: 0 0 6px; }
 .mi-cols { display: grid; gap: 8px; }
+.mi-sec { display: grid; gap: 6px; margin-top: 8px; }
+.mi-sec label { margin: 0; }
+.mi-col:not([data-type="image"]) > .mi-sec-image, .mi-col:not([data-type="text"]) > .mi-sec-text,
+.mi-col:not([data-type="links"]) > .mi-sec-links { display: none; }
 .mi[data-kind="link"] > .mi-panel { display: none; }
 .mi[data-kind="dropdown"] > .mi-mega, .mi[data-kind="mega"] > .mi-dropdown { display: none; }
-.mi:not([data-kind="link"]) > .mi-fields .mi-url, .mi:not([data-kind="link"]) > .mi-fields .chk-newtab { display: none; }
+.mi:not([data-kind="link"]) > .mi-fields .mi-url, .mi:not([data-kind="link"]) > .mi-fields .chk-newtab,
+.mi:not([data-kind="link"]) > .mi-fields .mi-find, .mi:not([data-kind="link"]) > .mi-search { display: none; }
+.mi-find { height: 28px; margin: 0; padding: 0 9px; }
+.mi-search { margin: 6px 0 2px; padding: 8px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--card); }
+.mi-search input { width: 100%; height: 34px; }
+.mi-results { list-style: none; margin: 6px 0 0; padding: 0; max-height: 260px; overflow-y: auto; }
+.mi-results button { display: flex; width: 100%; gap: 8px; align-items: baseline; margin: 0; padding: 6px 8px; border: 0; border-radius: 6px; background: transparent; color: inherit; text-align: left; font: inherit; cursor: pointer; }
+.mi-results button:hover, .mi-results button:focus-visible { background: var(--bg); }
+.mi-results .mi-r-title { flex: 1 1 auto; min-width: 0; font-weight: 600; }
+.mi-results .mi-r-meta { flex: 0 0 auto; color: var(--muted); font-size: .85em; }
+.mi-results .mi-r-none { padding: 6px 8px; color: var(--muted); }
 label.freeze { margin: 10px 0 0; padding: 10px 12px; border: 1px dashed var(--line-strong); border-radius: 10px; }
 
 @media (prefers-reduced-motion: reduce) {
@@ -473,6 +487,32 @@ fieldset.plainset input { margin-top: 4px; }
 .pb-actions { display: flex; gap: .5rem; align-items: center; }
 .progress-card progress { width: 100%; height: 1rem; }
 .alert-line { padding: .5rem .75rem; border-left: 4px solid #d29922; background: rgba(210, 153, 34, .12); }
+
+/* footer builder: rows of columns of widgets */
+.fb-rows { display: grid; gap: 12px; margin: 12px 0 8px; }
+.fb-row { padding: 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); }
+.fb-row-head { margin-bottom: 8px; }
+.fb-title { font-size: .95em; }
+.fb-inline { display: inline-flex; gap: 6px; align-items: center; margin: 0; font-size: .9em; }
+.fb-inline select { width: auto; height: 32px; }
+/* the editor column is narrow, so a row's columns are shown one under another, numbered */
+.fb-cols { display: grid; gap: 8px; counter-reset: fb-col; }
+.fb-col { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 8px; border: 1px dashed var(--line-strong); border-radius: 8px; counter-increment: fb-col; }
+.fb-col::before { content: "Column " counter(fb-col); font-size: .8rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.fb-widgets { display: grid; gap: 6px; }
+.fb-widgets:empty::before { content: "Empty column"; color: var(--muted); font-size: .85em; }
+.fb-widget { padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); }
+.fb-widget-head .mi-btns button { padding: 0 7px; }
+.fb-body textarea { min-height: 6.5em; }
+.fb-body { display: grid; gap: 6px; margin-top: 6px; }
+.fb-body label { margin: 0; }
+.fb-body .hint { margin: 0; }
+.fb-parts { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 0; }
+.fb-links .mi-fields input[data-f="label"], .fb-links .mi-fields input[data-f="url"] { flex: 1 1 100%; }
+.fb-add { display: flex; gap: 6px; margin-top: auto; }
+.fb-add select { flex: 1 1 auto; min-width: 0; height: 30px; }
+.fb-add button { height: 30px; margin: 0; padding: 0 9px; white-space: nowrap; }
+.fb-look { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
 
 /* ==========================================================================
    Rich text editor (Tiptap): see web/static/admin.js

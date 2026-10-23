@@ -43,7 +43,13 @@ func navSection(m menus.Menu, path string, x navExtras) themes.NavSection {
 			}
 		case menus.KindMega:
 			for _, c := range it.Columns {
-				col := themes.NavColumn{Heading: c.Heading}
+				typ := c.Type
+				if typ == "" {
+					typ = menus.SectionLinks
+				}
+				col := themes.NavColumn{Type: typ, Heading: c.Heading, URL: c.URL, Active: c.URL != "" && c.URL == path,
+					Image: c.Image, Alt: c.Alt, Caption: c.Caption, Text: c.Text}
+				ni.Within = ni.Within || col.Active
 				for _, l := range c.Links {
 					nl := navLink(l, path)
 					ni.Within = ni.Within || nl.Active
@@ -60,7 +66,8 @@ func navSection(m menus.Menu, path string, x navExtras) themes.NavSection {
 	return out
 }
 
-// nav loads all three menu sections for rendering the page at path.
+// nav loads the menu sections for rendering the page at path. The footer's links are part of the
+// footer itself now, so Nav.Footer stays empty (layouts may still place it).
 func (s *Service) nav(ctx context.Context, path string) (themes.Nav, error) {
 	all, err := s.content.Menus(ctx)
 	if err != nil {
@@ -74,6 +81,5 @@ func (s *Service) nav(ctx context.Context, path string) (themes.Nav, error) {
 	return themes.Nav{
 		TopBar: navSection(all["topbar"], path, x),
 		Main:   navSection(all["main"], path, x),
-		Footer: navSection(all["footer"], path, x),
 	}, nil
 }

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"unicode/utf8"
 
@@ -30,7 +29,6 @@ func (h *Handler) registerAppearance(mux *http.ServeMux, admin func(http.Handler
 	mux.Handle("POST /admin/appearance/search", admin(h.appearanceSearch))
 	mux.Handle("POST /admin/appearance/colormode", admin(h.appearanceColorMode))
 	mux.Handle("POST /admin/appearance/consent", admin(h.appearanceConsent))
-	mux.Handle("POST /admin/appearance/footer", admin(h.appearanceFooter))
 	mux.Handle("POST /admin/appearance/tokens", admin(h.appearanceTokens))
 	mux.Handle("POST /admin/appearance/tokens/reset", admin(h.appearanceReset))
 	mux.Handle("POST /admin/appearance/dark", admin(h.appearanceDark))
@@ -68,13 +66,10 @@ type appearanceData struct {
 	ColorMode        string // light, toggle or auto
 	ColorSwitch      string // floating, footer or off
 	Consent          content.Consent
-	ConsentHint      string                 // the text used when the owner leaves it blank
-	FooterCols       []content.FooterColumn // always MaxFooterColumns of them, so the form shows every slot
-	FooterBottom     string
+	ConsentHint      string // the text used when the owner leaves it blank
 	Brand            content.Brand
 	Fonts            []fontView
 	LogoHeights      []logoHeight
-	FooterHint       string
 	HasDark          bool // the active theme ships a dark palette
 	DarkFields       []darkField
 	DarkNotes        []string // dark colour pairs that are hard to read
@@ -110,7 +105,7 @@ func (h *Handler) renderAppearance(w http.ResponseWriter, r *http.Request, statu
 		return
 	}
 
-	d := appearanceData{SiteTitle: st.Title, ShowSearch: st.ShowSearch, ColorMode: st.ColorMode, ColorSwitch: st.ColorSwitch, HasDark: active.HasDark(), Consent: st.Consent, ConsentHint: content.DefaultConsentText, Brand: st.Brand, Fonts: fontViews(uploaded), LogoHeights: logoHeights(st.Brand), FooterCols: footerSlots(st.Footer), FooterBottom: st.Footer.Bottom, FooterHint: content.DefaultFooterBottom, ActiveLabel: active.Label, CustomCSS: st.CustomCSS, HasOverrides: len(withoutDark(saved)) > 0}
+	d := appearanceData{SiteTitle: st.Title, ShowSearch: st.ShowSearch, ColorMode: st.ColorMode, ColorSwitch: st.ColorSwitch, HasDark: active.HasDark(), Consent: st.Consent, ConsentHint: content.DefaultConsentText, Brand: st.Brand, Fonts: fontViews(uploaded), LogoHeights: logoHeights(st.Brand), ActiveLabel: active.Label, CustomCSS: st.CustomCSS, HasOverrides: len(withoutDark(saved)) > 0}
 	for _, t := range h.Engine.List() {
 		d.Themes = append(d.Themes, themeCard{t.Name, t.Label, t.Description, t.Swatches(), t.Name == active.Name})
 	}
@@ -163,7 +158,7 @@ func fontLabel(key string) string {
 func (h *Handler) appearancePage(w http.ResponseWriter, r *http.Request) {
 	notice := map[string]string{
 		"title": "Site title saved.", "theme": "Theme activated.", "tokens": "Colours, fonts and spacing saved.",
-		"reset": "Reset to the theme's defaults.", "dark": "Dark palette saved.", "darkreset": "Dark palette reset to the theme's.", "css": "Custom CSS saved.", "search": "Search box setting saved.", "colormode": "Dark mode setting saved.", "consent": "Cookie notice saved.", "footer": "Footer saved.", "font": "Font uploaded.", "fontdeleted": "Font deleted.", "brand": "Logo and icon saved.",
+		"reset": "Reset to the theme's defaults.", "dark": "Dark palette saved.", "darkreset": "Dark palette reset to the theme's.", "css": "Custom CSS saved.", "search": "Search box setting saved.", "colormode": "Dark mode setting saved.", "consent": "Cookie notice saved.", "font": "Font uploaded.", "fontdeleted": "Font deleted.", "brand": "Logo and icon saved.",
 	}[r.URL.Query().Get("done")]
 	h.renderAppearance(w, r, 200, notice, "", nil)
 }
@@ -424,43 +419,6 @@ func (h *Handler) appearanceDarkReset(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/admin/appearance?done=darkreset", http.StatusSeeOther)
 }
 
-// footerSlots pads the footer's columns to the number the form offers.
-func footerSlots(f content.Footer) []content.FooterColumn {
-	cols := make([]content.FooterColumn, content.MaxFooterColumns)
-	copy(cols, f.Columns)
-	return cols
-}
-
-// appearanceFooter saves the footer content. Text is basic HTML, cleaned the same way as the text of a block:
-// scripts, event handlers and unsafe links are removed on save and again when the page is drawn.
-func (h *Handler) appearanceFooter(w http.ResponseWriter, r *http.Request) {
-	var f content.Footer
-	f.Bottom = strings.Join(strings.Fields(r.PostFormValue("footer_bottom")), " ")
-	for i := 1; i <= content.MaxFooterColumns; i++ {
-		n := strconv.Itoa(i)
-		heading := strings.Join(strings.Fields(r.PostFormValue("footer_heading_"+n)), " ")
-		text := r.PostFormValue("footer_text_" + n)
-		switch {
-		case utf8.RuneCountInString(heading) > content.MaxFooterHeading:
-			h.renderAppearance(w, r, 400, "", fmt.Sprintf("Footer column %d: the heading must be at most %d characters.", i, content.MaxFooterHeading), nil)
-			return
-		case utf8.RuneCountInString(text) > content.MaxFooterText:
-			h.renderAppearance(w, r, 400, "", fmt.Sprintf("Footer column %d: the text must be at most %d characters.", i, content.MaxFooterText), nil)
-			return
-		}
-		f.Columns = append(f.Columns, content.FooterColumn{Heading: heading, Text: text})
-	}
-	if utf8.RuneCountInString(f.Bottom) > content.MaxFooterBottom {
-		h.renderAppearance(w, r, 400, "", fmt.Sprintf("The bottom line must be at most %d characters.", content.MaxFooterBottom), nil)
-		return
-	}
-	if err := h.Content.SetFooter(r.Context(), f); err != nil {
-		serverError(w, err)
-		return
-	}
-	http.Redirect(w, r, "/admin/appearance?done=footer", http.StatusSeeOther)
-}
-
 type logoHeight struct {
 	Key, Label string
 	Selected   bool
@@ -474,7 +432,7 @@ func logoHeights(b content.Brand) []logoHeight {
 	return out
 }
 
-// appearanceBrand saves the logo and the browser-tab icon. Both must be pictures from the media library or an
+// appearanceBrand saves the logo, the alternative logo and the browser-tab icon. All must be pictures from the media library or an
 // https address; anything else is refused rather than quietly dropped, so the owner sees why nothing changed.
 func (h *Handler) appearanceBrand(w http.ResponseWriter, r *http.Request) {
 	b := content.Brand{
@@ -483,10 +441,14 @@ func (h *Handler) appearanceBrand(w http.ResponseWriter, r *http.Request) {
 		LogoHeight: r.PostFormValue("logo_height"),
 		HideTitle:  r.PostFormValue("hide_title") == "on",
 		Icon:       strings.TrimSpace(r.PostFormValue("icon")),
+		AltLogo:    strings.TrimSpace(r.PostFormValue("alt_logo")),
 	}
 	switch {
 	case b.Logo != "" && blocks.SafeImageURL(b.Logo) == "":
 		h.renderAppearance(w, r, 400, "", "The logo must be a picture from the media library (such as /media/logo.png) or an https:// address.", nil)
+		return
+	case b.AltLogo != "" && blocks.SafeImageURL(b.AltLogo) == "":
+		h.renderAppearance(w, r, 400, "", "The alternative logo must be a picture from the media library (such as /media/logo-light.png) or an https:// address.", nil)
 		return
 	case b.Icon != "" && blocks.SafeImageURL(b.Icon) == "":
 		h.renderAppearance(w, r, 400, "", "The tab icon must be a picture from the media library or an https:// address.", nil)

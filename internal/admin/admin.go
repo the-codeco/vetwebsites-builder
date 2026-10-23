@@ -103,14 +103,14 @@ type pageData struct {
 var sectionOf = map[string]string{
 	"dashboard": "dashboard", "pages": "pages", "page_edit": "pages",
 	"posts": "posts", "post_edit": "posts", "categories": "posts",
-	"media": "media", "media_edit": "media", "menus": "menus", "appearance": "appearance",
+	"media": "media", "media_edit": "media", "menus": "menus", "footer": "footer", "appearance": "appearance",
 	"domain": "domain", "users": "users", "account": "account", "seo": "seo", "analytics": "analytics", "messages": "messages", "message": "messages", "subscribers": "subscribers", "campaigns": "campaigns", "campaign": "campaigns", "backup": "backup", "backup_review": "backup", "shared": "shared", "shared_edit": "shared", "redirects": "redirects", "sitedetails": "sitedetails", "platform_sites": "sites", "platform_audit": "audit", "publish": "publish", "hosting": "hosting",
 }
 
 var authScreens = map[string]bool{"setup": true, "login": true, "invite": true, "forgot": true, "reset": true}
 
 // screens lists every admin template.
-var screens = []string{"setup", "login", "invite", "forgot", "reset", "dashboard", "users", "pages", "page_edit", "menus", "media", "media_edit",
+var screens = []string{"setup", "login", "invite", "forgot", "reset", "dashboard", "users", "pages", "page_edit", "menus", "footer", "media", "media_edit",
 	"posts", "post_edit", "categories", "appearance", "seo", "domain", "account", "analytics", "messages", "message", "subscribers", "campaigns", "campaign", "backup", "backup_review", "shared", "shared_edit", "redirects", "sitedetails", "platform_sites", "platform_audit", "publish", "hosting"}
 
 var funcs = template.FuncMap{
@@ -236,6 +236,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	h.registerMedia(mux, authed)
 	h.registerPosts(mux, authed)
 	h.registerAppearance(mux, admin)
+	h.registerFooter(mux, admin)
 	h.registerSiteDetails(mux, admin)
 	if !h.MultiTenant { // the domain is the platform's concern (where the site is published), not the customer's
 		h.registerDomain(mux, admin)
