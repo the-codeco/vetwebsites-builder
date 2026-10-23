@@ -63,9 +63,15 @@
         <input type="hidden" name="csrf" value="{{.CSRF}}">
         <fieldset class="plainset">
           <label class="check"><input type="radio" name="color_mode" value="light"{{if eq .Data.ColorMode "light"}} checked{{end}}> <span><strong>Off</strong> — the site is always light</span></label>
-          <label class="check"><input type="radio" name="color_mode" value="toggle"{{if eq .Data.ColorMode "toggle"}} checked{{end}}> <span><strong>Switch</strong> — light by default, with a button in the header to go dark</span></label>
+          <label class="check"><input type="radio" name="color_mode" value="toggle"{{if eq .Data.ColorMode "toggle"}} checked{{end}}> <span><strong>Switch</strong> — light by default, with a switch to go dark</span></label>
           <label class="check"><input type="radio" name="color_mode" value="auto"{{if eq .Data.ColorMode "auto"}} checked{{end}}> <span><strong>Automatic</strong> — follows each visitor's device setting, and they can switch</span></label>
         </fieldset>
+        <label>Where visitors find the switch
+          <select name="color_switch">
+            <option value="floating"{{if ne .Data.ColorSwitch "footer"}}{{if ne .Data.ColorSwitch "off"}} selected{{end}}{{end}}>Floating button at the side of the page</option>
+            <option value="footer"{{if eq .Data.ColorSwitch "footer"}} selected{{end}}>A link in the footer</option>
+            <option value="off"{{if eq .Data.ColorSwitch "off"}} selected{{end}}>Disabled: no switch (Automatic mode still follows the device)</option>
+          </select></label>
         <span class="hint">Dark mode uses this theme's dark colours. A Primary colour you set above is kept in both modes. Visitors' choice is remembered in their own browser only.</span>
         <button>Save</button>
       </form>

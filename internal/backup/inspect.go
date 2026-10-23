@@ -288,6 +288,11 @@ func (s *Service) cleanSettings(in Settings, w *warnings) Settings {
 	} else {
 		out.ColorMode = themes.ColorToggle
 	}
+	if themes.ValidColorSwitch(in.ColorSwitch) {
+		out.ColorSwitch = in.ColorSwitch
+	} else {
+		out.ColorSwitch = themes.SwitchFloating // a backup from before the switch had a place of its own
+	}
 	if utf8.RuneCountInString(in.CustomCSS) > 20000 {
 		out.CustomCSS = ""
 		w.add("The custom CSS was longer than allowed, so it was left out.")

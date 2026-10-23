@@ -14,6 +14,8 @@ type Settings struct {
 	ShowSearch bool
 	// ColorMode is "light", "toggle" or "auto": how the site treats dark mode.
 	ColorMode string
+	// ColorSwitch is where the dark mode switch is offered: "floating", "footer" or "off".
+	ColorSwitch string
 	// Consent is the cookie notice.
 	Consent Consent
 	// Footer is the content the owner has written for the bottom of every page.
@@ -36,8 +38,8 @@ func (s *Store) Settings(ctx context.Context) (Settings, error) {
 	var st Settings
 	var raw, seo, consent, footer, brand, details, tracking map[string]any
 	err := s.pool.QueryRow(ctx,
-		`SELECT title, domain, active_theme, tokens, custom_css, seo, show_search, color_mode, consent, footer, brand, details, tracking FROM site_settings WHERE id = 1`).
-		Scan(&st.Title, &st.Domain, &st.ActiveTheme, &raw, &st.CustomCSS, &seo, &st.ShowSearch, &st.ColorMode, &consent, &footer, &brand, &details, &tracking)
+		`SELECT title, domain, active_theme, tokens, custom_css, seo, show_search, color_mode, color_switch, consent, footer, brand, details, tracking FROM site_settings WHERE id = 1`).
+		Scan(&st.Title, &st.Domain, &st.ActiveTheme, &raw, &st.CustomCSS, &seo, &st.ShowSearch, &st.ColorMode, &st.ColorSwitch, &consent, &footer, &brand, &details, &tracking)
 	st.Consent = consentFrom(consent)
 	st.Footer = footerFrom(footer)
 	st.Brand, st.Details, st.Tracking = brandFrom(brand), detailsFrom(details), trackingFrom(tracking)
@@ -66,6 +68,11 @@ func (s *Store) SetTitle(ctx context.Context, title string) error {
 
 func (s *Store) SetColorMode(ctx context.Context, mode string) error {
 	_, err := s.pool.Exec(ctx, `UPDATE site_settings SET color_mode = $1 WHERE id = 1`, mode)
+	return err
+}
+
+func (s *Store) SetColorSwitch(ctx context.Context, place string) error {
+	_, err := s.pool.Exec(ctx, `UPDATE site_settings SET color_switch = $1 WHERE id = 1`, place)
 	return err
 }
 

@@ -8,11 +8,11 @@ function run({ mode, saved, systemDark, storageBlocked }) {
   const attrs = { 'data-color-mode': mode };
   const store = saved ? { 'wb-color': saved } : {};
   let clickHandler, domReady, mqListener;
-  const btn = { attrs: {}, setAttribute(k, v) { this.attrs[k] = v; }, addEventListener(e, f) { if (e === 'click') clickHandler = f; } };
+  const btn = { attrs: {}, setAttribute(k, v) { this.attrs[k] = v; }, querySelector: () => null, addEventListener(e, f) { if (e === 'click') clickHandler = f; } };
   const root = { getAttribute: k => attrs[k] ?? null, setAttribute: (k, v) => { attrs[k] = v; } };
   const mq = { matches: systemDark, addEventListener: (e, f) => { mqListener = f; } };
   const ctx = {
-    document: { documentElement: root, querySelector: () => btn, addEventListener: (e, f) => { domReady = f; } },
+    document: { documentElement: root, querySelector: () => btn, querySelectorAll: () => [btn], addEventListener: (e, f) => { domReady = f; } },
     window: { matchMedia: () => mq },
     localStorage: storageBlocked
       ? { getItem() { throw new Error('blocked'); }, setItem() { throw new Error('blocked'); } }

@@ -18,6 +18,10 @@ func siteInfo(r *http.Request, theme *themes.Theme, st content.Settings, preview
 	info := theme.Info(st.Title, preview)
 	info.Search = st.ShowSearch
 	info.ColorMode = theme.EffectiveColorMode(st.ColorMode)
+	info.ColorSwitch = st.ColorSwitch
+	if !themes.ValidColorSwitch(info.ColorSwitch) {
+		info.ColorSwitch = themes.SwitchFloating
+	}
 	info.Footer = themes.FooterInfo{Bottom: st.Footer.BottomLine(st.Title, time.Now().Year())}
 	for _, c := range st.Footer.Columns {
 		info.Footer.Columns = append(info.Footer.Columns, themes.FooterColumn{Heading: c.Heading, Text: c.Text})

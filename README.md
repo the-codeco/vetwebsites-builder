@@ -54,8 +54,8 @@ blocks, write posts, upload images, restyle the whole site, and put it on your o
   required by the site itself; turn it on if your visitors or local rules expect one. Choose a plain notice ("Got it") or
   Accept / Decline with a "Cookie settings" link in the footer. The answer is kept in the visitor's browser only, and is
   published as `<html data-consent="accepted|declined">` plus a `wb:consent` event for features that need it.
-- **Dark mode** — Default and Journal come with a dark palette. In Appearance choose Off, Switch (a sun/moon button in
-  the header, light by default) or Automatic (follows each visitor's device setting, and they can still switch). The
+- **Dark mode** — Default and Journal come with a dark palette. In Appearance choose Off, Switch (light by default, with a switch to go dark
+  light by default) or Automatic (follows each visitor's device setting, and they can still switch). The switch is a button floating at the side of the page, a link in the footer, or disabled. The
   choice is remembered in the visitor's own browser: no cookie, nothing sent to the server. A Primary colour you set
   is kept in dark mode unless you give it a dark colour. The **Dark mode colours** card in Appearance lets you recolour the
   dark palette (background, surface, text, muted, primary, text on primary) with a live preview shown in dark mode; it warns

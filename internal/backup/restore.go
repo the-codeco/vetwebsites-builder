@@ -199,8 +199,8 @@ func (s *Service) apply(ctx context.Context, a *Archive, thumbs map[string]strin
 
 	st := c.Settings
 	if _, err := tx.Exec(ctx, `UPDATE site_settings SET title = $1, active_theme = $2, tokens = $3, custom_css = $4, seo = $5,
-		show_search = $6, color_mode = $7, consent = $8, footer = $9, brand = $10, details = $11, tracking = $12 WHERE id = 1`,
-		st.Title, st.ActiveTheme, st.Tokens, st.CustomCSS, st.SEO, st.ShowSearch, st.ColorMode, st.Consent, st.Footer, st.Brand, st.Details, st.Tracking); err != nil {
+		show_search = $6, color_mode = $7, consent = $8, footer = $9, brand = $10, details = $11, tracking = $12, color_switch = $13 WHERE id = 1`,
+		st.Title, st.ActiveTheme, st.Tokens, st.CustomCSS, st.SEO, st.ShowSearch, st.ColorMode, st.Consent, st.Footer, st.Brand, st.Details, st.Tracking, st.ColorSwitch); err != nil {
 		return err
 	}
 

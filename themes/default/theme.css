@@ -382,3 +382,13 @@ html:not(.js) .has-panel:hover > .menu-panel, html:not(.js) .has-panel:focus-wit
 .menu-topbar.bar-lg .menu-topbar-inner { padding-top: .7rem; padding-bottom: .7rem; }
 .menu-topbar.bar-lg .social-link, .menu-topbar.bar-lg .menu-search-btn { width: 2.4rem; height: 2.4rem; }
 .menu-topbar.bar-lg svg { width: 22px; height: 22px; }
+
+/* the dark mode switch: floating at the side of the page, or a link in the footer (Appearance → Dark mode) */
+.color-float { position: fixed; right: 0; top: 50%; z-index: 80; transform: translateY(-50%); }
+.color-float .color-toggle { width: 2.6rem; height: 2.6rem; background: var(--color-surface); border: 1px solid color-mix(in srgb, var(--color-text) 20%, transparent); border-right: 0; border-radius: 999px 0 0 999px; box-shadow: 0 2px 10px rgba(0, 0, 0, .15); }
+.color-float .color-toggle:hover { background: var(--color-bg); }
+.color-footer { margin: .6rem 0 0; }
+.color-link { padding: 0; font: inherit; color: var(--color-muted); background: none; border: 0; text-decoration: underline; cursor: pointer; }
+.color-link:hover { color: var(--color-text); }
+.color-link:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+@media print { .color-float { display: none; } }

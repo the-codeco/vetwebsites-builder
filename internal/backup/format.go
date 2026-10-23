@@ -99,6 +99,7 @@ type Settings struct {
 	SEO         map[string]any               `json:"seo"`
 	ShowSearch  bool                         `json:"show_search"`
 	ColorMode   string                       `json:"color_mode"`
+	ColorSwitch string                       `json:"color_switch,omitempty"`
 	Consent     map[string]any               `json:"consent"`
 	Footer      map[string]any               `json:"footer"`
 	Brand       map[string]any               `json:"brand"`

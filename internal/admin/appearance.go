@@ -66,6 +66,7 @@ type appearanceData struct {
 	SiteTitle        string
 	ShowSearch       bool
 	ColorMode        string // light, toggle or auto
+	ColorSwitch      string // floating, footer or off
 	Consent          content.Consent
 	ConsentHint      string                 // the text used when the owner leaves it blank
 	FooterCols       []content.FooterColumn // always MaxFooterColumns of them, so the form shows every slot
@@ -109,7 +110,7 @@ func (h *Handler) renderAppearance(w http.ResponseWriter, r *http.Request, statu
 		return
 	}
 
-	d := appearanceData{SiteTitle: st.Title, ShowSearch: st.ShowSearch, ColorMode: st.ColorMode, HasDark: active.HasDark(), Consent: st.Consent, ConsentHint: content.DefaultConsentText, Brand: st.Brand, Fonts: fontViews(uploaded), LogoHeights: logoHeights(st.Brand), FooterCols: footerSlots(st.Footer), FooterBottom: st.Footer.Bottom, FooterHint: content.DefaultFooterBottom, ActiveLabel: active.Label, CustomCSS: st.CustomCSS, HasOverrides: len(withoutDark(saved)) > 0}
+	d := appearanceData{SiteTitle: st.Title, ShowSearch: st.ShowSearch, ColorMode: st.ColorMode, ColorSwitch: st.ColorSwitch, HasDark: active.HasDark(), Consent: st.Consent, ConsentHint: content.DefaultConsentText, Brand: st.Brand, Fonts: fontViews(uploaded), LogoHeights: logoHeights(st.Brand), FooterCols: footerSlots(st.Footer), FooterBottom: st.Footer.Bottom, FooterHint: content.DefaultFooterBottom, ActiveLabel: active.Label, CustomCSS: st.CustomCSS, HasOverrides: len(withoutDark(saved)) > 0}
 	for _, t := range h.Engine.List() {
 		d.Themes = append(d.Themes, themeCard{t.Name, t.Label, t.Description, t.Swatches(), t.Name == active.Name})
 	}
@@ -186,7 +187,21 @@ func (h *Handler) appearanceColorMode(w http.ResponseWriter, r *http.Request) {
 		h.renderAppearance(w, r, 400, "", "Choose one of the dark mode options.", nil)
 		return
 	}
+	place := r.PostFormValue("color_switch")
+	if place == "" { // a form from before the switch had a place of its own: leave it where it is
+		if st, err := h.Content.Settings(r.Context()); err == nil {
+			place = st.ColorSwitch
+		}
+	}
+	if !themes.ValidColorSwitch(place) {
+		h.renderAppearance(w, r, 400, "", "Choose where the dark mode switch goes: floating, in the footer, or off.", nil)
+		return
+	}
 	if err := h.Content.SetColorMode(r.Context(), mode); err != nil {
+		serverError(w, err)
+		return
+	}
+	if err := h.Content.SetColorSwitch(r.Context(), place); err != nil {
 		serverError(w, err)
 		return
 	}

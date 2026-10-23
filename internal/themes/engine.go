@@ -61,6 +61,7 @@ type SiteInfo struct {
 	Styles       []string      // theme stylesheets, in load order
 	CSSURL       string        // the generated /site.css (tokens + custom CSS)
 	ColorMode    string        // "toggle" or "auto" when the visitor can switch to dark mode; empty when dark mode is off or the theme has none
+	ColorSwitch  string        // where the switch is offered: "floating", "footer" or "off"
 	ColorJS      string        // the script that applies the visitor's choice (loaded in <head>, before the page paints)
 	Consent      *ConsentInfo  // the cookie notice, nil when it is off
 	ConsentJS    string        // the script that shows it and remembers the answer
@@ -542,6 +543,16 @@ const (
 
 // ValidColorMode reports whether m is one of the colour modes.
 func ValidColorMode(m string) bool { return m == ColorLight || m == ColorToggle || m == ColorAuto }
+
+// Where the dark mode switch is offered to visitors.
+const (
+	SwitchFloating = "floating" // a small button fixed to the side of the page
+	SwitchFooter   = "footer"   // a link in the footer
+	SwitchOff      = "off"      // nowhere: the site's mode is the owner's choice alone
+)
+
+// ValidColorSwitch reports whether p is one of the places the switch can be.
+func ValidColorSwitch(p string) bool { return p == SwitchFloating || p == SwitchFooter || p == SwitchOff }
 
 // HasDark reports whether the theme ships a dark palette. A theme that is dark already
 // (Midnight) has none: there is nothing to switch to.
