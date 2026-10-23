@@ -61,6 +61,7 @@ type SiteInfo struct {
 	Styles       []string      // theme stylesheets, in load order
 	CSSURL       string        // the generated /site.css (tokens + custom CSS)
 	ColorMode    string        // "toggle" or "auto" when the visitor can switch to dark mode; empty when dark mode is off or the theme has none
+	ColorSwitch  string        // where the switch is offered: "floating", "footer" or "off"
 	ColorJS      string        // the script that applies the visitor's choice (loaded in <head>, before the page paints)
 	Consent      *ConsentInfo  // the cookie notice, nil when it is off
 	ConsentJS    string        // the script that shows it and remembers the answer
@@ -121,11 +122,13 @@ type NavColumn struct {
 	Text    string // text sections: basic HTML, sanitised again when drawn
 }
 
-// NavItem is a top-level entry: Kind is "link", "dropdown" or "mega".
+// NavItem is a top-level entry: Kind is "link", "dropdown", "mega", "social" (the social icons) or "search" (the search icon).
 type NavItem struct {
 	Kind, Label, URL string
 	NewTab           bool
 	Button           bool // drawn as a button
+	Social           []SocialLink // the social icons ("social" items)
+	Side             string // top bar only: "left" or "right"
 	Active           bool // this link is the current page
 	Within           bool // a link inside its panel is the current page
 	Children         []NavLink
@@ -137,9 +140,56 @@ type NavItem struct {
 type NavSection struct {
 	Sticky bool
 	Items  []NavItem
+	// the section's own look (the top bar): colours as #rrggbb and a size, "" for the theme's own
+	Background, Text, Size string
+}
+
+var navColor = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
+
+// Vars is the section's own colours as CSS variables, for its style attribute ("" when it has none).
+func (s NavSection) Vars() template.CSS {
+	var b strings.Builder
+	if navColor.MatchString(s.Background) {
+		b.WriteString("--bar-bg:" + s.Background + ";")
+	}
+	if navColor.MatchString(s.Text) {
+		b.WriteString("--bar-text:" + s.Text + ";")
+	}
+	return template.CSS(b.String())
+}
+
+// SizeClass is the class that sets the section's size: " bar-sm" or " bar-lg", and nothing for medium.
+func (s NavSection) SizeClass() string {
+	if s.Size == "sm" || s.Size == "lg" {
+		return " bar-" + s.Size
+	}
+	return ""
 }
 
 type Nav struct{ TopBar, Main, Footer NavSection }
+
+// ItemsOn returns the items on one side of a section ("left" or "right"); an item with no side is on the right.
+func (s NavSection) ItemsOn(side string) []NavItem {
+	var out []NavItem
+	for _, it := range s.Items {
+		if (it.Side == "left") == (side == "left") {
+			out = append(out, it)
+		}
+	}
+	return out
+}
+
+// HasSearch says whether the owner placed the search icon in the top bar or the main menu.
+func (n Nav) HasSearch() bool {
+	for _, s := range []NavSection{n.TopBar, n.Main} {
+		for _, it := range s.Items {
+			if it.Kind == "search" {
+				return true
+			}
+		}
+	}
+	return false
+}
 
 // Blog data shown by the blog templates and the "Latest posts" block.
 type CategoryLink struct{ Name, URL string }
@@ -199,7 +249,7 @@ type HeaderInfo struct {
 }
 
 // SocialLink is one social profile.
-type SocialLink struct{ Label, URL string }
+type SocialLink struct{ Key, Label, URL string } // Key is the network ("facebook", "instagram"…), which picks the icon
 
 // DetailsInfo is the contact details, with the links made.
 type DetailsInfo struct {
@@ -585,6 +635,16 @@ const (
 
 // ValidColorMode reports whether m is one of the colour modes.
 func ValidColorMode(m string) bool { return m == ColorLight || m == ColorToggle || m == ColorAuto }
+
+// Where the dark mode switch is offered to visitors.
+const (
+	SwitchFloating = "floating" // a small button fixed to the side of the page
+	SwitchFooter   = "footer"   // a link in the footer
+	SwitchOff      = "off"      // nowhere: the site's mode is the owner's choice alone
+)
+
+// ValidColorSwitch reports whether p is one of the places the switch can be.
+func ValidColorSwitch(p string) bool { return p == SwitchFloating || p == SwitchFooter || p == SwitchOff }
 
 // HasDark reports whether the theme ships a dark palette. A theme that is dark already
 // (Midnight) has none: there is nothing to switch to.

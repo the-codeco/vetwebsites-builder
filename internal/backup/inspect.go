@@ -298,6 +298,11 @@ func (s *Service) cleanSettings(in Settings, menuList []Menu, w *warnings) Setti
 	} else {
 		out.ColorMode = themes.ColorToggle
 	}
+	if themes.ValidColorSwitch(in.ColorSwitch) {
+		out.ColorSwitch = in.ColorSwitch
+	} else {
+		out.ColorSwitch = themes.SwitchFloating // a backup from before the switch had a place of its own
+	}
 	if utf8.RuneCountInString(in.CustomCSS) > 20000 {
 		out.CustomCSS = ""
 		w.add("The custom CSS was longer than allowed, so it was left out.")
@@ -738,7 +743,11 @@ func cleanMenus(in []Menu, w *warnings) []Menu {
 		if items == nil {
 			items = []menus.Item{}
 		}
-		out = append(out, Menu{Location: m.Location, Items: items, Sticky: m.Sticky})
+		style := menus.CleanStyle(m.Style)
+		if !sec.Styled {
+			style = menus.Style{}
+		}
+		out = append(out, Menu{Location: m.Location, Items: items, Sticky: m.Sticky, Style: style})
 	}
 	return out
 }

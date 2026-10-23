@@ -20,7 +20,6 @@
     {{template "site-brand" .}}
     {{template "menu-main" .}}
     {{template "site-search" .}}
-    {{template "color-toggle" .}}
   </div>
 </header>{{end}}
 {{with .Site.Sidebar}}<div class="with-sidebar sidebar-{{.Side}} sidebar-{{.Width}}"><main>{{$.Content}}</main>
@@ -31,8 +30,11 @@
   {{template "footer-columns" .}}
   <p class="footer-bottom">{{.Site.Footer.Bottom}}</p>
   {{template "consent-reopen" .}}
+  {{template "color-footer-link" .}}
   </div>
 </footer>
+{{template "color-float" .}}
+{{template "search-dialog" .}}
 <script src="{{.Site.MenuJS}}" defer></script>
 {{template "consent-banner" .}}
 </body>

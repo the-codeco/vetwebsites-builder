@@ -20,8 +20,9 @@
 </header>
 {{end}}{{end}}
 
-{{/* the menu as a full-width bar, with the search box and the dark-mode switch at its end */}}
-{{define "header-bar"}}<div class="header-bar"><div class="header-bar-inner">{{template "menu-main" .}}{{template "site-search" .}}{{template "color-toggle" .}}</div></div>{{end}}
+{{/* the menu as a full-width bar, with the search box at its end (the dark mode switch floats or sits in the
+   footer, see Appearance) */}}
+{{define "header-bar"}}<div class="header-bar"><div class="header-bar-inner">{{template "menu-main" .}}{{template "site-search" .}}</div></div>{{end}}
 
 {{/* the header's pictures: more than one cross-fade (menu.js), the first shows without JavaScript */}}
 {{define "header-banner"}}<div class="header-banner"{{if gt (len .Banners) 1}} data-rotate{{end}} aria-hidden="true">{{range $i, $b := .Banners}}<img src="{{$b}}" {{srcset $b "100vw"}} alt=""{{if eq $i 0}} class="is-on"{{else}} loading="lazy"{{end}}>{{end}}</div>{{end}}

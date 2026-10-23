@@ -21,6 +21,10 @@ func (s *Service) siteInfo(r *http.Request, theme *themes.Theme, st content.Sett
 	info := theme.Info(st.Title, preview)
 	info.Search = st.ShowSearch
 	info.ColorMode = theme.EffectiveColorMode(st.ColorMode)
+	info.ColorSwitch = st.ColorSwitch
+	if !themes.ValidColorSwitch(info.ColorSwitch) {
+		info.ColorSwitch = themes.SwitchFloating
+	}
 	m := s.newWidgetMaker(r, st)
 	info.Footer = s.footerInfo(m)
 	info.Sidebar = s.sidebarInfo(m)
@@ -186,7 +190,7 @@ func detailsInfo(d content.Details) themes.DetailsInfo {
 	}
 	for _, n := range content.Networks {
 		if u := d.Social[n.Key]; u != "" {
-			out.Social = append(out.Social, themes.SocialLink{Label: n.Label, URL: u})
+			out.Social = append(out.Social, themes.SocialLink{Key: n.Key, Label: n.Label, URL: u})
 		}
 	}
 	return out

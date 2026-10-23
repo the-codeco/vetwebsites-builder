@@ -289,7 +289,7 @@ func TestSearchBoxInHeader(t *testing.T) {
 		admin.post("/admin/appearance/theme", url.Values{"theme": {theme}})
 		for _, p := range []string{"/", "/about", "/blog", "/search?q=x"} {
 			body := anon.get(p).Body
-			for _, want := range []string{`<form class="site-search" role="search" action="/search" method="get">`, `name="q"`, `aria-label="Search"`} {
+			for _, want := range []string{`<div class="site-search">`, `data-search-open`, `<dialog class="search-dialog" id="search-dialog"`, `<form class="search-popup-form" role="search" action="/search" method="get">`, `name="q"`, `aria-label="Search"`} {
 				if !strings.Contains(body, want) {
 					t.Errorf("%s %s: lacks %s", theme, p, want)
 				}

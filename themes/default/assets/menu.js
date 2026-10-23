@@ -168,3 +168,26 @@
     }, 6000);
   });
 })();
+
+// The search icon opens a popup. Without this script the icon is a link to the search page.
+(function () {
+  'use strict';
+
+  var dialog = document.querySelector('#search-dialog');
+  if (!dialog || typeof dialog.showModal !== 'function') return;
+  var input = dialog.querySelector('input[type="search"]');
+
+  function open() {
+    if (!dialog.open) dialog.showModal();
+    if (input) { input.focus(); input.select(); }
+  }
+
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest ? e.target : e.target.parentElement;
+    if (!t) return;
+    var opener = t.closest('[data-search-open]');
+    if (opener) { e.preventDefault(); open(); return; }
+    if (t.closest('[data-search-close]')) { dialog.close(); return; }
+    if (t === dialog) dialog.close(); // a click on the dimmed backdrop
+  });
+})();

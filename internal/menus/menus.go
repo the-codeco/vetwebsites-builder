@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"unicode/utf8"
 
@@ -20,6 +21,10 @@ const (
 	KindLink     = "link"
 	KindDropdown = "dropdown"
 	KindMega     = "mega"
+	// KindSocial shows the site's social network icons (from Site details); KindSearch shows a search icon that opens
+	// the search popup. Neither has a link of its own.
+	KindSocial = "social"
+	KindSearch = "search"
 )
 
 // Mega menu section types. A section saved before types existed is a list of links.
@@ -77,8 +82,17 @@ type Item struct {
 	NewTab   bool     `json:"new_tab,omitempty"`
 	Hidden   bool     `json:"hidden,omitempty"`
 	Button   bool     `json:"button,omitempty"` // a plain link drawn as a button ("Book now")
+	Side     string   `json:"side,omitempty"`   // top bar only: "left" or "right" (empty: right)
 	Children []Link   `json:"children,omitempty"`
 	Columns  []Column `json:"columns,omitempty"`
+}
+
+// Style is the look of a menu section (the top bar uses it): background and text colours as #rrggbb, and a size.
+// Anything empty keeps the theme's own look.
+type Style struct {
+	Background string `json:"background,omitempty"`
+	Text       string `json:"text,omitempty"`
+	Size       string `json:"size,omitempty"` // "sm", "md" or "lg"
 }
 
 // Menu is one saved section.
@@ -86,21 +100,28 @@ type Menu struct {
 	Items []Item
 	// Sticky ("frozen") keeps the section on screen while the page scrolls.
 	Sticky bool
+	Style  Style
 }
 
 // Section describes one of the three menus.
 type Section struct {
 	Key, Label, Help string
 	// Nested says whether dropdowns and mega menus are allowed here.
-	Nested   bool
+	Nested bool
+	// Icons says whether the social icons and the search icon may be placed here.
+	Icons bool
+	// Sides says whether each item can be put on the left or the right.
+	Sides bool
+	// Styled says whether the section has colours and a size of its own.
+	Styled   bool
 	MaxItems int
 }
 
 var Sections = []Section{
-	{Key: "topbar", Label: "Top bar", MaxItems: 8,
-		Help: "A slim bar above the header: phone number, login link, language… Links only."},
-	{Key: "main", Label: "Main navigation", Nested: true, MaxItems: 12,
-		Help: "The site's main menu. Items can be plain links, simple dropdowns, or mega menus with columns of links."},
+	{Key: "topbar", Label: "Top bar", Icons: true, Sides: true, Styled: true, MaxItems: 10,
+		Help: "A slim bar above the header. Put links (a phone number, a login), your social icons or the search icon on its left or its right."},
+	{Key: "main", Label: "Main navigation", Nested: true, Icons: true, MaxItems: 12,
+		Help: "The site's main menu. Items can be plain links, simple dropdowns, mega menus with columns of links, or the search icon."},
 }
 
 // FooterKey is where the footer menu was kept before links moved into the footer builder
@@ -180,6 +201,20 @@ func Validate(sec Section, in []Item) ([]Item, error) {
 		it.Label, it.URL = clean(it.Label), clean(it.URL)
 		if it.Kind == "" {
 			it.Kind = KindLink
+		}
+		if it.Kind == KindSocial || it.Kind == KindSearch {
+			// icons have no address; the label is only what a screen reader says
+			if !sec.Icons {
+				return nil, fmt.Errorf("The %s can only contain plain links.", strings.ToLower(sec.Label))
+			}
+			if it.Label == "" {
+				it.Label = map[string]string{KindSocial: "Social media", KindSearch: "Search"}[it.Kind]
+			}
+		}
+		if sec.Sides && (it.Side == "left" || it.Side == "right") {
+			it.Side = clean(it.Side)
+		} else {
+			it.Side = ""
 		}
 		blank := it.Label == "" && it.URL == ""
 		for _, l := range it.Children {
@@ -284,6 +319,9 @@ func Validate(sec Section, in []Item) ([]Item, error) {
 			}
 			it.URL, it.NewTab, it.Button, it.Children, it.Columns = "", false, false, nil, cols
 
+		case KindSocial, KindSearch:
+			it.URL, it.NewTab, it.Button, it.Children, it.Columns = "", false, false, nil, nil
+
 		default:
 			return nil, fmt.Errorf("“%s” has an unknown type.", it.Label)
 		}
@@ -344,6 +382,48 @@ func Visible(in []Item) []Item {
 			it.Columns = cols
 		}
 		out = append(out, it)
+	}
+	return out
+}
+
+var hexColor = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
+
+// ValidateStyle checks a section's look: colours must be #rrggbb (or empty, to keep the theme's), the size one of
+// sm, md or lg (or empty, which is medium). The error is written for the person editing the menu.
+func ValidateStyle(s Style) (Style, error) {
+	s.Background, s.Text, s.Size = clean(s.Background), clean(s.Text), clean(s.Size)
+	if s.Background != "" && !hexColor.MatchString(s.Background) {
+		return Style{}, errors.New("The background colour must look like #1a2b3c.")
+	}
+	if s.Text != "" && !hexColor.MatchString(s.Text) {
+		return Style{}, errors.New("The text colour must look like #1a2b3c.")
+	}
+	switch s.Size {
+	case "", "sm", "md", "lg":
+	default:
+		return Style{}, errors.New("The size must be small, medium or large.")
+	}
+	s.Background, s.Text = strings.ToLower(s.Background), strings.ToLower(s.Text)
+	if s.Size == "md" {
+		s.Size = "" // medium is the default
+	}
+	return s, nil
+}
+
+// CleanStyle is ValidateStyle for data that was stored or restored: what is not valid is dropped, not reported.
+func CleanStyle(s Style) Style {
+	if out, err := ValidateStyle(s); err == nil {
+		return out
+	}
+	out := Style{}
+	if v, err := ValidateStyle(Style{Background: s.Background}); err == nil {
+		out.Background = v.Background
+	}
+	if v, err := ValidateStyle(Style{Text: s.Text}); err == nil {
+		out.Text = v.Text
+	}
+	if v, err := ValidateStyle(Style{Size: s.Size}); err == nil {
+		out.Size = v.Size
 	}
 	return out
 }

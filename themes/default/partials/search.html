@@ -1,6 +1,20 @@
-{{/* The header search box. Shown unless the site owner turned it off in Appearance. */}}
-{{define "site-search"}}{{if .Site.Search}}<form class="site-search" role="search" action="/search" method="get">
-  <label class="sr-only" for="site-search-q">Search this site</label>
-  <input id="site-search-q" type="search" name="q" placeholder="Search" maxlength="100" autocomplete="off">
-  <button type="submit" class="site-search-btn" aria-label="Search"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg></button>
-</form>{{end}}{{end}}
+{{/*
+  Search. The search is an icon that opens a popup (a <dialog>), wherever the owner puts it: as an item in the top
+  bar or the main menu (Menus), or, when they have not placed it, at the end of the header. Without JavaScript the
+  icon is a link to the search page. Search is switched on or off in Appearance.
+*/}}
+
+{{define "search-icon"}}<a class="menu-search-btn" href="/search" role="button" aria-haspopup="dialog" aria-controls="search-dialog" data-search-open aria-label="Search"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg></a>{{end}}
+
+{{/* the header icon, for a site whose owner has not put the search icon in a menu */}}
+{{define "site-search"}}{{if and .Site.Search (not .Nav.HasSearch)}}<div class="site-search">{{template "search-icon"}}</div>{{end}}{{end}}
+
+{{/* the popup itself: layouts put it once, near the end of the page */}}
+{{define "search-dialog"}}{{if .Site.Search}}<dialog class="search-dialog" id="search-dialog" aria-label="Search this site">
+  <form class="search-popup-form" role="search" action="/search" method="get">
+    <label class="sr-only" for="search-dialog-q">Search this site</label>
+    <input id="search-dialog-q" type="search" name="q" placeholder="Search this site…" maxlength="100" autocomplete="off" required>
+    <button type="submit" class="btn btn-primary">Search</button>
+    <button type="button" class="search-dialog-close" data-search-close aria-label="Close search">&times;</button>
+  </form>
+</dialog>{{end}}{{end}}
