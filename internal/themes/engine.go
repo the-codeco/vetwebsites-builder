@@ -305,12 +305,21 @@ var (
 		"serif":     `Georgia, "Times New Roman", serif`,
 		"classical": `Palatino, "Palatino Linotype", "Book Antiqua", "URW Palladio L", serif`,
 		"mono":      `ui-monospace, Menlo, Consolas, monospace`,
+		// the web-safe fonts older sites were built with, so a rebuilt site can look the same
+		"arial":     `Arial, "Helvetica Neue", Helvetica, "Liberation Sans", sans-serif`,
+		"verdana":   `Verdana, "DejaVu Sans", "Bitstream Vera Sans", sans-serif`,
+		"tahoma":    `Tahoma, Verdana, "DejaVu Sans", sans-serif`,
+		"trebuchet": `"Trebuchet MS", "Lucida Grande", "Lucida Sans Unicode", sans-serif`,
+		"times":     `"Times New Roman", Times, "Liberation Serif", serif`,
+		"impact":    `Impact, "Arial Black", Haettenschweiler, sans-serif`,
 	}
 
 	// FontOptions lists the fonts in the order the editor offers them.
 	FontOptions = []struct{ Key, Label string }{
 		{"sans", "Sans-serif"}, {"humanist", "Humanist sans"}, {"rounded", "Rounded sans"},
 		{"serif", "Serif"}, {"classical", "Classical serif"}, {"mono", "Monospace"},
+		{"arial", "Arial / Helvetica"}, {"verdana", "Verdana"}, {"tahoma", "Tahoma"}, {"trebuchet", "Trebuchet MS"},
+		{"times", "Times New Roman"}, {"impact", "Impact (headings)"},
 	}
 
 	funcs = template.FuncMap{

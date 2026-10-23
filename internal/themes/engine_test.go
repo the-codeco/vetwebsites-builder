@@ -368,3 +368,14 @@ func TestMenuScriptAddressIsFingerprinted(t *testing.T) {
 		}
 	}
 }
+
+func TestEveryFontOptionHasAStack(t *testing.T) {
+	for _, o := range FontOptions {
+		if FontStacks[o.Key] == "" || o.Label == "" {
+			t.Errorf("font option %q has no stack or label", o.Key)
+		}
+	}
+	if !strings.HasPrefix(FontStacks["arial"], "Arial") {
+		t.Errorf("arial: %s", FontStacks["arial"])
+	}
+}
