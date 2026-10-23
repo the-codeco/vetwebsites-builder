@@ -11,14 +11,30 @@ func navLink(l menus.Link, path string) themes.NavLink {
 	return themes.NavLink{Label: l.Label, URL: l.URL, Description: l.Description, NewTab: l.NewTab, Active: l.URL == path}
 }
 
+// navExtras is what the icon items need from the rest of the site: the social links (from Site details) and whether
+// the site has search switched on. Without them the icons are left out rather than drawn empty.
+type navExtras struct {
+	Social []themes.SocialLink
+	Search bool
+}
+
 // navSection turns a saved menu into what the templates render: hidden items and
 // emptied panels are dropped (the saved data keeps them, so hiding is reversible)
 // and the link for the current page is marked.
-func navSection(m menus.Menu, path string) themes.NavSection {
-	out := themes.NavSection{Sticky: m.Sticky}
+func navSection(m menus.Menu, path string, x navExtras) themes.NavSection {
+	out := themes.NavSection{Sticky: m.Sticky, Background: m.Style.Background, Text: m.Style.Text, Size: m.Style.Size}
 	for _, it := range menus.Visible(m.Items) {
-		ni := themes.NavItem{Kind: it.Kind, Label: it.Label, URL: it.URL, NewTab: it.NewTab, Button: it.Button}
+		ni := themes.NavItem{Kind: it.Kind, Label: it.Label, URL: it.URL, NewTab: it.NewTab, Button: it.Button, Side: it.Side}
 		switch it.Kind {
+		case menus.KindSocial:
+			if len(x.Social) == 0 {
+				continue
+			}
+			ni.Social = x.Social
+		case menus.KindSearch:
+			if !x.Search {
+				continue
+			}
 		case menus.KindDropdown:
 			for _, l := range it.Children {
 				nl := navLink(l, path)
@@ -57,8 +73,13 @@ func (s *Service) nav(ctx context.Context, path string) (themes.Nav, error) {
 	if err != nil {
 		return themes.Nav{}, err
 	}
+	st, err := s.settings(ctx)
+	if err != nil {
+		return themes.Nav{}, err
+	}
+	x := navExtras{Social: detailsInfo(st.Details).Social, Search: st.ShowSearch}
 	return themes.Nav{
-		TopBar: navSection(all["topbar"], path),
-		Main:   navSection(all["main"], path),
+		TopBar: navSection(all["topbar"], path, x),
+		Main:   navSection(all["main"], path, x),
 	}, nil
 }

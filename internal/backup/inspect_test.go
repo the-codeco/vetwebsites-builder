@@ -822,3 +822,32 @@ func TestInspectChecksRedirects(t *testing.T) {
 		t.Errorf("at most 1000: %v %d", err, len(a.Content.Redirects))
 	}
 }
+
+// The top bar's colours and size come back from a backup, cleaned like anything else in it.
+func TestRestoredMenuStyleIsCleaned(t *testing.T) {
+	w := &warnings{}
+	got := cleanMenus([]Menu{
+		{Location: "topbar", Style: menus.Style{Background: "#ABCDEF", Text: `#fff" onclick="x`, Size: "lg"}},
+		{Location: "footer", Style: menus.Style{Background: "#112233"}},
+	}, w)
+	if len(got) != 2 {
+		t.Fatalf("%+v", got)
+	}
+	if got[0].Style != (menus.Style{Background: "#abcdef", Size: "lg"}) {
+		t.Errorf("top bar style: %+v", got[0].Style)
+	}
+	if got[1].Style != (menus.Style{}) {
+		t.Errorf("only the top bar has a look: %+v", got[1].Style)
+	}
+}
+
+// The dark mode switch's place comes back from a backup; a backup from before it had one (or a bad value) gets the default.
+func TestRestoredColorSwitchPlace(t *testing.T) {
+	s := testService(t)
+	for in, want := range map[string]string{"footer": "footer", "off": "off", "floating": "floating", "": "floating", "header": "floating", `x" onclick="y`: "floating"} {
+		got := s.cleanSettings(Settings{Title: "T", ActiveTheme: "default", ColorMode: "toggle", ColorSwitch: in}, &warnings{})
+		if got.ColorSwitch != want {
+			t.Errorf("%q: got %q, want %q", in, got.ColorSwitch, want)
+		}
+	}
+}

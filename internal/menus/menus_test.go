@@ -296,3 +296,61 @@ func TestMegaSectionTypes(t *testing.T) {
 		t.Errorf("visible: %+v", vis)
 	}
 }
+
+func TestIconItemsAndSides(t *testing.T) {
+	bar := Section{Key: "topbar", Label: "Top bar", Icons: true, Sides: true, MaxItems: 10}
+	out, err := Validate(bar, []Item{
+		{Kind: KindSocial, Side: "left", URL: "/ignored", NewTab: true},
+		{Kind: KindSearch, Side: "sideways"},
+		{Kind: KindLink, Label: "Login", URL: "/login", Side: "right"},
+	})
+	if err != nil || len(out) != 3 {
+		t.Fatalf("%v %+v", err, out)
+	}
+	if out[0].Label != "Social media" || out[0].URL != "" || out[0].NewTab || out[0].Side != "left" {
+		t.Errorf("social item: %+v", out[0])
+	}
+	if out[1].Label != "Search" || out[1].Side != "" {
+		t.Errorf("an unknown side is dropped: %+v", out[1])
+	}
+	if out[2].Side != "right" {
+		t.Errorf("side kept on a link: %+v", out[2])
+	}
+
+	// sections without icons or sides refuse and forget
+	plain := Section{Key: "footer", Label: "Footer", MaxItems: 5}
+	if _, err := Validate(plain, []Item{{Kind: KindSearch}}); err == nil {
+		t.Error("the footer takes links only")
+	}
+	kept, err := Validate(plain, []Item{{Label: "Home", URL: "/", Side: "left"}})
+	if err != nil || kept[0].Side != "" {
+		t.Errorf("a side only means something in the top bar: %+v %v", kept, err)
+	}
+
+	// hidden icon items are not shown, like any hidden item
+	if vis := Visible([]Item{{Kind: KindSearch, Hidden: true}, {Kind: KindSocial}}); len(vis) != 1 || vis[0].Kind != KindSocial {
+		t.Errorf("%+v", vis)
+	}
+}
+
+func TestStyleIsValidatedAndCleaned(t *testing.T) {
+	got, err := ValidateStyle(Style{Background: " #1A2B3C ", Text: "#FFFFFF", Size: "lg"})
+	if err != nil || got != (Style{Background: "#1a2b3c", Text: "#ffffff", Size: "lg"}) {
+		t.Errorf("%+v %v", got, err)
+	}
+	if got, _ := ValidateStyle(Style{Size: "md"}); got.Size != "" {
+		t.Errorf("medium is the default and is not stored: %+v", got)
+	}
+	for _, bad := range []Style{{Background: "red"}, {Text: "#12345"}, {Background: "#1a2b3c;color:red"}, {Size: "huge"}, {Text: "url(javascript:x)"}} {
+		if _, err := ValidateStyle(bad); err == nil {
+			t.Errorf("%+v should be refused", bad)
+		}
+	}
+	// stored or restored data: keep what is valid, drop the rest
+	if got := CleanStyle(Style{Background: "#112233", Text: "nonsense", Size: "xl"}); got != (Style{Background: "#112233"}) {
+		t.Errorf("%+v", got)
+	}
+	if got := CleanStyle(Style{}); got != (Style{}) {
+		t.Errorf("%+v", got)
+	}
+}

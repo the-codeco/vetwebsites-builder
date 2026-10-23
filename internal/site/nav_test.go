@@ -19,7 +19,7 @@ func TestNavSection(t *testing.T) {
 			{Heading: "Hidden col", Links: []menus.Link{{Label: "z", URL: "/z", Hidden: true}}}}},
 	}}
 
-	got := navSection(m, "/about")
+	got := navSection(m, "/about", navExtras{})
 	if !got.Sticky || len(got.Items) != 4 {
 		t.Fatalf("sticky=%v, %d items", got.Sticky, len(got.Items))
 	}
@@ -39,24 +39,24 @@ func TestNavSection(t *testing.T) {
 	}
 
 	// the current page is found inside a mega menu too, and on the home page
-	if got := navSection(m, "/beta"); !got.Items[3].Within || !got.Items[3].Columns[0].Links[1].Active || got.Items[2].Within {
+	if got := navSection(m, "/beta", navExtras{}); !got.Items[3].Within || !got.Items[3].Columns[0].Links[1].Active || got.Items[2].Within {
 		t.Errorf("current page in mega: %+v", got.Items[3])
 	}
-	if got := navSection(m, "/"); !got.Items[0].Active {
+	if got := navSection(m, "/", navExtras{}); !got.Items[0].Active {
 		t.Error("home link should be current on /")
 	}
 	// an external link is never "current"
-	if got := navSection(m, "/anything"); got.Items[1].Active {
+	if got := navSection(m, "/anything", navExtras{}); got.Items[1].Active {
 		t.Error("external link marked current")
 	}
 }
 
 func TestNavSectionOfNothing(t *testing.T) {
-	if got := navSection(menus.Menu{}, "/"); len(got.Items) != 0 || got.Sticky {
+	if got := navSection(menus.Menu{}, "/", navExtras{}); len(got.Items) != 0 || got.Sticky {
 		t.Errorf("%+v", got)
 	}
 	// legacy rows saved before kinds existed are still plain links
-	got := navSection(menus.Menu{Items: []menus.Item{{Label: "Old", URL: "/old"}}}, "/old")
+	got := navSection(menus.Menu{Items: []menus.Item{{Label: "Old", URL: "/old"}}}, "/old", navExtras{})
 	if len(got.Items) != 1 || got.Items[0].Kind != "link" || !got.Items[0].Active {
 		t.Errorf("%+v", got.Items)
 	}

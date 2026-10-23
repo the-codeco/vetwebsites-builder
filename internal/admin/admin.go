@@ -137,14 +137,14 @@ var funcs = template.FuncMap{
 	},
 	// the menu builder renders the same row templates for saved rows and for blank
 	// "add" templates, so rows are wrapped with the context they need
-	"itemctx": func(it menus.Item, nested bool) struct {
+	"itemctx": func(it menus.Item, sec menus.Section) struct {
 		menus.Item
-		Nested bool
+		Nested, Icons, Sides bool
 	} {
 		return struct {
 			menus.Item
-			Nested bool
-		}{it, nested}
+			Nested, Icons, Sides bool
+		}{it, sec.Nested, sec.Icons, sec.Sides}
 	},
 	"linkctx": func(l menus.Link, desc bool) struct {
 		menus.Link
