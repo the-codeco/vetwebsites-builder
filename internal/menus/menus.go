@@ -18,6 +18,10 @@ const (
 	KindLink     = "link"
 	KindDropdown = "dropdown"
 	KindMega     = "mega"
+	// KindSocial shows the site's social network icons (from Site details); KindSearch shows a search icon that opens
+	// the search popup. Neither has a link of its own.
+	KindSocial = "social"
+	KindSearch = "search"
 )
 
 // Limits keep menus usable and requests bounded.
@@ -55,6 +59,7 @@ type Item struct {
 	NewTab   bool     `json:"new_tab,omitempty"`
 	Hidden   bool     `json:"hidden,omitempty"`
 	Button   bool     `json:"button,omitempty"` // a plain link drawn as a button ("Book now")
+	Side     string   `json:"side,omitempty"`   // top bar only: "left" or "right" (empty: right)
 	Children []Link   `json:"children,omitempty"`
 	Columns  []Column `json:"columns,omitempty"`
 }
@@ -70,15 +75,19 @@ type Menu struct {
 type Section struct {
 	Key, Label, Help string
 	// Nested says whether dropdowns and mega menus are allowed here.
-	Nested   bool
+	Nested bool
+	// Icons says whether the social icons and the search icon may be placed here.
+	Icons bool
+	// Sides says whether each item can be put on the left or the right.
+	Sides    bool
 	MaxItems int
 }
 
 var Sections = []Section{
-	{Key: "topbar", Label: "Top bar", MaxItems: 8,
-		Help: "A slim bar above the header: phone number, login link, language… Links only."},
-	{Key: "main", Label: "Main navigation", Nested: true, MaxItems: 12,
-		Help: "The site's main menu. Items can be plain links, simple dropdowns, or mega menus with columns of links."},
+	{Key: "topbar", Label: "Top bar", Icons: true, Sides: true, MaxItems: 10,
+		Help: "A slim bar above the header. Put links (a phone number, a login), your social icons or the search icon on its left or its right."},
+	{Key: "main", Label: "Main navigation", Nested: true, Icons: true, MaxItems: 12,
+		Help: "The site's main menu. Items can be plain links, simple dropdowns, mega menus with columns of links, or the search icon."},
 	{Key: "footer", Label: "Footer", MaxItems: 12,
 		Help: "Links shown at the bottom of every page. Links only."},
 }
@@ -157,6 +166,20 @@ func Validate(sec Section, in []Item) ([]Item, error) {
 		if it.Kind == "" {
 			it.Kind = KindLink
 		}
+		if it.Kind == KindSocial || it.Kind == KindSearch {
+			// icons have no address; the label is only what a screen reader says
+			if !sec.Icons {
+				return nil, fmt.Errorf("The %s can only contain plain links.", strings.ToLower(sec.Label))
+			}
+			if it.Label == "" {
+				it.Label = map[string]string{KindSocial: "Social media", KindSearch: "Search"}[it.Kind]
+			}
+		}
+		if sec.Sides && (it.Side == "left" || it.Side == "right") {
+			it.Side = clean(it.Side)
+		} else {
+			it.Side = ""
+		}
 		blank := it.Label == "" && it.URL == ""
 		for _, l := range it.Children {
 			blank = blank && blankLink(l)
@@ -219,6 +242,9 @@ func Validate(sec Section, in []Item) ([]Item, error) {
 				return nil, fmt.Errorf("“%s” can have at most %d columns.", it.Label, MaxColumns)
 			}
 			it.URL, it.NewTab, it.Button, it.Children, it.Columns = "", false, false, nil, cols
+
+		case KindSocial, KindSearch:
+			it.URL, it.NewTab, it.Button, it.Children, it.Columns = "", false, false, nil, nil
 
 		default:
 			return nil, fmt.Errorf("“%s” has an unknown type.", it.Label)

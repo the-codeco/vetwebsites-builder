@@ -228,3 +228,39 @@ func TestVisible(t *testing.T) {
 		t.Error("Visible modified its input")
 	}
 }
+
+func TestIconItemsAndSides(t *testing.T) {
+	bar := Section{Key: "topbar", Label: "Top bar", Icons: true, Sides: true, MaxItems: 10}
+	out, err := Validate(bar, []Item{
+		{Kind: KindSocial, Side: "left", URL: "/ignored", NewTab: true},
+		{Kind: KindSearch, Side: "sideways"},
+		{Kind: KindLink, Label: "Login", URL: "/login", Side: "right"},
+	})
+	if err != nil || len(out) != 3 {
+		t.Fatalf("%v %+v", err, out)
+	}
+	if out[0].Label != "Social media" || out[0].URL != "" || out[0].NewTab || out[0].Side != "left" {
+		t.Errorf("social item: %+v", out[0])
+	}
+	if out[1].Label != "Search" || out[1].Side != "" {
+		t.Errorf("an unknown side is dropped: %+v", out[1])
+	}
+	if out[2].Side != "right" {
+		t.Errorf("side kept on a link: %+v", out[2])
+	}
+
+	// sections without icons or sides refuse and forget
+	plain := Section{Key: "footer", Label: "Footer", MaxItems: 5}
+	if _, err := Validate(plain, []Item{{Kind: KindSearch}}); err == nil {
+		t.Error("the footer takes links only")
+	}
+	kept, err := Validate(plain, []Item{{Label: "Home", URL: "/", Side: "left"}})
+	if err != nil || kept[0].Side != "" {
+		t.Errorf("a side only means something in the top bar: %+v %v", kept, err)
+	}
+
+	// hidden icon items are not shown, like any hidden item
+	if vis := Visible([]Item{{Kind: KindSearch, Hidden: true}, {Kind: KindSocial}}); len(vis) != 1 || vis[0].Kind != KindSocial {
+		t.Errorf("%+v", vis)
+	}
+}

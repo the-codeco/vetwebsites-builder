@@ -510,6 +510,8 @@
   function readItem(li) {
     var kind = li.getAttribute('data-kind') || 'link';
     var item = { kind: kind, label: textOf(li, 'label'), url: '', new_tab: false, button: false, hidden: checkOf(li, 'hidden') };
+    var side = fieldOf(li, 'side');
+    if (side) item.side = side.value;
     if (kind === 'link') {
       item.url = textOf(li, 'url');
       item.new_tab = checkOf(li, 'new_tab');

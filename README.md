@@ -13,7 +13,7 @@ blocks, write posts, upload images, restyle the whole site, and put it on your o
   dropdowns or **mega menus** (up to 4 columns of links with headings and short descriptions); each can open in
   a new tab or be hidden without deleting it. Any section can be **frozen** so it stays on screen while visitors
   scroll (a frozen top bar and header stack neatly). Keyboard-accessible, with a hamburger menu on phones, and
-  usable even without JavaScript.
+  usable even without JavaScript. The top bar takes items on its left or its right, a row of **social icons** (from Site details) and a **search icon**; the search icon can also sit in the main menu, and clicking it opens a search popup (without JavaScript it links to the search page).
 - **SEO** — every page and post can set its own search title, description, sharing image and "don't list this";
   a live preview shows how it may look in search results. Pages get a canonical link, Open Graph and Twitter
   card tags and schema.org data, and the site serves `/sitemap.xml` and `/robots.txt` automatically. An admin

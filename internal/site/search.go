@@ -48,7 +48,7 @@ func detailsInfo(d content.Details) themes.DetailsInfo {
 	}
 	for _, n := range content.Networks {
 		if u := d.Social[n.Key]; u != "" {
-			out.Social = append(out.Social, themes.SocialLink{Label: n.Label, URL: u})
+			out.Social = append(out.Social, themes.SocialLink{Key: n.Key, Label: n.Label, URL: u})
 		}
 	}
 	return out

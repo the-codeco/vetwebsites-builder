@@ -117,11 +117,11 @@
     </div>
 
     <div class="card">
-      <h2>Search box</h2>
+      <h2>Search</h2>
       <form method="post" action="/admin/appearance/search">
         <input type="hidden" name="csrf" value="{{.CSRF}}">
-        <label class="check"><input type="checkbox" name="show_search"{{if .Data.ShowSearch}} checked{{end}}> Show a search box in the site header</label>
-        <span class="hint">Visitors can always search at <a href="{{.PreviewBase}}/search" target="_blank" rel="noopener">/search</a>.</span>
+        <label class="check"><input type="checkbox" name="show_search"{{if .Data.ShowSearch}} checked{{end}}> Show a search icon (it opens a search popup)</label>
+        <span class="hint">Put the icon where you like in <a href="/admin/menus">Menus</a> (top bar or main menu); until you do, it sits at the end of the header. Visitors can always search at <a href="{{.PreviewBase}}/search" target="_blank" rel="noopener">/search</a>.</span>
         <button>Save</button>
       </form>
     </div>

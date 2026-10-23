@@ -4,7 +4,7 @@
 <div class="editor">
   <div class="editor-main" data-menu-builder>
     {{range .Data.Sections}}
-    {{$nested := .Nested}}
+    {{$sec := .Section}}
     <div class="card menu-card" id="menu-{{.Key}}">
       <h2>{{.Label}}</h2>
       <p class="hint">{{.Help}}</p>
@@ -15,12 +15,12 @@
           <span><strong>Freeze</strong> — keep the {{lower .Label}} on screen while visitors scroll</span></label>
 
         <div class="mi-sub" data-sub="items">
-          <ol class="mi-list" data-list>{{range .Items}}{{template "mi-item" (itemctx . $nested)}}{{end}}</ol>
+          <ol class="mi-list" data-list>{{range .Items}}{{template "mi-item" (itemctx . $sec)}}{{end}}</ol>
           <button type="button" class="ghost" data-act="add" data-tpl="tpl-item-{{.Key}}">+ Add item</button>
         </div>
         <button>Save {{lower .Label}}</button>
       </form>
-      <template id="tpl-item-{{.Key}}">{{template "mi-item" (itemctx blankitem $nested)}}</template>
+      <template id="tpl-item-{{.Key}}">{{template "mi-item" (itemctx blankitem $sec)}}</template>
     </div>
     {{end}}
 
@@ -40,10 +40,16 @@
 {{define "mi-item"}}<li class="mi" data-kind="{{.Kind}}">
   <div class="mi-fields">
     <input data-f="label" value="{{.Label}}" placeholder="Label" maxlength="60" aria-label="Label">
-    {{if .Nested}}<select data-f="kind" aria-label="Type">
+    {{if or .Nested .Icons}}<select data-f="kind" aria-label="Type">
       <option value="link"{{if eq .Kind "link"}} selected{{end}}>Link</option>
-      <option value="dropdown"{{if eq .Kind "dropdown"}} selected{{end}}>Dropdown</option>
-      <option value="mega"{{if eq .Kind "mega"}} selected{{end}}>Mega menu</option>
+      {{if .Nested}}<option value="dropdown"{{if eq .Kind "dropdown"}} selected{{end}}>Dropdown</option>
+      <option value="mega"{{if eq .Kind "mega"}} selected{{end}}>Mega menu</option>{{end}}
+      {{if .Icons}}<option value="social"{{if eq .Kind "social"}} selected{{end}}>Social icons</option>
+      <option value="search"{{if eq .Kind "search"}} selected{{end}}>Search icon</option>{{end}}
+    </select>{{end}}
+    {{if .Sides}}<select data-f="side" aria-label="Side of the bar">
+      <option value="left"{{if eq .Side "left"}} selected{{end}}>Left</option>
+      <option value="right"{{if ne .Side "left"}} selected{{end}}>Right</option>
     </select>{{end}}
     <input data-f="url" class="mi-url" value="{{.URL}}" placeholder="/about" list="page-urls" maxlength="2000" aria-label="Address">
     <label class="chk chk-newtab"><input type="checkbox" data-f="new_tab"{{if .NewTab}} checked{{end}}> New tab</label>
@@ -51,6 +57,8 @@
     <label class="chk"><input type="checkbox" data-f="hidden"{{if .Hidden}} checked{{end}}> Hide</label>
     {{template "mi-buttons"}}
   </div>
+  <p class="hint mi-hint mi-hint-social">Shows an icon for each social network you filled in under <a href="/admin/details">Site details</a>.</p>
+  <p class="hint mi-hint mi-hint-search">Shows a search icon. Clicking it opens a search popup. Search can be switched off under Appearance.</p>
   {{if .Nested}}
   <div class="mi-panel mi-dropdown">
     <p class="hint">Opens a simple list of links.</p>

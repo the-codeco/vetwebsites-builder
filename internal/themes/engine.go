@@ -111,11 +111,13 @@ type NavColumn struct {
 	Links   []NavLink
 }
 
-// NavItem is a top-level entry: Kind is "link", "dropdown" or "mega".
+// NavItem is a top-level entry: Kind is "link", "dropdown", "mega", "social" (the social icons) or "search" (the search icon).
 type NavItem struct {
 	Kind, Label, URL string
 	NewTab           bool
 	Button           bool // drawn as a button
+	Social           []SocialLink // the social icons ("social" items)
+	Side             string // top bar only: "left" or "right"
 	Active           bool // this link is the current page
 	Within           bool // a link inside its panel is the current page
 	Children         []NavLink
@@ -130,6 +132,29 @@ type NavSection struct {
 }
 
 type Nav struct{ TopBar, Main, Footer NavSection }
+
+// ItemsOn returns the items on one side of a section ("left" or "right"); an item with no side is on the right.
+func (s NavSection) ItemsOn(side string) []NavItem {
+	var out []NavItem
+	for _, it := range s.Items {
+		if (it.Side == "left") == (side == "left") {
+			out = append(out, it)
+		}
+	}
+	return out
+}
+
+// HasSearch says whether the owner placed the search icon in the top bar or the main menu.
+func (n Nav) HasSearch() bool {
+	for _, s := range []NavSection{n.TopBar, n.Main} {
+		for _, it := range s.Items {
+			if it.Kind == "search" {
+				return true
+			}
+		}
+	}
+	return false
+}
 
 // Blog data shown by the blog templates and the "Latest posts" block.
 type CategoryLink struct{ Name, URL string }
@@ -176,7 +201,7 @@ type BrandInfo struct {
 }
 
 // SocialLink is one social profile.
-type SocialLink struct{ Label, URL string }
+type SocialLink struct{ Key, Label, URL string } // Key is the network ("facebook", "instagram"…), which picks the icon
 
 // DetailsInfo is the contact details, with the links made.
 type DetailsInfo struct {

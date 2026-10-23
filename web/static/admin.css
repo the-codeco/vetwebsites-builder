@@ -499,3 +499,10 @@ fieldset.plainset input { margin-top: 4px; }
 .tt-content hr { border: 0; border-top: 1px solid var(--line-strong); }
 .tt-content code { padding: 1px 4px; border-radius: 4px; background: var(--bg); }
 .tt-content pre { padding: 8px 10px; border-radius: 6px; background: var(--bg); overflow-x: auto; }
+
+/* menu builder: the icon items (social icons, search icon) have no address, label or button */
+.mi-hint { display: none; margin: 6px 0 0 12px; }
+.mi[data-kind="social"] > .mi-hint-social, .mi[data-kind="search"] > .mi-hint-search { display: block; }
+.mi[data-kind="social"] > .mi-panel, .mi[data-kind="search"] > .mi-panel { display: none; }
+.mi[data-kind="social"] > .mi-fields input[data-f="label"], .mi[data-kind="search"] > .mi-fields input[data-f="label"],
+.mi[data-kind="social"] > .mi-fields .chk-newtab, .mi[data-kind="search"] > .mi-fields .chk-newtab { display: none; }
