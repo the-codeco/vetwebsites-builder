@@ -539,3 +539,7 @@ fieldset.plainset input { margin-top: 4px; }
 .tt-content hr { border: 0; border-top: 1px solid var(--line-strong); }
 .tt-content code { padding: 1px 4px; border-radius: 4px; background: var(--bg); }
 .tt-content pre { padding: 8px 10px; border-radius: 6px; background: var(--bg); overflow-x: auto; }
+
+/* site details: a row of fields for one extra number or email address */
+.details-row { display: grid; gap: 0 10px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.details-row label { margin-top: 8px; }

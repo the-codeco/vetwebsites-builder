@@ -351,3 +351,68 @@ func TestBrandDetailsAndTrackingSurviveABackupRestore(t *testing.T) {
 		t.Error("the restored site shows them")
 	}
 }
+
+func TestMoreNumbersAndEmails(t *testing.T) {
+	e := newEnv(t)
+	admin := e.newAdmin("admin@example.com")
+	anon := e.client()
+
+	if body := admin.get("/admin/details").Body; !strings.Contains(body, `name="number_kind_5"`) || strings.Contains(body, `name="number_kind_6"`) || !strings.Contains(body, `name="extra_email_3"`) || !strings.Contains(body, `<option value="fax"`) {
+		t.Error("the form offers 5 more numbers and 3 more addresses")
+	}
+	form := url.Values{
+		"phone":         {"011 782 5661"},
+		"number_kind_1": {"fax"}, "number_1": {"086 616 7186"},
+		"number_kind_2": {"emergency"}, "number_label_2": {"  After   hours "}, "number_2": {"076 053 7178"},
+		"number_kind_3": {"cell"}, "number_3": {""}, // an empty row
+		"number_kind_4": {"bogus"}, "number_4": {"084 312 4065"},
+		"email":         {"info@example.com"},
+		"email_label_1": {"Vet"}, "extra_email_1": {"vet@example.com"},
+	}
+	if r := admin.post("/admin/details", form); r.Status != 303 {
+		t.Fatalf("save: %d", r.Status)
+	}
+	stored := e.sql(`SELECT (details->'numbers')::text FROM site_settings`)
+	if !strings.Contains(stored, `"label": "After hours"`) || strings.Count(stored, `"number"`) != 3 || !strings.Contains(stored, `"kind": "phone", "number": "084 312 4065"`) {
+		t.Errorf("stored numbers (empty rows dropped, unknown kinds become phone): %s", stored)
+	}
+
+	// a page with the contact details block, and a footer contact widget
+	id := e.sql(`SELECT id FROM pages WHERE slug = 'about'`)
+	admin.post("/admin/pages/"+id+"/blocks", url.Values{"type": {"details"}})
+	saveFooter(admin, `{"rows":[{"columns":[{"widgets":[{"type":"contact","parts":["phone","email"]}]}]}]}`)
+	body := anon.get("/about").Body
+	for _, want := range []string{
+		`<li class="details-fax"><span class="details-label">Fax</span> 086 616 7186</li>`, // a fax is never a call link
+		`<li class="details-emergency"><span class="details-label">After hours</span> <a href="tel:0760537178">076 053 7178</a></li>`,
+		`<span class="details-label">Phone</span> <a href="tel:0843124065">`,
+		`<span class="details-label">Vet</span> <a href="mailto:vet@example.com">vet@example.com</a>`,
+	} {
+		if strings.Count(body, want) != 2 { // once in the block, once in the footer
+			t.Errorf("block and footer should each show %s (%d times)", want, strings.Count(body, want))
+		}
+	}
+	if strings.Contains(body, "tel:0866167186") {
+		t.Error("the fax became a call link")
+	}
+
+	// bad rows are reported against their field and nothing is saved
+	before := e.sql(`SELECT details::text FROM site_settings`)
+	for name, v := range map[string]url.Values{"short number": {"number_2": {"12"}}, "bad email": {"extra_email_1": {"nope"}}, "label only email": {"email_label_2": {"Accounts"}}} {
+		if r := admin.post("/admin/details", v); r.Status != 400 || !strings.Contains(r.Body, "field-error") {
+			t.Errorf("%s: %d", name, r.Status)
+		}
+	}
+	if e.sql(`SELECT details::text FROM site_settings`) != before {
+		t.Error("refused saves changed nothing")
+	}
+	// stored junk is cleaned: unusable numbers dropped, too many kept to the limit
+	e.pool.Exec(t.Context(), `UPDATE site_settings SET details = '{"numbers":[{"kind":"fax","number":"javascript:alert(1)"},{"number":"1"},{"number":"011 11"},{"number":"011 22"},{"number":"011 33"},{"number":"011 44"},{"number":"011 55"},{"number":"011 66"}],"emails":[{"email":"x\"onmouseover=\"y"}]}'`)
+	if got := e.sql(`SELECT count(*) FROM jsonb_array_elements((SELECT details->'numbers' FROM site_settings))`); got != "8" {
+		t.Fatalf("setup: %s", got)
+	}
+	body = anon.get("/about").Body
+	if strings.Contains(body, "javascript:") || strings.Contains(body, "onmouseover") || strings.Contains(body, "011 66") || !strings.Contains(body, "011 55") {
+		t.Error("stored numbers are cleaned and limited to 5 when shown")
+	}
+}

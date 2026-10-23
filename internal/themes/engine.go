@@ -193,15 +193,30 @@ type DetailsInfo struct {
 	Phone, PhoneLink       string
 	WhatsApp, WhatsAppLink string
 	Email                  string
+	Numbers                []NumberInfo // more numbers; Link is "" for a fax
+	Emails                 []EmailInfo
 	Address, Hours         string
 	Social                 []SocialLink
 	InFooter               bool
 }
 
+// NumberInfo is one extra contact number. Kind is "phone", "cell", "emergency" or "fax".
+type NumberInfo struct{ Kind, Label, Number, Link string }
+
+// EmailInfo is one extra email address (Label may be "").
+type EmailInfo struct{ Label, Email string }
+
 // Empty says whether there is nothing to show.
 func (d DetailsInfo) Empty() bool {
-	return d.Phone == "" && d.WhatsApp == "" && d.Email == "" && d.Address == "" && d.Hours == "" && len(d.Social) == 0
+	return d.Phone == "" && d.WhatsApp == "" && d.Email == "" && len(d.Numbers) == 0 && len(d.Emails) == 0 &&
+		d.Address == "" && d.Hours == "" && len(d.Social) == 0
 }
+
+// HasPhone says whether there is any number to show besides WhatsApp.
+func (d DetailsInfo) HasPhone() bool { return d.Phone != "" || len(d.Numbers) > 0 }
+
+// HasEmail says whether there is any email address to show.
+func (d DetailsInfo) HasEmail() bool { return d.Email != "" || len(d.Emails) > 0 }
 
 // TrackingInfo is what the analytics loader needs.
 type TrackingInfo struct {

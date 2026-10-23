@@ -44,7 +44,7 @@ func (s *Service) siteInfo(r *http.Request, theme *themes.Theme, st content.Sett
 func (s *Service) footerInfo(r *http.Request, st content.Settings) themes.FooterInfo {
 	f := st.Footer
 	d := detailsInfo(st.Details)
-	has := map[string]bool{"phone": d.Phone != "", "whatsapp": d.WhatsApp != "", "email": d.Email != "", "address": d.Address != "", "hours": d.Hours != "", "social": len(d.Social) > 0}
+	has := map[string]bool{"phone": d.HasPhone(), "whatsapp": d.WhatsApp != "", "email": d.HasEmail(), "address": d.Address != "", "hours": d.Hours != "", "social": len(d.Social) > 0}
 	out := themes.FooterInfo{Bottom: f.BottomLine(st.Title, time.Now().Year()), Classes: f.Style.Classes(), Style: f.Style.CSSVars()}
 	for _, row := range f.Rows {
 		fr := themes.FooterRow{Ratio: row.Ratio, Align: row.Align}
@@ -94,6 +94,12 @@ func detailsInfo(d content.Details) themes.DetailsInfo {
 	out := themes.DetailsInfo{
 		Phone: d.Phone, PhoneLink: content.PhoneLink(d.Phone), WhatsApp: d.WhatsApp, WhatsAppLink: content.WhatsAppLink(d.WhatsApp),
 		Email: d.Email, Address: d.Address, Hours: d.Hours, InFooter: d.InFooter,
+	}
+	for _, n := range d.Numbers {
+		out.Numbers = append(out.Numbers, themes.NumberInfo{Kind: n.Kind, Label: n.ShownLabel(), Number: n.Number, Link: n.Link()})
+	}
+	for _, e := range d.Emails {
+		out.Emails = append(out.Emails, themes.EmailInfo{Label: e.Label, Email: e.Email})
 	}
 	for _, n := range content.Networks {
 		if u := d.Social[n.Key]; u != "" {

@@ -11,8 +11,10 @@
     {{- else if eq $w.Type "links"}}{{with $w.Heading}}<h2>{{.}}</h2>{{end}}<ul class="footer-links{{if $w.Inline}} is-inline{{end}}">{{range $w.Links}}<li><a href="{{safeurl .URL}}"{{if .Active}} aria-current="page"{{end}}{{if .NewTab}} target="_blank" rel="noopener noreferrer"{{end}}>{{.Label}}</a></li>{{end}}</ul>
     {{- else if eq $w.Type "contact"}}{{with $w.Heading}}<h2>{{.}}</h2>{{end}}<ul class="details">
       {{if and $w.Show.phone $d.Phone}}<li><a href="{{safeurl $d.PhoneLink}}">{{$d.Phone}}</a></li>{{end}}
+      {{if $w.Show.phone}}{{range $d.Numbers}}<li class="details-{{.Kind}}"><span class="details-label">{{.Label}}</span> {{if .Link}}<a href="{{safeurl .Link}}">{{.Number}}</a>{{else}}{{.Number}}{{end}}</li>{{end}}{{end}}
       {{if and $w.Show.whatsapp $d.WhatsApp}}<li><a href="{{safeurl $d.WhatsAppLink}}" rel="noopener">WhatsApp {{$d.WhatsApp}}</a></li>{{end}}
       {{if and $w.Show.email $d.Email}}<li><a href="mailto:{{$d.Email}}">{{$d.Email}}</a></li>{{end}}
+      {{if $w.Show.email}}{{range $d.Emails}}<li>{{with .Label}}<span class="details-label">{{.}}</span> {{end}}<a href="mailto:{{.Email}}">{{.Email}}</a></li>{{end}}{{end}}
       {{if and $w.Show.address $d.Address}}<li class="details-lines">{{$d.Address}}</li>{{end}}
       {{if and $w.Show.hours $d.Hours}}<li class="details-lines">{{$d.Hours}}</li>{{end}}
       {{if and $w.Show.social $d.Social}}<li class="details-links">{{range $d.Social}}<a href="{{.URL}}" rel="noopener">{{.Label}}</a> {{end}}</li>{{end}}

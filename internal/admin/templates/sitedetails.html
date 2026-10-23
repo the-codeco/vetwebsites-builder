@@ -13,6 +13,28 @@
     <label>Email
       <input type="email" name="email" value="{{.Data.D.Email}}" maxlength="120" placeholder="hello@example.com"></label>
     {{with index .Data.Errors "email"}}<p class="field-error">{{.}}</p>{{end}}
+    <fieldset class="plainset">
+      <legend>More numbers <span class="muted">(a second line, a cellphone, emergencies, a fax; leave rows empty if you don't need them)</span></legend>
+      {{range .Data.Numbers}}{{$slot := .}}
+      <div class="details-row">
+        <label>Kind <select name="number_kind_{{.N}}">{{range $.Data.Kinds}}<option value="{{.Key}}"{{if eq .Key $slot.Kind}} selected{{end}}>{{.Label}}</option>{{end}}</select></label>
+        <label>Label <span class="muted">(optional)</span><input name="number_label_{{.N}}" value="{{.Label}}" maxlength="40" placeholder="Reception, Dr Smith…"></label>
+        <label>Number <input name="number_{{.N}}" value="{{.Number}}" maxlength="30" placeholder="011 555 0123"></label>
+      </div>
+      {{with index $.Data.Errors (printf "number_%d" .N)}}<p class="field-error">{{.}}</p>{{end}}
+      {{end}}
+      <span class="hint">Shown with the phone number wherever your contact details appear. Fax numbers are shown but not made into tap-to-call links.</span>
+    </fieldset>
+    <fieldset class="plainset">
+      <legend>More email addresses <span class="muted">(optional)</span></legend>
+      {{range .Data.Emails}}
+      <div class="details-row">
+        <label>Label <span class="muted">(optional)</span><input name="email_label_{{.N}}" value="{{.Label}}" maxlength="40" placeholder="Accounts, Dr Smith…"></label>
+        <label>Email <input type="email" name="extra_email_{{.N}}" value="{{.Email}}" maxlength="120" placeholder="accounts@example.com"></label>
+      </div>
+      {{with index $.Data.Errors (printf "extra_email_%d" .N)}}<p class="field-error">{{.}}</p>{{end}}
+      {{end}}
+    </fieldset>
     <label>Address <span class="muted">(one line per row, up to 8)</span>
       <textarea name="address" rows="3" maxlength="300">{{.Data.D.Address}}</textarea></label>
     <label>Opening hours <span class="muted">(one line per row, up to 8)</span>
