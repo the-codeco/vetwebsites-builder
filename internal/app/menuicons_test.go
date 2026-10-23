@@ -79,8 +79,8 @@ func TestTopBarSidesSocialIconsAndSearchIcon(t *testing.T) {
 	}
 
 	// the rules
-	if r := saveMenuItems(t, admin, "footer", []map[string]any{{"kind": "search", "label": "x"}}); r.Status != 400 {
-		t.Errorf("the footer takes links only: %d", r.Status)
+	if r := saveMenuItems(t, admin, "footer", []map[string]any{{"kind": "search", "label": "x"}}); r.Status != 404 {
+		t.Errorf("there is no footer menu (its links are part of the footer builder): %d", r.Status)
 	}
 	if r := saveMenuItems(t, admin, "topbar", []map[string]any{{"kind": "dropdown", "label": "x", "children": []map[string]any{{"label": "a", "url": "/a"}}}}); r.Status != 400 {
 		t.Errorf("no dropdowns in the top bar: %d", r.Status)

@@ -828,7 +828,7 @@ func TestRestoredMenuStyleIsCleaned(t *testing.T) {
 	w := &warnings{}
 	got := cleanMenus([]Menu{
 		{Location: "topbar", Style: menus.Style{Background: "#ABCDEF", Text: `#fff" onclick="x`, Size: "lg"}},
-		{Location: "footer", Style: menus.Style{Background: "#112233"}},
+		{Location: "main", Style: menus.Style{Background: "#112233"}}, // the footer menu is gone: its links are in the footer builder
 	}, w)
 	if len(got) != 2 {
 		t.Fatalf("%+v", got)

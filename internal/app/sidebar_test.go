@@ -160,3 +160,34 @@ func TestSidebarWithASectionMenu(t *testing.T) {
 		t.Errorf("after restore:\n%s\nwant\n%s", got, want)
 	}
 }
+
+// The page layout, header, sidebar and a page's section change what visitors see, so each counts as an unpublished
+// change (the platform's "you have changes that are not published yet").
+func TestLayoutSidebarAndSectionsCountAsChanges(t *testing.T) {
+	e := newEnv(t)
+	admin := e.newAdmin("admin@example.com")
+	top := newPublishedPage(t, e, admin, "Services", "services")
+	child := newPublishedPage(t, e, admin, "Dentistry", "dentistry")
+	counter := func() string { return e.sql(`SELECT n FROM change_counter`) }
+	for name, change := range map[string]func() response{
+		"page layout": func() response {
+			return admin.post("/admin/appearance/layout", url.Values{"boxed": {"on"}, "width": {"980"}})
+		},
+		"header": func() response {
+			return admin.post("/admin/appearance/header", url.Values{"header_style": {"centered"}})
+		},
+		"sidebar": func() response {
+			return admin.post("/admin/sidebar", url.Values{"structure": {`{"side":"left","widgets":[{"type":"search"}]}`}})
+		},
+		"section":        func() response { return putUnder(admin, child, "Dentistry", "dentistry", top, "3", true) },
+		"sidebar switch": func() response { return putUnder(admin, child, "Dentistry", "dentistry", top, "3", false) },
+	} {
+		before := counter()
+		if r := change(); r.Status != 303 {
+			t.Fatalf("%s: %d", name, r.Status)
+		}
+		if counter() == before {
+			t.Errorf("%s did not count as a change", name)
+		}
+	}
+}
