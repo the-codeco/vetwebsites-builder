@@ -1,0 +1,43 @@
+{{/*
+  One widget, shared by the footer and the sidebar: called as
+  {{template "widget" (widgetctx $w $.Site "footer" "f1-2-3")}}. Class names start with the area's prefix
+  (footer-links, sidebar-links…), so each area can be styled on its own. ID makes form fields unique.
+*/}}
+{{define "widget"}}{{$w := .W}}{{$p := .Prefix}}{{$d := .Site.Details}}{{$b := .Site.Brand}}<section class="{{$p}}-widget {{$p}}-{{$w.Type}}">
+    {{- if eq $w.Type "text"}}{{with $w.Heading}}<h2>{{.}}</h2>{{end}}{{with $w.Text}}<div class="prose">{{richtext .}}</div>{{end}}
+    {{- else if or (eq $w.Type "links") (eq $w.Type "sectionmenu")}}{{if $w.Heading}}<h2>{{if $w.HeadingURL}}<a href="{{safeurl $w.HeadingURL}}"{{if $w.HeadingActive}} aria-current="page"{{end}}>{{$w.Heading}}</a>{{else}}{{$w.Heading}}{{end}}</h2>{{end}}<ul class="{{$p}}-links{{if $w.Inline}} is-inline{{end}}">{{range $w.Links}}<li><a href="{{safeurl .URL}}"{{if .Active}} aria-current="page"{{end}}{{if .NewTab}} target="_blank" rel="noopener noreferrer"{{end}}>{{.Label}}</a></li>{{end}}</ul>
+    {{- else if eq $w.Type "contact"}}{{with $w.Heading}}<h2>{{.}}</h2>{{end}}<ul class="details">
+      {{if and $w.Show.phone $d.Phone}}<li><a href="{{safeurl $d.PhoneLink}}">{{$d.Phone}}</a></li>{{end}}
+      {{if $w.Show.phone}}{{range $d.Numbers}}<li class="details-{{.Kind}}"><span class="details-label">{{.Label}}</span> {{if .Link}}<a href="{{safeurl .Link}}">{{.Number}}</a>{{else}}{{.Number}}{{end}}</li>{{end}}{{end}}
+      {{if and $w.Show.whatsapp $d.WhatsApp}}<li><a href="{{safeurl $d.WhatsAppLink}}" rel="noopener">WhatsApp {{$d.WhatsApp}}</a></li>{{end}}
+      {{if and $w.Show.email $d.Email}}<li><a href="mailto:{{$d.Email}}">{{$d.Email}}</a></li>{{end}}
+      {{if $w.Show.email}}{{range $d.Emails}}<li>{{with .Label}}<span class="details-label">{{.}}</span> {{end}}<a href="mailto:{{.Email}}">{{.Email}}</a></li>{{end}}{{end}}
+      {{if and $w.Show.address $d.Address}}<li class="details-lines">{{$d.Address}}</li>{{end}}
+      {{if and $w.Show.hours $d.Hours}}<li class="details-lines">{{$d.Hours}}</li>{{end}}
+      {{if and $w.Show.social $d.Social}}<li class="details-links">{{range $d.Social}}<a href="{{.URL}}" rel="noopener">{{.Label}}</a> {{end}}</li>{{end}}
+    </ul>
+    {{- else if eq $w.Type "social"}}{{with $w.Heading}}<h2>{{.}}</h2>{{end}}{{with $d.Social}}<ul class="{{$p}}-links is-inline {{$p}}-social-links">{{range .}}<li><a href="{{.URL}}" rel="noopener">{{.Label}}</a></li>{{end}}</ul>{{end}}
+    {{- else if eq $w.Type "logo"}}<a class="{{$p}}-logo" href="/">{{if $w.Logo}}<img class="logo-{{$b.Size}}" src="{{$w.Logo}}" alt="{{$b.Alt}}" height="{{$b.Height}}">{{else}}<span class="{{$p}}-logo-title">{{.Site.Title}}</span>{{end}}</a>{{with $w.Text}}<p class="{{$p}}-tagline">{{.}}</p>{{end}}
+    {{- else if eq $w.Type "image"}}{{with $w.Heading}}<h2>{{.}}</h2>{{end}}<figure class="{{$p}}-figure">{{if $w.URL}}<a href="{{safeurl $w.URL}}"{{if not (hasprefix $w.URL "/")}} rel="noopener"{{end}}>{{end}}<img src="{{$w.Image}}" {{srcset $w.Image "20rem"}} alt="{{$w.Alt}}" loading="lazy">{{if $w.URL}}</a>{{end}}{{with $w.Text}}<figcaption>{{.}}</figcaption>{{end}}</figure>
+    {{- else if eq $w.Type "search"}}{{with $w.Heading}}<h2>{{.}}</h2>{{end}}<form class="{{$p}}-search search-form" role="search" action="/search" method="get">
+        <label class="sr-only" for="q-{{.ID}}">Search this site</label>
+        <input id="q-{{.ID}}" type="search" name="q" placeholder="Search…" maxlength="100" autocomplete="off">
+        <button class="btn btn-primary" type="submit">Search</button>
+      </form>
+    {{- else if eq $w.Type "newsletter"}}{{with $w.Heading}}<h2>{{.}}</h2>{{end}}{{with $w.Text}}<p>{{.}}</p>{{end}}
+      {{- with $w.Form}}{{if .Sent}}<p class="form-notice"{{if eq $p "footer"}} id="newsletter-0"{{end}} role="status">{{or $w.Success "Thanks for subscribing!"}}{{if .Confirm}} Please check your inbox and confirm your address.{{end}}</p>
+      {{- else if .Token}}<form class="newsletter-form"{{if eq $p "footer"}} id="newsletter-0"{{end}} method="post" action="/subscribe" data-success="{{or $w.Success "Thanks for subscribing!"}}">
+        <input type="hidden" name="t" value="{{.Token}}">
+        <input type="hidden" name="from" value="{{.Path}}">
+        <input type="hidden" name="block" value="0">
+        <p class="hp" aria-hidden="true"><label>Leave this field empty <input name="website" tabindex="-1" autocomplete="off"></label></p>
+        <label class="sr-only" for="nl-email-{{$.ID}}">Email address</label>
+        <input id="nl-email-{{$.ID}}" type="email" name="email" required maxlength="254" autocomplete="email" placeholder="you@example.com">
+        <button class="btn btn-primary" type="submit">{{or $w.Button "Subscribe"}}</button>
+      </form>{{end}}{{end}}
+    {{- end}}</section>{{end}}
+
+{{/* The sidebar the owner built (Admin → Sidebar). Layouts place it beside <main> inside a .with-sidebar box. */}}
+{{define "site-sidebar"}}{{with .Site.Sidebar}}<aside class="site-sidebar" aria-label="Sidebar">
+{{range $i, $w := .Widgets}}  {{template "widget" (widgetctx $w $.Site "sidebar" (printf "s%d" $i))}}
+{{end}}</aside>{{end}}{{end}}

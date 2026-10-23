@@ -126,7 +126,10 @@ func TestRedirectsRefuseWhatCannotWork(t *testing.T) {
 		"no new address":        {"/old", "", 400, "where it should go"},
 		"javascript":            {"/old", "javascript:alert(1)", 400, "where it should go"},
 		"mailto":                {"/old", "mailto:a@b.com", 400, "where it should go"},
-		"query in old":          {"/old?x=1", "/x", 400, "no ?"},
+		"anchor in old":         {"/old#x", "/x", 400, "no #"},
+		"star without a group":  {"/old", "/new/*", 400, "ends in /*"},
+		"star in the middle":    {"/old/*/x", "/x", 400, "can only end"},
+		"group into itself":     {"/index.php/*", "/index.php/new/*", 400, "circle"},
 		"protocol relative":     {"/old", "//evil.example", 400, "where it should go"},
 	} {
 		r := addRedirect(admin, c.from, c.to, "")
@@ -232,5 +235,56 @@ func TestRedirectsSurviveABackupRestore(t *testing.T) {
 	}
 	if r := anon.get("/old-b"); r.Status != 302 || r.Header.Get("Location") != "https://example.org/x" {
 		t.Errorf("restored redirect works: %d", r.Status)
+	}
+}
+
+// A site moved over from Joomla: old addresses with a ? part, and /index.php/... paths.
+func TestRedirectsFromOldJoomlaAddresses(t *testing.T) {
+	e := newEnv(t)
+	admin := e.newAdmin("admin@example.com")
+	anon := e.client()
+	for _, r := range [][2]string{
+		{"/index.php/*", "/*"},
+		{"/index.php?option=com_content&view=article&id=5&Itemid=105", "/animal-control-poles"},
+		{"https://animalhandling.co.za/index.php?option=com_content&view=article&id=6", "/animal-grabber"},
+		{"/index.php?option=com_contact&view=contact&id=1&Itemid=134", "/contact-us"},
+		{"/index.php/about-us/staff", "/staff"},
+	} {
+		if res := addRedirect(admin, r[0], r[1], ""); res.Status != 303 {
+			t.Fatalf("add %s: %d %s", r[0], res.Status, firstLine(res.Body))
+		}
+	}
+	for from, want := range map[string]string{
+		"/index.php?option=com_content&view=article&id=5&Itemid=105": "/animal-control-poles",
+		"/index.php?Itemid=105&id=5&view=article&option=com_content": "/animal-control-poles", // in any order, any case
+		"/index.php?Itemid=999&id=5&view=article&option=com_content": "/",                     // a value it names differs: no match, the group sends it home
+		"/index.php?option=com_content&view=article&id=6&Itemid=111": "/animal-grabber",       // a value it leaves out can be anything
+		"/index.php?option=com_contact&view=contact&id=1&Itemid=134": "/contact-us",
+		"/index.php/about-us":                              "/about-us",
+		"/index.php/about-us.html":                         "/about-us",
+		"/index.php/about-us/staff":                        "/staff", // one address beats the group
+		"/index.php":                                       "/",
+		"/index.php?option=com_content&view=article&id=77": "/", // no query redirect matches: the group sends it home
+	} {
+		r := anon.get(from)
+		if r.Status != 301 || r.Location() != want {
+			t.Errorf("%s: %d → %q, want 301 → %q", from, r.Status, r.Location(), want)
+		}
+	}
+	if r := anon.get("/index.php?option=com_content&view=article&id=5&Itemid=105"); r.Status != 301 {
+		t.Fatal("setup")
+	}
+	// the list shows them as stored
+	if body := admin.get("/admin/redirects").Body; !strings.Contains(body, "<code>/index.php?id=5&amp;itemid=105&amp;option=com_content&amp;view=article</code>") || !strings.Contains(body, "<code>/index.php/*</code>") {
+		t.Error("the list shows the stored addresses")
+	}
+	// they survive a backup restore
+	raw := []byte(admin.downloadBackup(false).Body)
+	e.pool.Exec(t.Context(), `DELETE FROM redirects`)
+	if r := admin.restoreUpload(t, raw, nil); r.Status != 200 {
+		t.Fatalf("restore: %d", r.Status)
+	}
+	if got := e.sql(`SELECT count(*) FROM redirects`); got != "5" {
+		t.Errorf("restored redirects: %s", got)
 	}
 }

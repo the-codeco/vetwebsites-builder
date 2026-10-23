@@ -1,7 +1,8 @@
 // Package footer is the data model and validation for the site footer the owner
 // builds: rows of 1–4 columns, each column a list of widgets (text, a list of
-// links, contact details, social links, the logo, a newsletter signup), above a
-// bottom line, with the footer's own colours and spacing.
+// links, contact details, social links, the logo, a newsletter signup, a picture,
+// a search box, the section menu), above a bottom line, with the footer's own
+// colours and spacing. The sidebar (sidebar.go) is a column of the same widgets.
 package footer
 
 import (
@@ -31,6 +32,9 @@ const (
 	TypeSocial     = "social"
 	TypeLogo       = "logo"
 	TypeNewsletter = "newsletter"
+	TypeImage      = "image"
+	TypeSearch     = "search"
+	TypeSection    = "sectionmenu"
 )
 
 // Types lists the widgets in the order the builder offers them.
@@ -41,6 +45,9 @@ var Types = []struct{ Name, Label string }{
 	{TypeSocial, "Social links"},
 	{TypeLogo, "Logo"},
 	{TypeNewsletter, "Newsletter signup"},
+	{TypeImage, "Picture"},
+	{TypeSearch, "Search box"},
+	{TypeSection, "Section menu"},
 }
 
 func typeLabel(t string) string {
@@ -77,7 +84,8 @@ const (
 	MaxHeading       = 60
 	MaxLabel         = 60
 	MaxText          = 5000
-	MaxShort         = 300 // a newsletter intro, button or thank-you line, a logo's tagline
+	MaxShort         = 300 // a newsletter intro, button or thank-you line, a logo's tagline, a caption
+	MaxAlt           = 120
 	MaxBottom        = 300
 	MaxJSON          = 256 << 10
 	DefaultBottom    = "© {year} {title}"
@@ -100,6 +108,10 @@ type Link struct {
 //	social      Heading (the social links from Site details)
 //	logo        Text (a short tagline under the logo), Logo ("alternative" for the alternative logo)
 //	newsletter  Heading, Text (introduction), Button, Success
+//	image       Heading, Image, Alt, URL (where the picture links, optional), Text (a caption)
+//	search      Heading
+//	sectionmenu Heading ("" shows the section's top page as the heading): the pages of the section the visitor
+//	            is in (see content.Section); nothing is shown on a page in no section
 type Widget struct {
 	Type    string   `json:"type"`
 	Heading string   `json:"heading,omitempty"`
@@ -110,6 +122,9 @@ type Widget struct {
 	Button  string   `json:"button,omitempty"`
 	Success string   `json:"success,omitempty"`
 	Logo    string   `json:"logo,omitempty"` // logo widgets: "" (the main logo) or LogoAlternative
+	Image   string   `json:"image,omitempty"`
+	Alt     string   `json:"alt,omitempty"`
+	URL     string   `json:"url,omitempty"`
 }
 
 // LogoAlternative picks the alternative logo (Appearance → Logo) in a logo widget.
@@ -326,8 +341,24 @@ func validateWidget(w Widget, where string) (Widget, error) {
 				out.Parts = append(out.Parts, p.Key)
 			}
 		}
-	case TypeSocial:
+	case TypeSocial, TypeSearch, TypeSection:
 		out.Heading = heading
+	case TypeImage:
+		out.Heading = heading
+		if out.Image = blocks.SafeImageURL(strings.TrimSpace(w.Image)); out.Image == "" {
+			return Widget{}, fmt.Errorf("%s: choose a picture from the media library, or give a /media/… or https:// address.", where)
+		}
+		if out.Alt = clean(w.Alt); tooLong(out.Alt, MaxAlt) {
+			return Widget{}, fmt.Errorf("%s: the picture description can be at most %d characters.", where, MaxAlt)
+		}
+		if u := strings.TrimSpace(w.URL); u != "" {
+			if out.URL = blocks.SafeURL(u); out.URL == "" {
+				return Widget{}, fmt.Errorf("%s: the link needs a valid address: a path like /about, or an http(s)://, mailto: or tel: address.", where)
+			}
+		}
+		if out.Text, err = short(w.Text, "caption"); err != nil {
+			return Widget{}, err
+		}
 	case TypeLogo:
 		if out.Text, err = short(w.Text, "tagline"); err != nil {
 			return Widget{}, err
@@ -395,34 +426,43 @@ func trim(f Footer) Footer {
 			r.Columns = r.Columns[:MaxColumns]
 		}
 		for ci := range r.Columns {
-			var ws []Widget
-			for _, w := range r.Columns[ci].Widgets {
-				if typeLabel(w.Type) == "" || len(ws) == MaxWidgets {
-					continue
-				}
-				w.Heading = cut(w.Heading, MaxHeading)
-				if w.Type == TypeText {
-					if utf8.RuneCountInString(w.Text) > MaxText {
-						w.Text = string([]rune(w.Text)[:MaxText])
-					}
-				} else {
-					w.Text = cut(w.Text, MaxShort)
-				}
-				w.Button, w.Success = cut(w.Button, MaxShort), cut(w.Success, MaxShort)
-				var links []Link
-				for _, l := range w.Links {
-					l.Label = cut(l.Label, MaxLabel)
-					if l.Label != "" && blocks.SafeURL(l.URL) != "" && len(links) < MaxLinks {
-						links = append(links, l)
-					}
-				}
-				w.Links = links
-				ws = append(ws, w)
-			}
-			r.Columns[ci].Widgets = ws
+			r.Columns[ci].Widgets = trimWidgets(r.Columns[ci].Widgets, MaxWidgets)
 		}
 	}
 	return f
+}
+
+// trimWidgets keeps at most max known widgets, each cut down to its limits and without unsafe values.
+func trimWidgets(in []Widget, max int) []Widget {
+	var ws []Widget
+	for _, w := range in {
+		if typeLabel(w.Type) == "" || len(ws) == max || w.Type == TypeImage && blocks.SafeImageURL(strings.TrimSpace(w.Image)) == "" {
+			continue
+		}
+		w.Alt = cut(w.Alt, MaxAlt)
+		if blocks.SafeURL(strings.TrimSpace(w.URL)) == "" {
+			w.URL = ""
+		}
+		w.Heading = cut(w.Heading, MaxHeading)
+		if w.Type == TypeText {
+			if utf8.RuneCountInString(w.Text) > MaxText {
+				w.Text = string([]rune(w.Text)[:MaxText])
+			}
+		} else {
+			w.Text = cut(w.Text, MaxShort)
+		}
+		w.Button, w.Success = cut(w.Button, MaxShort), cut(w.Success, MaxShort)
+		var links []Link
+		for _, l := range w.Links {
+			l.Label = cut(l.Label, MaxLabel)
+			if l.Label != "" && blocks.SafeURL(l.URL) != "" && len(links) < MaxLinks {
+				links = append(links, l)
+			}
+		}
+		w.Links = links
+		ws = append(ws, w)
+	}
+	return ws
 }
 
 // Empty is a footer with nothing but the default bottom line.

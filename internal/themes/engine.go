@@ -68,6 +68,8 @@ type SiteInfo struct {
 	TrackJS      string        // the analytics loader (used only when Tracking is set)
 	Footer       FooterInfo    // the footer the owner built
 	Brand        BrandInfo     // the logo and browser-tab icon
+	Header       HeaderInfo    // the owner's header style, when it isn't the theme's own
+	Sidebar      *SidebarInfo  // the sidebar beside the content; nil when there is none on this page
 	Details      DetailsInfo   // the contact details
 	Tracking     *TrackingInfo // analytics services to load, nil when there are none (or the visitor is logged in)
 	Search       bool          // show the search box (the site owner can turn it off)
@@ -235,6 +237,17 @@ type BrandInfo struct {
 	ShowTitle       bool   // the site title is shown beside the logo (always true without a logo)
 }
 
+// HeaderInfo is the header arrangement the owner chose (Appearance → Header). Custom is false for the theme's own
+// header; otherwise Style is "stacked" or "centered", Place is "beside" or "behind" and Height is the banner's
+// height in pixels.
+type HeaderInfo struct {
+	Custom         bool
+	Style, Tagline string
+	Banners        []string
+	Place          string
+	Height         int
+}
+
 // SocialLink is one social profile.
 type SocialLink struct{ Key, Label, URL string } // Key is the network ("facebook", "instagram"…), which picks the icon
 
@@ -243,15 +256,30 @@ type DetailsInfo struct {
 	Phone, PhoneLink       string
 	WhatsApp, WhatsAppLink string
 	Email                  string
+	Numbers                []NumberInfo // more numbers; Link is "" for a fax
+	Emails                 []EmailInfo
 	Address, Hours         string
 	Social                 []SocialLink
 	InFooter               bool
 }
 
+// NumberInfo is one extra contact number. Kind is "phone", "cell", "emergency" or "fax".
+type NumberInfo struct{ Kind, Label, Number, Link string }
+
+// EmailInfo is one extra email address (Label may be "").
+type EmailInfo struct{ Label, Email string }
+
 // Empty says whether there is nothing to show.
 func (d DetailsInfo) Empty() bool {
-	return d.Phone == "" && d.WhatsApp == "" && d.Email == "" && d.Address == "" && d.Hours == "" && len(d.Social) == 0
+	return d.Phone == "" && d.WhatsApp == "" && d.Email == "" && len(d.Numbers) == 0 && len(d.Emails) == 0 &&
+		d.Address == "" && d.Hours == "" && len(d.Social) == 0
 }
+
+// HasPhone says whether there is any number to show besides WhatsApp.
+func (d DetailsInfo) HasPhone() bool { return d.Phone != "" || len(d.Numbers) > 0 }
+
+// HasEmail says whether there is any email address to show.
+func (d DetailsInfo) HasEmail() bool { return d.Email != "" || len(d.Emails) > 0 }
 
 // TrackingInfo is what the analytics loader needs.
 type TrackingInfo struct {
@@ -290,6 +318,24 @@ type FooterWidget struct {
 	Button, Success     string
 	Form                NewsletterForm
 	Logo                string // logo widgets: the picture to show ("" draws the site title)
+	Image, Alt, URL     string // picture widgets: the picture, its description, where it links
+	// a section menu's heading links to the section's top page
+	HeadingURL    string
+	HeadingActive bool
+}
+
+// SidebarInfo is the sidebar: its widgets, its side ("left" or "right") and width ("narrow" or "wide").
+type SidebarInfo struct {
+	Side, Width string
+	Widgets     []FooterWidget
+}
+
+// WidgetCtx is what the "widget" template draws one widget with: the widget, the site (contact details, logo),
+// the area's class prefix ("footer" or "sidebar") and an ID unique on the page.
+type WidgetCtx struct {
+	W          FooterWidget
+	Site       SiteInfo
+	Prefix, ID string
 }
 
 // ConsentInfo is what the cookie notice shows.
@@ -355,18 +401,31 @@ var (
 		"serif":     `Georgia, "Times New Roman", serif`,
 		"classical": `Palatino, "Palatino Linotype", "Book Antiqua", "URW Palladio L", serif`,
 		"mono":      `ui-monospace, Menlo, Consolas, monospace`,
+		// the web-safe fonts older sites were built with, so a rebuilt site can look the same
+		"arial":     `Arial, "Helvetica Neue", Helvetica, "Liberation Sans", sans-serif`,
+		"verdana":   `Verdana, "DejaVu Sans", "Bitstream Vera Sans", sans-serif`,
+		"tahoma":    `Tahoma, Verdana, "DejaVu Sans", sans-serif`,
+		"trebuchet": `"Trebuchet MS", "Lucida Grande", "Lucida Sans Unicode", sans-serif`,
+		"times":     `"Times New Roman", Times, "Liberation Serif", serif`,
+		"impact":    `Impact, "Arial Black", Haettenschweiler, sans-serif`,
 	}
 
 	// FontOptions lists the fonts in the order the editor offers them.
 	FontOptions = []struct{ Key, Label string }{
 		{"sans", "Sans-serif"}, {"humanist", "Humanist sans"}, {"rounded", "Rounded sans"},
 		{"serif", "Serif"}, {"classical", "Classical serif"}, {"mono", "Monospace"},
+		{"arial", "Arial / Helvetica"}, {"verdana", "Verdana"}, {"tahoma", "Tahoma"}, {"trebuchet", "Trebuchet MS"},
+		{"times", "Times New Roman"}, {"impact", "Impact (headings)"},
 	}
 
 	funcs = template.FuncMap{
 		// blocks.Clean already sanitises; sanitising again here keeps templates safe
 		// even if a block ever reaches rendering without being cleaned.
 		"richtext": func(s string) template.HTML { return template.HTML(blocks.SanitizeHTML(s)) },
+		"widgetctx": func(w FooterWidget, site SiteInfo, prefix, id string) WidgetCtx {
+			return WidgetCtx{W: w, Site: site, Prefix: prefix, ID: id}
+		},
+		"hasprefix": strings.HasPrefix,
 		// what a video or map block shows; the address is checked again here, never trusted as stored
 		"video": func(u string) *blocks.Video {
 			v, ok := blocks.VideoOf(u)

@@ -51,6 +51,13 @@ func (h *Handler) redirectAdd(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	to, err := content.CleanRedirectTo(form.To)
+	if err == nil {
+		err = content.CheckRedirectStar(from, to)
+	}
+	if errors.Is(err, content.ErrRedirectLoop) {
+		h.renderRedirects(w, r, 400, "", "That would send visitors round in a circle.", form)
+		return
+	}
 	if err != nil {
 		h.renderRedirects(w, r, 400, "", err.Error(), form)
 		return

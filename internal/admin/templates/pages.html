@@ -5,7 +5,7 @@
     <tr><th>Title</th><th>URL</th><th>Status</th><th>Blocks</th><th>Updated</th></tr>
     {{range .Data.Pages}}
     <tr>
-      <td><a href="/admin/pages/{{.ID}}">{{.Title}}</a></td>
+      <td{{if .Child}} class="page-child"{{end}}>{{if .Child}}<span class="muted" aria-hidden="true">↳ </span>{{end}}<a href="/admin/pages/{{.ID}}">{{.Title}}</a></td>
       <td><code>{{if eq .Slug "home"}}/{{else}}/{{.Slug}}{{end}}</code></td>
       <td><span class="badge {{.Status}}">{{.Status}}</span>{{with .PublishAt}} <span class="muted">goes live {{.Format "2 Jan 15:04"}} UTC</span>{{end}}</td>
       <td>{{.BlockCount}}</td>

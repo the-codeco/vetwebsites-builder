@@ -14,14 +14,16 @@
 <body>
 {{if .Preview}}<div class="preview-banner">Draft preview — not visible to the public</div>{{end}}
 {{template "menu-topbar" .}}
+{{if .Site.Header.Custom}}{{template "site-header" .}}{{else}}
 <header class="site-header{{if .Nav.Main.Sticky}} is-sticky{{end}}">
   <div class="site-header-inner">
     {{template "site-brand" .}}
     {{template "menu-main" .}}
     {{template "site-search" .}}
   </div>
-</header>
-<main>{{.Content}}</main>
+</header>{{end}}
+{{with .Site.Sidebar}}<div class="with-sidebar sidebar-{{.Side}} sidebar-{{.Width}}"><main>{{$.Content}}</main>
+{{template "site-sidebar" $}}</div>{{else}}<main>{{.Content}}</main>{{end}}
 {{template "menu-footer" .}}
 <footer class="site-footer{{.Site.Footer.Classes}}" id="site-footer"{{with .Site.Footer.Style}} style="{{.}}"{{end}}>
   <div class="site-footer-inner">

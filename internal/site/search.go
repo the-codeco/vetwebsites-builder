@@ -2,9 +2,11 @@ package site
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"webbuilder/internal/auth"
@@ -23,7 +25,9 @@ func (s *Service) siteInfo(r *http.Request, theme *themes.Theme, st content.Sett
 	if !themes.ValidColorSwitch(info.ColorSwitch) {
 		info.ColorSwitch = themes.SwitchFloating
 	}
-	info.Footer = s.footerInfo(r, st)
+	m := s.newWidgetMaker(r, st)
+	info.Footer = s.footerInfo(m)
+	info.Sidebar = s.sidebarInfo(m)
 	if c := st.Consent; c.Enabled {
 		info.Consent = &themes.ConsentInfo{
 			Text: c.Message(), LinkLabel: c.LinkLabel, LinkURL: c.LinkURL, Ask: c.Ask,
@@ -35,6 +39,9 @@ func (s *Service) siteInfo(r *http.Request, theme *themes.Theme, st content.Sett
 		info.Brand.Alt = st.Title
 	}
 	info.Details = detailsInfo(st.Details)
+	if h := st.Layout.Header; h.Style != content.HeaderInline {
+		info.Header = themes.HeaderInfo{Custom: true, Style: h.Style, Tagline: h.Tagline, Banners: h.Banners, Place: h.BannerPlace, Height: h.BannerPixels()}
+	}
 	// analytics are never loaded for someone who is logged in: the owner's own visits are not visitors
 	if t := st.Tracking; t.Any() && auth.CurrentIdentity(r) == nil && !preview {
 		info.Tracking = &themes.TrackingInfo{GA4: t.GA4, Plausible: t.PlausibleDomain, Wait: !t.NoWait, JS: theme.TrackJS()}
@@ -42,53 +49,129 @@ func (s *Service) siteInfo(r *http.Request, theme *themes.Theme, st content.Sett
 	return info
 }
 
-// footerInfo turns the saved footer into what templates show: links marked when they point at
-// this page, a newsletter widget given its form (it signs up like a signup block, as block 0), and
-// contact or social widgets left out when Site details has nothing for them to show.
-func (s *Service) footerInfo(r *http.Request, st content.Settings) themes.FooterInfo {
-	f := st.Footer
+// widgetMaker turns saved footer and sidebar widgets into what templates show, for one request: links marked when
+// they point at this page, a newsletter widget given its form (it signs up like a signup block, as block 0),
+// contact or social widgets left out when Site details has nothing for them, and the section menu filled in with
+// the section the page is in (looked up once, the first time a section menu needs it).
+type widgetMaker struct {
+	s       *Service
+	r       *http.Request
+	st      content.Settings
+	has     map[string]bool
+	looked  bool
+	top     content.SectionPage
+	section []content.SectionPage
+}
+
+func (s *Service) newWidgetMaker(r *http.Request, st content.Settings) *widgetMaker {
 	d := detailsInfo(st.Details)
-	has := map[string]bool{"phone": d.Phone != "", "whatsapp": d.WhatsApp != "", "email": d.Email != "", "address": d.Address != "", "hours": d.Hours != "", "social": len(d.Social) > 0}
+	return &widgetMaker{s: s, r: r, st: st, has: map[string]bool{"phone": d.HasPhone(), "whatsapp": d.WhatsApp != "", "email": d.HasEmail(), "address": d.Address != "", "hours": d.Hours != "", "social": len(d.Social) > 0}}
+}
+
+// slugOf is the page slug a request path is for ("" for anything that isn't a page address).
+func slugOf(path string) string {
+	if path == "/" {
+		return "home"
+	}
+	slug := strings.TrimPrefix(path, "/")
+	if !slugRe.MatchString(slug) {
+		return ""
+	}
+	return slug
+}
+
+// widget is the widget as templates show it; ok is false when it has nothing to show here.
+func (m *widgetMaker) widget(w footer.Widget) (themes.FooterWidget, bool) {
+	path := m.r.URL.Path
+	fw := themes.FooterWidget{Type: w.Type, Heading: w.Heading, Text: w.Text, Inline: w.Inline, Button: w.Button, Success: w.Success,
+		Image: w.Image, Alt: w.Alt, URL: w.URL}
+	for _, l := range w.Links {
+		fw.Links = append(fw.Links, themes.NavLink{Label: l.Label, URL: l.URL, NewTab: l.NewTab, Active: l.URL == path})
+	}
+	switch w.Type {
+	case footer.TypeContact:
+		fw.Show = map[string]bool{}
+		for _, p := range w.Parts {
+			if m.has[p] {
+				fw.Show[p] = true
+			}
+		}
+		if len(fw.Show) == 0 {
+			return fw, false
+		}
+	case footer.TypeSocial:
+		if !m.has["social"] {
+			return fw, false
+		}
+	case footer.TypeNewsletter:
+		fw.Form = m.s.newsletterFormData(m.r, 0)
+	case footer.TypeLogo: // the alternative logo when asked for and set, else the main one
+		fw.Logo = m.st.Brand.Logo
+		if w.Logo == footer.LogoAlternative && m.st.Brand.AltLogo != "" {
+			fw.Logo = m.st.Brand.AltLogo
+		}
+	case footer.TypeSection:
+		if !m.looked {
+			m.looked = true
+			if slug := slugOf(path); slug != "" {
+				top, pages, ok, err := m.s.content.Section(m.r.Context(), slug)
+				if err != nil {
+					log.Printf("site: section menu: %v", err)
+				} else if ok {
+					m.top, m.section = top, pages
+				}
+			}
+		}
+		if len(m.section) == 0 {
+			return fw, false
+		}
+		topURL := "/" + m.top.Slug
+		if m.top.Slug == "home" {
+			topURL = "/"
+		}
+		if fw.Heading == "" {
+			fw.Heading = m.top.Title
+		}
+		fw.HeadingURL, fw.HeadingActive = topURL, topURL == path
+		for _, p := range m.section {
+			fw.Links = append(fw.Links, themes.NavLink{Label: p.Title, URL: "/" + p.Slug, Active: "/"+p.Slug == path})
+		}
+	}
+	return fw, true
+}
+
+// footerInfo turns the saved footer into what templates show.
+func (s *Service) footerInfo(m *widgetMaker) themes.FooterInfo {
+	st := m.st
+	f := st.Footer
 	out := themes.FooterInfo{Bottom: f.BottomLine(st.Title, time.Now().Year()), Classes: f.Style.Classes(), Style: f.Style.CSSVars()}
 	for _, row := range f.Rows {
 		fr := themes.FooterRow{Ratio: row.Ratio, Align: row.Align}
 		for _, col := range row.Columns {
 			var fc themes.FooterColumn
 			for _, w := range col.Widgets {
-				fw := themes.FooterWidget{Type: w.Type, Heading: w.Heading, Text: w.Text, Inline: w.Inline, Button: w.Button, Success: w.Success}
-				for _, l := range w.Links {
-					fw.Links = append(fw.Links, themes.NavLink{Label: l.Label, URL: l.URL, NewTab: l.NewTab, Active: l.URL == r.URL.Path})
+				if fw, ok := m.widget(w); ok {
+					fc.Widgets = append(fc.Widgets, fw)
 				}
-				switch w.Type {
-				case footer.TypeContact:
-					fw.Show = map[string]bool{}
-					for _, p := range w.Parts {
-						if has[p] {
-							fw.Show[p] = true
-						}
-					}
-					if len(fw.Show) == 0 {
-						continue
-					}
-				case footer.TypeSocial:
-					if !has["social"] {
-						continue
-					}
-				}
-				if w.Type == footer.TypeNewsletter {
-					fw.Form = s.newsletterFormData(r, 0)
-				}
-				if w.Type == footer.TypeLogo { // the alternative logo when asked for and set, else the main one
-					fw.Logo = st.Brand.Logo
-					if w.Logo == footer.LogoAlternative && st.Brand.AltLogo != "" {
-						fw.Logo = st.Brand.AltLogo
-					}
-				}
-				fc.Widgets = append(fc.Widgets, fw)
 			}
 			fr.Columns = append(fr.Columns, fc)
 		}
 		out.Rows = append(out.Rows, fr)
+	}
+	return out
+}
+
+// sidebarInfo is the sidebar as templates show it (nil when it has nothing to show on this page).
+func (s *Service) sidebarInfo(m *widgetMaker) *themes.SidebarInfo {
+	sb := m.st.Sidebar
+	out := &themes.SidebarInfo{Side: sb.Side, Width: sb.Width}
+	for _, w := range sb.Widgets {
+		if fw, ok := m.widget(w); ok {
+			out.Widgets = append(out.Widgets, fw)
+		}
+	}
+	if len(out.Widgets) == 0 {
+		return nil
 	}
 	return out
 }
@@ -98,6 +181,12 @@ func detailsInfo(d content.Details) themes.DetailsInfo {
 	out := themes.DetailsInfo{
 		Phone: d.Phone, PhoneLink: content.PhoneLink(d.Phone), WhatsApp: d.WhatsApp, WhatsAppLink: content.WhatsAppLink(d.WhatsApp),
 		Email: d.Email, Address: d.Address, Hours: d.Hours, InFooter: d.InFooter,
+	}
+	for _, n := range d.Numbers {
+		out.Numbers = append(out.Numbers, themes.NumberInfo{Kind: n.Kind, Label: n.ShownLabel(), Number: n.Number, Link: n.Link()})
+	}
+	for _, e := range d.Emails {
+		out.Emails = append(out.Emails, themes.EmailInfo{Label: e.Label, Email: e.Email})
 	}
 	for _, n := range content.Networks {
 		if u := d.Social[n.Key]; u != "" {

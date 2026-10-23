@@ -81,6 +81,8 @@ func blankWidget(typ string) footer.Widget {
 		w.Heading = "Follow us"
 	case footer.TypeNewsletter:
 		w.Heading, w.Text, w.Button, w.Success = "Stay in the loop", "Get our updates by email.", "Subscribe", "Thanks for subscribing!"
+	case footer.TypeSearch:
+		w.Heading = "Search the site"
 	}
 	return w
 }

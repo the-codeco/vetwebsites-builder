@@ -199,8 +199,8 @@ func (s *Service) apply(ctx context.Context, a *Archive, thumbs map[string]strin
 
 	st := c.Settings
 	if _, err := tx.Exec(ctx, `UPDATE site_settings SET title = $1, active_theme = $2, tokens = $3, custom_css = $4, seo = $5,
-		show_search = $6, color_mode = $7, consent = $8, footer = $9, brand = $10, details = $11, tracking = $12, color_switch = $13 WHERE id = 1`,
-		st.Title, st.ActiveTheme, st.Tokens, st.CustomCSS, st.SEO, st.ShowSearch, st.ColorMode, st.Consent, st.Footer, st.Brand, st.Details, st.Tracking, st.ColorSwitch); err != nil {
+		show_search = $6, color_mode = $7, consent = $8, footer = $9, brand = $10, details = $11, tracking = $12, layout = $13, sidebar = $14, color_switch = $15 WHERE id = 1`,
+		st.Title, st.ActiveTheme, st.Tokens, st.CustomCSS, st.SEO, st.ShowSearch, st.ColorMode, st.Consent, st.Footer, st.Brand, st.Details, st.Tracking, st.Layout, st.Sidebar, st.ColorSwitch); err != nil {
 		return err
 	}
 
@@ -270,8 +270,8 @@ func (s *Service) apply(ctx context.Context, a *Archive, thumbs map[string]strin
 			}
 		}
 		var id int64
-		if err := tx.QueryRow(ctx, `INSERT INTO pages (slug, title, status, seo, updated_at, search_text, publish_at) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
-			p.Slug, p.Title, p.Status, p.SEO, p.UpdatedAt, strings.Join(search, " "), p.PublishAt).Scan(&id); err != nil {
+		if err := tx.QueryRow(ctx, `INSERT INTO pages (slug, title, status, seo, updated_at, search_text, publish_at, position, sidebar) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
+			p.Slug, p.Title, p.Status, p.SEO, p.UpdatedAt, strings.Join(search, " "), p.PublishAt, p.Position, !p.NoSidebar).Scan(&id); err != nil {
 			return err
 		}
 		for i, b := range p.Blocks {
@@ -288,6 +288,15 @@ func (s *Service) apply(ctx context.Context, a *Archive, thumbs map[string]strin
 					}
 				}
 			}
+		}
+	}
+	// sections: now that every page exists, each page is put under its parent (checked when the file was read)
+	for _, p := range c.Pages {
+		if p.Parent == "" {
+			continue
+		}
+		if _, err := tx.Exec(ctx, `UPDATE pages SET parent_id = (SELECT id FROM pages WHERE slug = $2) WHERE slug = $1`, p.Slug, p.Parent); err != nil {
+			return err
 		}
 	}
 

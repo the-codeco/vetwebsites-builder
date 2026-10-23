@@ -1,0 +1,50 @@
+{{define "content"}}
+<datalist id="page-urls">{{range .Data.PageURLs}}<option value="{{.}}">{{end}}</datalist>
+
+<div class="editor">
+  <div class="editor-main sb-builder" data-footer-builder data-destinations="{{.Data.Destinations}}">
+    <form method="post" action="/admin/sidebar" data-sidebar-form>
+      <input type="hidden" name="csrf" value="{{.CSRF}}">
+      <input type="hidden" name="structure" value="">
+
+      <div class="card">
+        <h2>Sidebar</h2>
+        <p class="hint">A column beside the content of every page, with widgets top to bottom: a section menu, a search box, contact details, opening hours as text, pictures and partner logos, links… A page can turn it off in its settings (“Show the sidebar on this page”). Blog posts and the blog show it too. Phones show it under the content. With no widgets there is no sidebar.</p>
+        <div class="details-row">
+          <label>Side <select data-sb="side">
+            <option value="left"{{if eq .Data.Side "left"}} selected{{end}}>Left of the content</option>
+            <option value="right"{{if eq .Data.Side "right"}} selected{{end}}>Right of the content</option>
+          </select></label>
+          <label>Width <select data-sb="width">
+            <option value="narrow"{{if eq .Data.Width "narrow"}} selected{{end}}>Narrow</option>
+            <option value="wide"{{if eq .Data.Width "wide"}} selected{{end}}>Wide</option>
+          </select></label>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Widgets</h2>
+        <div class="fb-col sb-col">
+          <div class="fb-widgets" data-list>{{range .Data.Widgets}}{{template "fb-widget" .}}{{end}}</div>
+          <div class="fb-add">
+            {{template "fb-add-options"}}
+            <button type="button" class="ghost" data-act="add-widget">+ Add</button>
+          </div>
+        </div>
+      </div>
+
+      <button>Save sidebar</button>
+    </form>
+
+    <template id="tpl-fb-link">{{template "fb-link" .Data.BlankLink}}</template>
+    {{range .Data.BlankWidgets}}<template id="tpl-fb-w-{{.Type}}">{{template "fb-widget" .}}</template>
+    {{end}}
+  </div>
+
+  <div class="editor-preview">
+    <div class="preview-bar"><span>Live preview — saved sidebar</span><a href="{{.PreviewBase}}/" target="_blank" rel="noopener">Open site ↗</a></div>
+    <iframe id="preview" src="{{.PreviewBase}}/" title="Site preview"></iframe>
+  </div>
+</div>
+{{template "pickerdialog"}}
+{{end}}

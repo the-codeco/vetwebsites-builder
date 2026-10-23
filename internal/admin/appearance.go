@@ -25,6 +25,7 @@ func (h *Handler) registerAppearance(mux *http.ServeMux, admin func(http.Handler
 	mux.Handle("POST /admin/appearance/title", admin(h.appearanceTitle))
 	h.registerFonts(mux, admin)
 	mux.Handle("POST /admin/appearance/brand", admin(h.appearanceBrand))
+	h.registerLayout(mux, admin)
 	mux.Handle("POST /admin/appearance/theme", admin(h.appearanceTheme))
 	mux.Handle("POST /admin/appearance/search", admin(h.appearanceSearch))
 	mux.Handle("POST /admin/appearance/colormode", admin(h.appearanceColorMode))
@@ -68,6 +69,7 @@ type appearanceData struct {
 	Consent          content.Consent
 	ConsentHint      string // the text used when the owner leaves it blank
 	Brand            content.Brand
+	Layout           layoutView
 	Fonts            []fontView
 	LogoHeights      []logoHeight
 	HasDark          bool // the active theme ships a dark palette
@@ -105,7 +107,7 @@ func (h *Handler) renderAppearance(w http.ResponseWriter, r *http.Request, statu
 		return
 	}
 
-	d := appearanceData{SiteTitle: st.Title, ShowSearch: st.ShowSearch, ColorMode: st.ColorMode, ColorSwitch: st.ColorSwitch, HasDark: active.HasDark(), Consent: st.Consent, ConsentHint: content.DefaultConsentText, Brand: st.Brand, Fonts: fontViews(uploaded), LogoHeights: logoHeights(st.Brand), ActiveLabel: active.Label, CustomCSS: st.CustomCSS, HasOverrides: len(withoutDark(saved)) > 0}
+	d := appearanceData{SiteTitle: st.Title, ShowSearch: st.ShowSearch, ColorMode: st.ColorMode, ColorSwitch: st.ColorSwitch, HasDark: active.HasDark(), Consent: st.Consent, ConsentHint: content.DefaultConsentText, Brand: st.Brand, Layout: newLayoutView(st.Layout), Fonts: fontViews(uploaded), LogoHeights: logoHeights(st.Brand), ActiveLabel: active.Label, CustomCSS: st.CustomCSS, HasOverrides: len(withoutDark(saved)) > 0}
 	for _, t := range h.Engine.List() {
 		d.Themes = append(d.Themes, themeCard{t.Name, t.Label, t.Description, t.Swatches(), t.Name == active.Name})
 	}
@@ -158,7 +160,7 @@ func fontLabel(key string) string {
 func (h *Handler) appearancePage(w http.ResponseWriter, r *http.Request) {
 	notice := map[string]string{
 		"title": "Site title saved.", "theme": "Theme activated.", "tokens": "Colours, fonts and spacing saved.",
-		"reset": "Reset to the theme's defaults.", "dark": "Dark palette saved.", "darkreset": "Dark palette reset to the theme's.", "css": "Custom CSS saved.", "search": "Search box setting saved.", "colormode": "Dark mode setting saved.", "consent": "Cookie notice saved.", "font": "Font uploaded.", "fontdeleted": "Font deleted.", "brand": "Logo and icon saved.",
+		"reset": "Reset to the theme's defaults.", "dark": "Dark palette saved.", "darkreset": "Dark palette reset to the theme's.", "css": "Custom CSS saved.", "search": "Search box setting saved.", "colormode": "Dark mode setting saved.", "consent": "Cookie notice saved.", "font": "Font uploaded.", "fontdeleted": "Font deleted.", "brand": "Logo and icon saved.", "layout": "Page layout saved.", "header": "Header saved.",
 	}[r.URL.Query().Get("done")]
 	h.renderAppearance(w, r, 200, notice, "", nil)
 }

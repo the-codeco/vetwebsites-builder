@@ -29,6 +29,14 @@
       <input name="from" value="{{.Data.From}}" maxlength="300" placeholder="/old-page" required></label>
     <label>Goes to <span class="muted">(a path on this site, or an https:// address)</span>
       <input name="to" value="{{.Data.To}}" maxlength="2000" placeholder="/new-page" required></label>
+    <details class="hint-more">
+      <summary>Moving from an old site, such as Joomla?</summary>
+      <ul class="hint">
+        <li><strong>Addresses with a ? part</strong>, such as <code>/index.php?option=com_content&amp;view=article&amp;id=5&amp;Itemid=105</code>: paste the old address as it is. It matches when a visitor's address has the same values; values you leave out, such as <code>Itemid</code>, can be anything.</li>
+        <li><strong>A whole group of addresses</strong>: end the old address with <code>/*</code> and put a <code>*</code> in the new one. <code>/index.php/*</code> going to <code>/*</code> sends <code>/index.php/about-us</code> and <code>/index.php/about-us.html</code> to <code>/about-us</code>, and <code>/index.php</code> itself to the home page.</li>
+        <li>A redirect for one address always wins over a <code>/*</code> group, so you can send the few pages that changed name to their new place.</li>
+      </ul>
+    </details>
     <fieldset class="plainset">
       <label class="check"><input type="radio" name="kind" value="permanent"{{if not .Data.Temp}} checked{{end}}> <span><strong>Permanent</strong> — the page has moved for good; search engines move to the new address</span></label>
       <label class="check"><input type="radio" name="kind" value="temporary"{{if .Data.Temp}} checked{{end}}> <span><strong>Temporary</strong> — for a short while only; search engines keep the old address</span></label>

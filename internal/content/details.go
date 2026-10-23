@@ -15,7 +15,47 @@ const (
 	MaxAddress     = 300
 	MaxHours       = 500
 	MaxDetailLines = 8
+	MaxNumbers     = 5 // extra numbers, beside the main phone and WhatsApp
+	MaxEmails      = 3 // extra email addresses, beside the main one
+	MaxNumberLabel = 40
 )
+
+// NumberKinds are what an extra number can be. A fax is shown but never made a tap-to-call link.
+var NumberKinds = []struct{ Key, Label string }{
+	{"phone", "Phone"}, {"cell", "Cellphone"}, {"emergency", "Emergencies / after hours"}, {"fax", "Fax"},
+}
+
+// ContactNumber is one extra number. Label is what visitors see ("Reception", "Dr Smith"); without one, the
+// kind's label is used.
+type ContactNumber struct {
+	Kind, Label, Number string
+}
+
+// ShownLabel is the label visitors see.
+func (n ContactNumber) ShownLabel() string {
+	if n.Label != "" {
+		return n.Label
+	}
+	for _, k := range NumberKinds {
+		if k.Key == n.Kind {
+			return k.Label
+		}
+	}
+	return "Phone"
+}
+
+// Link is the tap-to-call link ("" for a fax).
+func (n ContactNumber) Link() string {
+	if n.Kind == "fax" {
+		return ""
+	}
+	return PhoneLink(n.Number)
+}
+
+// ContactEmail is one extra email address, with an optional label ("Accounts", "Dr Smith").
+type ContactEmail struct {
+	Label, Email string
+}
 
 // Network is one social site the details can link to; links must be https addresses on one of its hosts.
 type Network struct {
@@ -37,7 +77,9 @@ var Networks = []Network{
 // a "Contact details" block or the footer asks for them.
 type Details struct {
 	Phone, WhatsApp, Email string
-	Address, Hours         string // several lines
+	Numbers                []ContactNumber // more numbers: a second line, a cellphone, emergencies, a fax
+	Emails                 []ContactEmail  // more addresses
+	Address, Hours         string          // several lines
 	Social                 map[string]string
 	InFooter               bool // show them in the footer of every page
 }
@@ -128,8 +170,27 @@ func (d Details) clean() Details {
 		Address: cleanLines(d.Address, MaxAddress), Hours: cleanLines(d.Hours, MaxHours),
 		Social: map[string]string{}, InFooter: d.InFooter,
 	}
-	if e := strings.TrimSpace(d.Email); len(e) <= MaxDetailLine && emailRe.MatchString(e) {
-		out.Email = e
+	out.Email = cleanEmail(d.Email)
+	for _, n := range d.Numbers {
+		n.Number = cleanNumber(n.Number)
+		n.Label = truncateRunes(strings.TrimSpace(strings.Join(strings.Fields(n.Label), " ")), MaxNumberLabel)
+		known := false
+		for _, k := range NumberKinds {
+			known = known || k.Key == n.Kind
+		}
+		if !known {
+			n.Kind = "phone"
+		}
+		if n.Number != "" && len(out.Numbers) < MaxNumbers {
+			out.Numbers = append(out.Numbers, n)
+		}
+	}
+	for _, e := range d.Emails {
+		e.Email = cleanEmail(e.Email)
+		e.Label = truncateRunes(strings.TrimSpace(strings.Join(strings.Fields(e.Label), " ")), MaxNumberLabel)
+		if e.Email != "" && len(out.Emails) < MaxEmails {
+			out.Emails = append(out.Emails, e)
+		}
 	}
 	for _, n := range Networks {
 		if u := SocialURL(n, d.Social[n.Key]); u != "" {
@@ -139,9 +200,21 @@ func (d Details) clean() Details {
 	return out
 }
 
+// cleanEmail is the address if it looks like one, else "".
+func cleanEmail(s string) string {
+	if e := strings.TrimSpace(s); len(e) <= MaxDetailLine && emailRe.MatchString(e) {
+		return e
+	}
+	return ""
+}
+
+// ValidEmail says whether s is usable as an email address.
+func ValidEmail(s string) bool { return cleanEmail(s) != "" }
+
 // Empty says whether there is nothing to show.
 func (d Details) Empty() bool {
-	return d.Phone == "" && d.WhatsApp == "" && d.Email == "" && d.Address == "" && d.Hours == "" && len(d.Social) == 0
+	return d.Phone == "" && d.WhatsApp == "" && d.Email == "" && len(d.Numbers) == 0 && len(d.Emails) == 0 &&
+		d.Address == "" && d.Hours == "" && len(d.Social) == 0
 }
 
 func (d Details) asJSON() map[string]any {
@@ -159,6 +232,28 @@ func (d Details) asJSON() map[string]any {
 		}
 		m["social"] = soc
 	}
+	if len(d.Numbers) > 0 {
+		var ns []any
+		for _, n := range d.Numbers {
+			e := map[string]any{"kind": n.Kind, "number": n.Number}
+			if n.Label != "" {
+				e["label"] = n.Label
+			}
+			ns = append(ns, e)
+		}
+		m["numbers"] = ns
+	}
+	if len(d.Emails) > 0 {
+		var es []any
+		for _, e := range d.Emails {
+			x := map[string]any{"email": e.Email}
+			if e.Label != "" {
+				x["label"] = e.Label
+			}
+			es = append(es, x)
+		}
+		m["emails"] = es
+	}
 	if d.InFooter {
 		m["in_footer"] = true
 	}
@@ -173,6 +268,23 @@ func detailsFrom(m map[string]any) Details {
 	d.Address, _ = m["address"].(string)
 	d.Hours, _ = m["hours"].(string)
 	d.InFooter, _ = m["in_footer"].(bool)
+	ns, _ := m["numbers"].([]any)
+	for _, x := range ns {
+		e, _ := x.(map[string]any)
+		var n ContactNumber
+		n.Kind, _ = e["kind"].(string)
+		n.Label, _ = e["label"].(string)
+		n.Number, _ = e["number"].(string)
+		d.Numbers = append(d.Numbers, n)
+	}
+	es, _ := m["emails"].([]any)
+	for _, x := range es {
+		e, _ := x.(map[string]any)
+		var ce ContactEmail
+		ce.Label, _ = e["label"].(string)
+		ce.Email, _ = e["email"].(string)
+		d.Emails = append(d.Emails, ce)
+	}
 	d.Social = map[string]string{}
 	if soc, ok := m["social"].(map[string]any); ok {
 		for k, v := range soc {

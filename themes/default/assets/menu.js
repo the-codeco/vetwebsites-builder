@@ -152,6 +152,23 @@
   });
 })();
 
+// Header banners with more than one picture cross-fade every few seconds (not for visitors who ask for less
+// motion, and not while the tab is hidden). Without JavaScript the first picture simply stays.
+(function () {
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  document.querySelectorAll('.header-banner[data-rotate]').forEach(function (box) {
+    var imgs = box.querySelectorAll('img');
+    var at = 0;
+    setInterval(function () {
+      if (document.hidden) return;
+      imgs[at].classList.remove('is-on');
+      at = (at + 1) % imgs.length;
+      imgs[at].loading = 'eager';
+      imgs[at].classList.add('is-on');
+    }, 6000);
+  });
+})();
+
 // The search icon opens a popup. Without this script the icon is a link to the search page.
 (function () {
   'use strict';

@@ -17,6 +17,18 @@
               <option value="published"{{if eq .Data.Page.Status "published"}} selected{{end}}>Published</option>
             </select></label>
           {{template "schedule" .Data.Page.PublishAt}}
+          <fieldset class="plainset">
+            <legend>Section and sidebar</legend>
+            <input type="hidden" name="section" value="1">
+            {{if .Data.IsHome}}<input type="hidden" name="parent" value="0">
+            {{else if .Data.HasPages}}<input type="hidden" name="parent" value="0">
+            <p class="hint">Other pages belong under this one, so it is the top of a section.</p>
+            {{else}}<label>Belongs under <span class="muted">(makes it part of that page's section, listed in the sidebar's section menu)</span>
+              <select name="parent"><option value="0">Nothing (a top-level page)</option>{{$cur := .Data.Page.ParentID}}{{range .Data.Parents}}<option value="{{.ID}}"{{if eq .ID $cur}} selected{{end}}>{{.Title}}</option>{{end}}</select></label>{{end}}
+            <label>Order in the section <span class="muted">(lower numbers first; equal numbers go by title)</span>
+              <input type="number" name="position" value="{{.Data.Page.Position}}" min="0" max="9999"></label>
+            <label class="check"><input type="checkbox" name="sidebar"{{if .Data.Page.Sidebar}} checked{{end}}> <span>Show the <a href="/admin/sidebar">sidebar</a> on this page</span></label>
+          </fieldset>
           {{template "seofields" .Data.SEO}}
           <button>Save settings</button>
         </form>

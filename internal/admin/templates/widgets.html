@@ -1,0 +1,87 @@
+{{/*
+  The widget editor shared by the footer and sidebar builders: one widget's fields (by its type), a link row
+  for a links widget, the "add a widget" choices, and the move/remove buttons used by every builder row.
+*/}}
+
+{{define "fb-add-options"}}<select data-add-widget aria-label="Widget to add">
+      <option value="text">Text</option>
+      <option value="links">Links</option>
+      <option value="contact">Contact details</option>
+      <option value="social">Social links</option>
+      <option value="logo">Logo</option>
+      <option value="newsletter">Newsletter signup</option>
+      <option value="image">Picture</option>
+      <option value="search">Search box</option>
+      <option value="sectionmenu">Section menu</option>
+    </select>{{end}}
+
+{{/* one widget: its fields depend on its type */}}
+{{define "fb-widget"}}<div class="fb-widget" data-type="{{.Type}}">
+  <div class="mi-fields fb-widget-head">
+    <strong class="fb-title">{{.Label}}</strong>
+    <span class="mi-btns">
+      <button type="button" class="ghost" data-act="left" title="Move to the previous column" aria-label="Move to previous column">←</button>
+      <button type="button" class="ghost" data-act="right" title="Move to the next column" aria-label="Move to next column">→</button>
+      <button type="button" class="ghost" data-act="up" title="Move up" aria-label="Move up">↑</button>
+      <button type="button" class="ghost" data-act="down" title="Move down" aria-label="Move down">↓</button>
+      <button type="button" class="ghost danger" data-act="remove" title="Remove" aria-label="Remove">✕</button>
+    </span>
+  </div>
+  <div class="fb-body">
+  {{if ne .Type "logo"}}<label>Heading <span class="muted">(optional{{if eq .Type "sectionmenu"}}; empty shows the section's top page{{end}})</span><input data-f="heading" value="{{.Heading}}" maxlength="60"></label>{{end}}
+  {{if eq .Type "text"}}
+    <label>Text {{template "rtbar"}}<textarea data-f="text" rows="5" class="mono" maxlength="5000" data-richtext>{{.Text}}</textarea></label>
+    <span class="hint">Format with the buttons above (without JavaScript: plain text, or basic HTML). Anything unsafe is removed on save.</span>
+  {{else if eq .Type "links"}}
+    <label class="check"><input type="checkbox" data-f="inline"{{if .Inline}} checked{{end}}> <span>Show the links in a row instead of a list</span></label>
+    <div class="mi-sub fb-links">
+      <div class="mi-list" data-list>{{range .Links}}{{template "fb-link" .}}{{end}}</div>
+      <button type="button" class="ghost" data-act="add" data-tpl="tpl-fb-link">+ Add link</button>
+    </div>
+  {{else if eq .Type "contact"}}
+    <fieldset class="plainset fb-parts"><legend>Show</legend>
+      {{range .Parts}}<label class="chk"><input type="checkbox" data-part="{{.Key}}"{{if .On}} checked{{end}}> {{.Label}}</label>{{end}}
+    </fieldset>
+    <span class="hint">Only details filled in under Site details appear.</span>
+  {{else if eq .Type "social"}}
+    <span class="hint">Shows the social links from Site details.</span>
+  {{else if eq .Type "logo"}}
+    <label>Which logo <select data-f="logo">
+      <option value=""{{if ne .Logo "alternative"}} selected{{end}}>Main logo</option>
+      <option value="alternative"{{if eq .Logo "alternative"}} selected{{end}}>Alternative logo (for dark backgrounds)</option>
+    </select></label>
+    <span class="hint">Your logo from <a href="/admin/appearance">Appearance</a>, linking to the home page. Without an alternative logo the main one is used, and without either, the site's title.</span>
+    <label>Tagline <span class="muted">(optional)</span><input data-f="text" value="{{.Text}}" maxlength="300"></label>
+  {{else if eq .Type "newsletter"}}
+    <label>Introduction <span class="muted">(optional)</span><input data-f="text" value="{{.Text}}" maxlength="300"></label>
+    <label>Button label<input data-f="button" value="{{.Button}}" maxlength="300" placeholder="Subscribe"></label>
+    <label>Message shown after signing up<input data-f="success" value="{{.Success}}" maxlength="300" placeholder="Thanks for subscribing!"></label>
+  {{else if eq .Type "image"}}
+    <label>Picture <span class="colorrow"><input type="text" data-f="image" value="{{.Image}}" maxlength="2000" placeholder="/media/photo.jpg"><button type="button" class="ghost" data-pick>Choose…</button></span></label>
+    <label>Description <span class="muted">(for people who can't see it)</span><input data-f="alt" value="{{.Alt}}" maxlength="120"></label>
+    <label>Links to <span class="muted">(optional, such as a partner's site)</span><input data-f="url" value="{{.URL}}" maxlength="2000" list="page-urls" placeholder="https://"></label>
+    <label>Caption <span class="muted">(optional)</span><input data-f="text" value="{{.Text}}" maxlength="300"></label>
+  {{else if eq .Type "search"}}
+    <span class="hint">A box that searches your pages and posts.</span>
+  {{else if eq .Type "sectionmenu"}}
+    <span class="hint">On a page that is part of a section (Pages → page settings → “Belongs under”), lists the section's pages with the current one marked. Shows nothing on other pages.</span>
+  {{end}}
+  </div>
+</div>{{end}}
+
+{{/* a link in a links widget */}}
+{{define "fb-link"}}<div class="mi-link">
+  <div class="mi-fields">
+    <input data-f="label" value="{{.Label}}" placeholder="Label" maxlength="60" aria-label="Link label">
+    <input data-f="url" value="{{.URL}}" placeholder="/page" list="page-urls" maxlength="2000" aria-label="Link address">
+    <button type="button" class="ghost mi-find" data-act="find" title="Search your pages and posts to fill in the label and address" aria-expanded="false">Find…</button>
+    <label class="chk"><input type="checkbox" data-f="new_tab"{{if .NewTab}} checked{{end}}> New tab</label>
+    {{template "mi-buttons"}}
+  </div>
+</div>{{end}}
+
+{{define "mi-buttons"}}<span class="mi-btns">
+  <button type="button" class="ghost" data-act="up" title="Move up / earlier" aria-label="Move up">↑</button>
+  <button type="button" class="ghost" data-act="down" title="Move down / later" aria-label="Move down">↓</button>
+  <button type="button" class="ghost danger" data-act="remove" title="Remove" aria-label="Remove">✕</button>
+</span>{{end}}

@@ -540,6 +540,21 @@ fieldset.plainset input { margin-top: 4px; }
 .tt-content code { padding: 1px 4px; border-radius: 4px; background: var(--bg); }
 .tt-content pre { padding: 8px 10px; border-radius: 6px; background: var(--bg); overflow-x: auto; }
 
+/* site details: a row of fields for one extra number or email address */
+.details-row { display: grid; gap: 0 10px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.details-row label { margin-top: 8px; }
+
+/* redirects: the "moving from an old site" help */
+details.hint-more { margin: 10px 0 4px; }
+details.hint-more summary { cursor: pointer; font-size: .88rem; font-weight: 600; }
+details.hint-more ul { margin: 6px 0 0; padding-left: 18px; }
+details.hint-more li { margin-bottom: 6px; }
+.page-child { padding-left: 22px; }
+
+/* sidebar builder: one column of the footer's widgets */
+.sb-col::before { content: none; }
+.sb-builder [data-act="left"], .sb-builder [data-act="right"] { display: none; }
+
 /* menu builder: the icon items (social icons, search icon) have no address, label or button */
 .mi-hint { display: none; margin: 6px 0 0 12px; }
 .mi[data-kind="social"] > .mi-hint-social, .mi[data-kind="search"] > .mi-hint-search { display: block; }
