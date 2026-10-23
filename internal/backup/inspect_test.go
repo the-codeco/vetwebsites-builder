@@ -845,7 +845,7 @@ func TestRestoredMenuStyleIsCleaned(t *testing.T) {
 func TestRestoredColorSwitchPlace(t *testing.T) {
 	s := testService(t)
 	for in, want := range map[string]string{"footer": "footer", "off": "off", "floating": "floating", "": "floating", "header": "floating", `x" onclick="y`: "floating"} {
-		got := s.cleanSettings(Settings{Title: "T", ActiveTheme: "default", ColorMode: "toggle", ColorSwitch: in}, &warnings{})
+		got := s.cleanSettings(Settings{Title: "T", ActiveTheme: "default", ColorMode: "toggle", ColorSwitch: in}, nil, &warnings{})
 		if got.ColorSwitch != want {
 			t.Errorf("%q: got %q, want %q", in, got.ColorSwitch, want)
 		}
