@@ -24,8 +24,8 @@
 
     <label>Content
       {{template "rtbar"}}
-      <textarea name="body" rows="18" class="mono" maxlength="200000">{{.Data.Post.Body}}</textarea>
-      <span class="hint">Write plain text (a blank line starts a new paragraph) or use the buttons for formatting. Unsafe HTML is removed on save.</span></label>
+      <textarea name="body" rows="18" class="mono" maxlength="200000" data-richtext>{{.Data.Post.Body}}</textarea>
+      <span class="hint">Format with the buttons above (without JavaScript: plain text, or basic HTML). Unsafe HTML is removed on save.</span></label>
 
     {{template "seofields" .Data.SEO}}
 

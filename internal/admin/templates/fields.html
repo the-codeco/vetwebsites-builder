@@ -18,8 +18,8 @@
 {{else if eq .Kind "bool"}}<label class="check"><input type="checkbox" name="{{.Name}}"{{if .Checked}} checked{{end}}> {{.Label}}</label>
 {{else}}<label>{{.Label}}
   {{if eq .Kind "textarea"}}<textarea name="{{.Name}}" rows="3" maxlength="5000">{{.Str}}</textarea>
-  {{else if eq .Kind "richtext"}}{{template "rtbar"}}<textarea name="{{.Name}}" rows="10" class="mono" maxlength="50000">{{.Str}}</textarea>
-    <span class="hint">Plain text works (blank line = new paragraph), or use the buttons / basic HTML. Anything unsafe is removed on save.</span>
+  {{else if eq .Kind "richtext"}}{{template "rtbar"}}<textarea name="{{.Name}}" rows="10" class="mono" maxlength="50000" data-richtext>{{.Str}}</textarea>
+    <span class="hint">Format with the buttons above (without JavaScript: plain text, or basic HTML). Anything unsafe is removed on save.</span>
   {{else if eq .Kind "imagelist"}}<textarea name="{{.Name}}" rows="4" class="mono" placeholder="/media/photo.jpg">{{.Str}}</textarea>
     <button type="button" class="ghost" data-pick>Add from library…</button>
   {{else if eq .Kind "select"}}<select name="{{.Name}}">{{range .Options}}<option value="{{.Value}}"{{if .Selected}} selected{{end}}>{{.Label}}</option>{{end}}</select>

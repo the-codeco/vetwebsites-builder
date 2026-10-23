@@ -75,8 +75,8 @@
       if (!win || !doc) return;
       fetch(win.location.href, { credentials: 'same-origin', cache: 'no-store' })
         .then(function (r) { return r.ok ? r.text() : Promise.reject(); })
-        .then(function (html) {
-          var fresh = new DOMParser().parseFromString(html, 'text/html').getElementById('block-' + id);
+        .then(function (html) { // parsed by the preview's own window: its inline styles are judged by the preview's policy, not the admin's
+          var fresh = new win.DOMParser().parseFromString(html, 'text/html').getElementById('block-' + id);
           var old = doc.getElementById('block-' + id);
           if (fresh && old) old.replaceWith(doc.importNode(fresh, true));
           else win.location.reload(); // not on this page (or not drawn yet): start the preview again
@@ -111,6 +111,158 @@
       var form = b && formOf(b);
       if (form) schedule(form);
     });
+  })();
+
+
+  // ---- rich text editor (Tiptap) ----
+  // Every textarea marked data-richtext becomes a visual editor. The textarea stays in the form, hidden, and always
+  // holds the editor's HTML, so saving, the live preview and the server's cleaning work as they always did. Without
+  // JavaScript the textarea and its plain buttons are still there.
+  (function () {
+    var TT = window.WBTiptap;
+    if (!TT) return;
+
+    function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+    // text written without tags ("a blank line starts a new paragraph") becomes paragraphs
+    function toHTML(v) {
+      v = (v || '').trim();
+      if (!v || /<[a-z][\s\S]*>/i.test(v)) return v;
+      return v.split(/\n{2,}/).map(function (p) { return '<p>' + esc(p).replace(/\n/g, '<br>') + '</p>'; }).join('');
+    }
+
+    var SEP = '|';
+    var BUTTONS = [
+      ['bold', '<b>B</b>', 'Bold'], ['italic', '<i>I</i>', 'Italic'], ['underline', '<u>U</u>', 'Underline'], SEP,
+      ['h2', 'H2', 'Heading'], ['h3', 'H3', 'Subheading'], ['p', '¶', 'Normal text'], SEP,
+      ['ul', '• List', 'Bulleted list'], ['ol', '1. List', 'Numbered list'], ['quote', '“ ”', 'Quote'], SEP,
+      ['link', 'Link', 'Add or change a link'], ['unlink', 'Unlink', 'Remove the link'], ['image', 'Image', 'Insert an image from the library'], SEP,
+      ['undo', '↶', 'Undo'], ['redo', '↷', 'Redo']
+    ];
+
+    function active(ed, k) {
+      switch (k) {
+        case 'bold': case 'italic': case 'underline': return ed.isActive(k);
+        case 'h2': return ed.isActive('heading', { level: 2 });
+        case 'h3': return ed.isActive('heading', { level: 3 });
+        case 'ul': return ed.isActive('bulletList');
+        case 'ol': return ed.isActive('orderedList');
+        case 'quote': return ed.isActive('blockquote');
+        case 'link': return ed.isActive('link');
+      }
+      return false;
+    }
+
+    function run(ed, k) {
+      var c = ed.chain().focus();
+      switch (k) {
+        case 'bold': c.toggleBold().run(); break;
+        case 'italic': c.toggleItalic().run(); break;
+        case 'underline': c.toggleUnderline().run(); break;
+        case 'h2': c.toggleHeading({ level: 2 }).run(); break;
+        case 'h3': c.toggleHeading({ level: 3 }).run(); break;
+        case 'p': c.setParagraph().run(); break;
+        case 'ul': c.toggleBulletList().run(); break;
+        case 'ol': c.toggleOrderedList().run(); break;
+        case 'quote': c.toggleBlockquote().run(); break;
+        case 'unlink': c.unsetLink().run(); break;
+        case 'undo': c.undo().run(); break;
+        case 'redo': c.redo().run(); break;
+        case 'link':
+          var url = window.prompt('Link address (e.g. /about or https://example.com). Leave empty to remove the link.', ed.getAttributes('link').href || '');
+          if (url === null) return;
+          if (url.trim() === '') c.unsetLink().run();
+          else c.extendMarkRange('link').setLink({ href: url.trim() }).run();
+          break;
+      }
+    }
+
+    function init(ta) {
+      if (ta.getAttribute('data-rich-ready')) return;
+      var label = ta.closest('label');
+      if (!label) return;
+      ta.setAttribute('data-rich-ready', '1');
+      var old = label.querySelector('.rtbar');
+      if (old) old.remove();
+
+      var wrap = document.createElement('div');
+      wrap.className = 'tt-wrap';
+      var bar = document.createElement('div');
+      bar.className = 'tt-bar';
+      bar.setAttribute('role', 'toolbar');
+      bar.setAttribute('aria-label', 'Formatting');
+      var edit = document.createElement('div');
+      edit.className = 'tt-editor';
+      var btns = {};
+      BUTTONS.forEach(function (b) {
+        if (b === SEP) { var s = document.createElement('span'); s.className = 'tt-sep'; bar.appendChild(s); return; }
+        var el = document.createElement('button');
+        el.type = 'button';
+        el.className = 'ghost';
+        el.innerHTML = b[1];
+        el.title = b[2];
+        el.setAttribute('aria-label', b[2]);
+        el.setAttribute('data-tt', b[0]);
+        if (b[0] === 'image') { el.setAttribute('data-pick', ''); el.setAttribute('data-insert', ''); }
+        bar.appendChild(el);
+        btns[b[0]] = el;
+      });
+      wrap.appendChild(bar);
+      wrap.appendChild(edit);
+      ta.classList.add('tt-source');
+      ta.parentNode.insertBefore(wrap, ta);
+
+      var name = (label.firstChild && label.firstChild.textContent || '').trim() || 'Content';
+      var ed = new TT.Editor({
+        element: edit,
+        extensions: [
+          TT.StarterKit.configure({
+            heading: { levels: [2, 3] },
+            trailingNode: false, // no empty paragraph kept at the end of the text
+            link: { openOnClick: false, HTMLAttributes: { target: null, rel: null } }
+          }),
+          TT.Image
+        ],
+        content: toHTML(ta.value),
+        editorProps: { attributes: { class: 'tt-content', role: 'textbox', 'aria-multiline': 'true', 'aria-label': name } },
+        onUpdate: function () {
+          var html = ed.isEmpty ? '' : ed.getHTML();
+          if (ta.value !== html) {
+            ta.value = html;
+            ta.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+        },
+        onTransaction: function () {
+          Object.keys(btns).forEach(function (k) {
+            var on = active(ed, k);
+            btns[k].setAttribute('aria-pressed', on ? 'true' : 'false');
+            btns[k].classList.toggle('on', on);
+          });
+          btns.undo.disabled = !ed.can().undo();
+          btns.redo.disabled = !ed.can().redo();
+        }
+      });
+      ta.wbEditor = ed;
+
+      // the editor sits inside the field's <label>: a click in it must not be passed on to the label's control
+      wrap.addEventListener('click', function (e) {
+        e.preventDefault();
+        var b = e.target.closest && e.target.closest('button[data-tt]');
+        if (b && b.getAttribute('data-tt') !== 'image') run(ed, b.getAttribute('data-tt'));
+      });
+      bar.addEventListener('mousedown', function (e) { e.preventDefault(); }); // keep the selection while a button is pressed
+    }
+
+    function initAll(root) {
+      if (root.matches && root.matches('textarea[data-richtext]')) init(root);
+      if (root.querySelectorAll) Array.prototype.forEach.call(root.querySelectorAll('textarea[data-richtext]'), init);
+    }
+
+    initAll(document);
+    // blocks added, swapped in by htmx, or cloned for a new list item
+    new MutationObserver(function (muts) {
+      muts.forEach(function (m) { Array.prototype.forEach.call(m.addedNodes, function (n) { if (n.nodeType === 1) initAll(n); }); });
+    }).observe(document.body, { childList: true, subtree: true });
   })();
 
 
@@ -208,6 +360,11 @@
 
   function choose(item) {
     var url = item.getAttribute('data-media-url');
+    if (insertMode && target.wbEditor) { // the visual editor: put the picture where the cursor is
+      target.wbEditor.chain().focus().setImage({ src: url, alt: item.getAttribute('data-media-alt') || '' }).run();
+      dialog.close();
+      return;
+    }
     if (insertMode) { // toolbar "Image": put an <img> at the cursor
       insertAtCursor(target, '<img src="' + attrEsc(url) + '" alt="' + attrEsc(item.getAttribute('data-media-alt') || '') + '">');
       dialog.close();
