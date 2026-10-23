@@ -518,6 +518,9 @@ func cleanRedirects(in []Redirect, w *warnings) []Redirect {
 	for _, r := range in {
 		from, err1 := content.CleanRedirectFrom(r.From)
 		to, err2 := content.CleanRedirectTo(r.To)
+		if err1 == nil && err2 == nil {
+			err2 = content.CheckRedirectStar(from, to)
+		}
 		switch {
 		case err1 != nil || err2 != nil:
 			w.add("A redirect from %q was left out because an address in it is not valid.", trunc(r.From, 40))

@@ -22,22 +22,7 @@ func (b *builder) htaccess() []byte {
 	w.WriteString("<IfModule mod_rewrite.c>\nRewriteEngine On\nRewriteBase " + rb + "\n\n")
 	if len(b.redirs) > 0 {
 		w.WriteString("# redirects set up in the website's Redirects screen, and links that moved\n")
-		seen := map[string]bool{}
-		rs := append([]Redirect(nil), b.redirs...)
-		sort.SliceStable(rs, func(i, j int) bool { return rs[i].From < rs[j].From })
-		for _, r := range rs {
-			from := strings.Trim(strings.SplitN(r.From, "?", 2)[0], "/")
-			to := b.redirectTarget(r.To)
-			if from == "" || to == "" || seen[from] || !safeHtaccessText(from) || !safeHtaccessText(to) {
-				continue
-			}
-			seen[from] = true
-			code := "302"
-			if r.Permanent {
-				code = "301"
-			}
-			fmt.Fprintf(&w, "RewriteRule ^%s/?$ %s [R=%s,L,NC]\n", regexp.QuoteMeta(from), to, code)
-		}
+		w.WriteString(b.redirectRules())
 		w.WriteString("\n")
 	}
 	w.WriteString("# an address does not end in a slash\nRewriteRule ^(.+)/$ " + b.base + "/$1 [R=301,L]\n\n")
@@ -56,6 +41,87 @@ func (b *builder) htaccess() []byte {
 	w.WriteString("ExpiresByType image/webp \"access plus 1 year\"\nExpiresByType image/gif \"access plus 1 year\"\nExpiresByType image/svg+xml \"access plus 1 year\"\nExpiresByType font/woff2 \"access plus 1 year\"\n</IfModule>\n\n")
 	w.WriteString("<IfModule mod_deflate.c>\nAddOutputFilterByType DEFLATE text/html text/css text/plain text/xml application/xml application/json application/javascript text/javascript image/svg+xml\n</IfModule>\n")
 	return []byte(w.String())
+}
+
+// redirectRules writes the redirects in the order the live site checks them: old addresses with a ? part (they
+// match on the query values they name, in any order, and drop the old query), then exact addresses, then /* groups
+// with the longest prefix first (the * becomes the rest of the old address, without an .html or .htm ending).
+func (b *builder) redirectRules() string {
+	var query, exact, wild []Redirect
+	seen := map[string]bool{}
+	for _, r := range b.redirs {
+		if seen[r.From] {
+			continue
+		}
+		seen[r.From] = true
+		switch {
+		case strings.Contains(r.From, "?"):
+			query = append(query, r)
+		case strings.HasSuffix(r.From, "/*"):
+			wild = append(wild, r)
+		default:
+			exact = append(exact, r)
+		}
+	}
+	sort.SliceStable(query, func(i, j int) bool { return len(query[i].From) > len(query[j].From) }) // more values first
+	sort.SliceStable(exact, func(i, j int) bool { return exact[i].From < exact[j].From })
+	sort.SliceStable(wild, func(i, j int) bool { return len(wild[i].From) > len(wild[j].From) })
+	code := func(r Redirect) string {
+		if r.Permanent {
+			return "301"
+		}
+		return "302"
+	}
+	var w strings.Builder
+	for _, r := range query {
+		path, q, _ := strings.Cut(r.From, "?")
+		path = strings.Trim(path, "/")
+		to := b.redirectTarget(r.To)
+		vals, err := url.ParseQuery(q)
+		if path == "" || to == "" || err != nil || len(vals) == 0 || !safeHtaccessText(path) || !safeHtaccessText(to) {
+			continue
+		}
+		keys := make([]string, 0, len(vals))
+		for k := range vals {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		ok := true
+		var conds strings.Builder
+		for _, k := range keys {
+			pair := url.QueryEscape(k) + "=" + url.QueryEscape(vals.Get(k))
+			if !safeHtaccessText(pair) {
+				ok = false
+				break
+			}
+			fmt.Fprintf(&conds, "RewriteCond %%{QUERY_STRING} (^|&)%s(&|$) [NC]\n", regexp.QuoteMeta(pair))
+		}
+		if !ok {
+			continue
+		}
+		if !strings.Contains(to, "?") {
+			to += "?" // a trailing ? drops the old query
+		}
+		fmt.Fprintf(&w, "%sRewriteRule ^%s$ %s [R=%s,L,NC]\n", conds.String(), regexp.QuoteMeta(path), to, code(r))
+	}
+	for _, r := range exact {
+		from := strings.Trim(r.From, "/")
+		to := b.redirectTarget(r.To)
+		if from == "" || to == "" || !safeHtaccessText(from) || !safeHtaccessText(to) {
+			continue
+		}
+		fmt.Fprintf(&w, "RewriteRule ^%s/?$ %s [R=%s,L,NC]\n", regexp.QuoteMeta(from), to, code(r))
+	}
+	for _, r := range wild {
+		prefix := strings.Trim(strings.TrimSuffix(r.From, "*"), "/")
+		to := b.redirectTarget(r.To)
+		if prefix == "" || to == "" || !safeHtaccessText(prefix) || !safeHtaccessText(to) {
+			continue
+		}
+		to = strings.Replace(to, "*", "$1", 1)
+		fmt.Fprintf(&w, "RewriteRule ^%s(?:/(.*?))?(?:\\.html?)?/?$ %s [R=%s,L,NC]\n", regexp.QuoteMeta(prefix), to, code(r))
+	}
+	return w.String()
 }
 
 // redirectTarget is where a redirect leads, as written in the rule: a path on this site gets the folder prefix.

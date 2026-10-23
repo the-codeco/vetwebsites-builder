@@ -384,7 +384,7 @@ func (s *Service) servePage(w http.ResponseWriter, r *http.Request, slug string)
 
 func (s *Service) notFound(w http.ResponseWriter, r *http.Request, st content.Settings, theme *themes.Theme) {
 	// an old address that was moved: send the visitor (and search engines) to the new one
-	if to, permanent, ok := s.content.RedirectFor(r.Context(), r.URL.Path); ok {
+	if to, permanent, ok := s.content.RedirectFor(r.Context(), r.URL.Path, r.URL.RawQuery); ok {
 		code := http.StatusFound
 		if permanent {
 			code = http.StatusMovedPermanently
