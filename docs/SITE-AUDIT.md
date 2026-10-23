@@ -18,6 +18,21 @@ Some also show vetwebsites' pet-info articles, which come from a separate API, n
 | 9thavevet.co.za | ~10 + pet-info feed | no | boxed on green gradient; logo + tagline; menu bar; left sidebar; side art |
 | vanriebeeckparkvet.co.za | 6 + pet-info feed | yes | full-width bands; sticky header, logo left, menu right; sliders; textured sections |
 
+## Progress (branch `site-gaps`)
+
+Done:
+- **Gap 1, redirects:** query-string redirects and `/*` groups, including in the static export's `.htaccess`.
+  Alias domains are not done yet.
+- **Gap 2, contact details:** labelled extra numbers (phone, cell, emergency, fax) and email addresses.
+- **Gap 3, header layouts:** a logo-and-banner style with cross-fading pictures beside or behind the logo, a centred
+  style with the menu bar on top, a tagline, and menu bar colours.
+- **Gap 4, fonts:** Arial/Helvetica, Verdana, Tahoma, Trebuchet MS, Times New Roman and Impact.
+- **Gap 5, page layout:** a boxed page on a background colour, and a background picture that covers, runs along the
+  top or repeats.
+
+Not yet: alias domains, the sidebar (6), slideshow block (8), contact form options (9), tables (10), smaller items (11),
+the credit default (12) and the importer (13).
+
 ## Gaps, ranked by how many sites need them
 
 1. **Redirects from Joomla addresses (all 7).** Two kinds:
