@@ -698,6 +698,8 @@
       w.button = f('button'); w.success = f('success');
     } else if (w.type === 'logo') {
       w.logo = f('logo');
+    } else if (w.type === 'image') {
+      w.image = f('image'); w.alt = f('alt'); w.url = f('url');
     }
     return w;
   }
@@ -724,6 +726,13 @@
   document.addEventListener('submit', function (e) {
     var form = e.target;
     if (form.matches && form.matches('[data-footer-form]')) form.elements.structure.value = JSON.stringify(fbRead(form));
+    if (form.matches && form.matches('[data-sidebar-form]')) { // the sidebar: one column of the same widgets
+      form.elements.structure.value = JSON.stringify({
+        side: form.querySelector('[data-sb="side"]').value,
+        width: form.querySelector('[data-sb="width"]').value,
+        widgets: Array.prototype.map.call(form.querySelectorAll('.sb-col > [data-list] > .fb-widget'), fbReadWidget)
+      });
+    }
   });
 
   document.addEventListener('change', function (e) {

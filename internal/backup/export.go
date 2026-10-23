@@ -76,8 +76,8 @@ func (s *Service) load(ctx context.Context, personal bool) (Content, error) {
 
 	var c Content
 	st := &c.Settings
-	if err := tx.QueryRow(ctx, `SELECT title, active_theme, tokens, custom_css, seo, show_search, color_mode, consent, footer, brand, details, tracking, layout FROM site_settings WHERE id = 1`).
-		Scan(&st.Title, &st.ActiveTheme, &st.Tokens, &st.CustomCSS, &st.SEO, &st.ShowSearch, &st.ColorMode, &st.Consent, &st.Footer, &st.Brand, &st.Details, &st.Tracking, &st.Layout); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT title, active_theme, tokens, custom_css, seo, show_search, color_mode, consent, footer, brand, details, tracking, layout, sidebar FROM site_settings WHERE id = 1`).
+		Scan(&st.Title, &st.ActiveTheme, &st.Tokens, &st.CustomCSS, &st.SEO, &st.ShowSearch, &st.ColorMode, &st.Consent, &st.Footer, &st.Brand, &st.Details, &st.Tracking, &st.Layout, &st.Sidebar); err != nil {
 		return c, err
 	}
 
@@ -134,7 +134,8 @@ func (s *Service) load(ctx context.Context, personal bool) (Content, error) {
 	}
 
 	// pages and their blocks
-	rows, err = tx.Query(ctx, `SELECT id, slug, title, status, seo, updated_at, publish_at FROM pages ORDER BY id`)
+	rows, err = tx.Query(ctx, `SELECT p.id, p.slug, p.title, p.status, p.seo, p.updated_at, p.publish_at, COALESCE(t.slug, ''), p.position, NOT p.sidebar
+		FROM pages p LEFT JOIN pages t ON t.id = p.parent_id ORDER BY p.id`)
 	if err != nil {
 		return c, err
 	}
@@ -142,7 +143,7 @@ func (s *Service) load(ctx context.Context, personal bool) (Content, error) {
 	for rows.Next() {
 		var id int64
 		var p Page
-		if err := rows.Scan(&id, &p.Slug, &p.Title, &p.Status, &p.SEO, &p.UpdatedAt, &p.PublishAt); err != nil {
+		if err := rows.Scan(&id, &p.Slug, &p.Title, &p.Status, &p.SEO, &p.UpdatedAt, &p.PublishAt, &p.Parent, &p.Position, &p.NoSidebar); err != nil {
 			rows.Close()
 			return c, err
 		}

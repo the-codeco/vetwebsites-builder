@@ -549,3 +549,8 @@ details.hint-more { margin: 10px 0 4px; }
 details.hint-more summary { cursor: pointer; font-size: .88rem; font-weight: 600; }
 details.hint-more ul { margin: 6px 0 0; padding-left: 18px; }
 details.hint-more li { margin-bottom: 6px; }
+.page-child { padding-left: 22px; }
+
+/* sidebar builder: one column of the footer's widgets */
+.sb-col::before { content: none; }
+.sb-builder [data-act="left"], .sb-builder [data-act="right"] { display: none; }

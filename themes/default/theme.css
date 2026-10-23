@@ -365,6 +365,41 @@ html:not(.js) .has-panel:hover > .menu-panel, html:not(.js) .has-panel:focus-wit
 @media (max-width: 800px) { .team.cols-3, .team.cols-4 { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 520px) { .team.cols-2, .team.cols-3, .team.cols-4 { grid-template-columns: 1fr; } }
 
+/* the sidebar the owner builds: a column of widgets beside <main>; the content comes first in the page, so phones
+   (and screen readers) get it before the sidebar */
+.with-sidebar { display: grid; gap: calc(var(--space) * 2); grid-template-columns: minmax(0, 1fr) var(--sidebar-w); grid-template-areas: "main side"; max-width: var(--content-width); margin: 0 auto; padding: 0 var(--space); }
+.with-sidebar.sidebar-left { grid-template-columns: var(--sidebar-w) minmax(0, 1fr); grid-template-areas: "side main"; }
+.sidebar-narrow { --sidebar-w: 14rem; }
+.sidebar-wide { --sidebar-w: 20rem; }
+.with-sidebar > main { grid-area: main; min-width: 0; }
+.with-sidebar > main .block-inner { padding-left: var(--space); padding-right: var(--space); }
+.site-sidebar { grid-area: side; display: grid; gap: calc(var(--space) * 1.5); align-content: start; padding: calc(var(--space) * 2) 0; min-width: 0; }
+.sidebar-widget h2 { margin: 0 0 .5em; font-size: 1.05rem; }
+.sidebar-widget h2 a { color: inherit; text-decoration: none; }
+.sidebar-widget .prose > :first-child { margin-top: 0; }
+.sidebar-widget .prose > :last-child { margin-bottom: 0; }
+.sidebar-links { list-style: none; margin: 0; padding: 0; }
+.sidebar-links li { border-bottom: 1px dotted color-mix(in srgb, var(--color-text) 25%, transparent); }
+.sidebar-links a { display: block; padding: .45em 0; color: var(--color-text); text-decoration: none; }
+.sidebar-links a:hover { color: var(--color-primary); }
+.sidebar-links a[aria-current], .sidebar-widget h2 a[aria-current] { font-weight: 700; color: var(--color-primary); }
+.sidebar-links.is-inline { display: flex; flex-wrap: wrap; gap: .4em var(--space); }
+.sidebar-links.is-inline li { border: 0; }
+.sidebar-figure, .footer-figure { margin: 0; }
+.sidebar-figure img, .footer-figure img { display: block; width: 100%; max-width: 20rem; height: auto; border-radius: var(--radius); }
+.sidebar-figure figcaption, .footer-figure figcaption { margin-top: .4rem; font-size: .9rem; color: var(--color-muted); }
+.sidebar-search, .footer-search { display: flex; flex-wrap: wrap; gap: .4rem; }
+.sidebar-search input[type=search], .footer-search input[type=search] { flex: 1 1 8rem; min-width: 0; padding: .5em .7em; font: inherit; color: var(--color-text); background: var(--color-bg); border: 1px solid color-mix(in srgb, var(--color-text) 30%, transparent); border-radius: var(--radius); }
+.sidebar-search button, .footer-search button { cursor: pointer; font: inherit; font-weight: 600; }
+.sidebar-logo { display: inline-block; text-decoration: none; color: var(--color-text); }
+.sidebar-logo img { display: block; width: auto; max-width: 100%; }
+.sidebar-logo-title { font-size: 1.25rem; font-weight: 700; }
+.sidebar-newsletter .newsletter-form { margin: 0; }
+@media (max-width: 800px) {
+  .with-sidebar, .with-sidebar.sidebar-left { grid-template-columns: minmax(0, 1fr); grid-template-areas: "main" "side"; }
+  .site-sidebar { padding-top: 0; }
+}
+
 /* the footer the owner builds: rows of columns of widgets */
 .footer-row { display: grid; gap: calc(var(--space) * 2); margin-bottom: calc(var(--space) * 2); }
 .footer-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -394,6 +429,9 @@ html:not(.js) .has-panel:hover > .menu-panel, html:not(.js) .has-panel:focus-wit
 .site-footer:not(.has-fg) .footer-links a[aria-current] { color: var(--color-primary); }
 .footer-logo { display: inline-block; text-decoration: none; color: var(--footer-fg, var(--color-text)); }
 .footer-logo img { display: block; width: auto; max-width: min(100%, 20rem); object-fit: contain; object-position: left center; }
+.sidebar-logo img.logo-sm { height: 32px; }
+.sidebar-logo img.logo-md { height: 44px; }
+.sidebar-logo img.logo-lg { height: 64px; }
 .footer-logo-title { font-size: 1.25rem; font-weight: 700; }
 .footer-tagline { margin: .5em 0 0; }
 .footer-newsletter .newsletter-form { margin: 0; }

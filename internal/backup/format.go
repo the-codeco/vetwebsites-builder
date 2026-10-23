@@ -23,7 +23,7 @@ import (
 const (
 	// Format and Version identify a backup file. A file with another format, or a newer version, is refused.
 	Format  = "webbuilder-backup"
-	Version = 5 // 2: blocks can hold child blocks (layouts); 3: the shared block library; 4: the footer builder; 5: page and header layout
+	Version = 6 // 2: blocks can hold child blocks (layouts); 3: the shared block library; 4: the footer builder; 5: page and header layout; 6: page sections and the sidebar
 
 	ManifestName = "manifest.json"
 	SiteName     = "site.json"
@@ -104,7 +104,8 @@ type Settings struct {
 	Brand       map[string]any               `json:"brand"`
 	Details     map[string]any               `json:"details"`
 	Tracking    map[string]any               `json:"tracking"`
-	Layout      map[string]any               `json:"layout,omitempty"` // format 5
+	Layout      map[string]any               `json:"layout,omitempty"`  // format 5
+	Sidebar     map[string]any               `json:"sidebar,omitempty"` // format 6
 }
 
 type Page struct {
@@ -114,6 +115,9 @@ type Page struct {
 	SEO       map[string]any `json:"seo"`
 	UpdatedAt time.Time      `json:"updated_at"`
 	PublishAt *time.Time     `json:"publish_at,omitempty"` // a draft that goes live at this time
+	Parent    string         `json:"parent,omitempty"`     // the slug of the page this one belongs under (format 6)
+	Position  int            `json:"position,omitempty"`
+	NoSidebar bool           `json:"no_sidebar,omitempty"`
 	Blocks    []Block        `json:"blocks"`
 }
 

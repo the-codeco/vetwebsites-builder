@@ -68,6 +68,7 @@ type SiteInfo struct {
 	Footer       FooterInfo    // the footer the owner built
 	Brand        BrandInfo     // the logo and browser-tab icon
 	Header       HeaderInfo    // the owner's header style, when it isn't the theme's own
+	Sidebar      *SidebarInfo  // the sidebar beside the content; nil when there is none on this page
 	Details      DetailsInfo   // the contact details
 	Tracking     *TrackingInfo // analytics services to load, nil when there are none (or the visitor is logged in)
 	Search       bool          // show the search box (the site owner can turn it off)
@@ -267,6 +268,24 @@ type FooterWidget struct {
 	Button, Success     string
 	Form                NewsletterForm
 	Logo                string // logo widgets: the picture to show ("" draws the site title)
+	Image, Alt, URL     string // picture widgets: the picture, its description, where it links
+	// a section menu's heading links to the section's top page
+	HeadingURL    string
+	HeadingActive bool
+}
+
+// SidebarInfo is the sidebar: its widgets, its side ("left" or "right") and width ("narrow" or "wide").
+type SidebarInfo struct {
+	Side, Width string
+	Widgets     []FooterWidget
+}
+
+// WidgetCtx is what the "widget" template draws one widget with: the widget, the site (contact details, logo),
+// the area's class prefix ("footer" or "sidebar") and an ID unique on the page.
+type WidgetCtx struct {
+	W          FooterWidget
+	Site       SiteInfo
+	Prefix, ID string
 }
 
 // ConsentInfo is what the cookie notice shows.
@@ -353,6 +372,10 @@ var (
 		// blocks.Clean already sanitises; sanitising again here keeps templates safe
 		// even if a block ever reaches rendering without being cleaned.
 		"richtext": func(s string) template.HTML { return template.HTML(blocks.SanitizeHTML(s)) },
+		"widgetctx": func(w FooterWidget, site SiteInfo, prefix, id string) WidgetCtx {
+			return WidgetCtx{W: w, Site: site, Prefix: prefix, ID: id}
+		},
+		"hasprefix": strings.HasPrefix,
 		// what a video or map block shows; the address is checked again here, never trusted as stored
 		"video": func(u string) *blocks.Video {
 			v, ok := blocks.VideoOf(u)

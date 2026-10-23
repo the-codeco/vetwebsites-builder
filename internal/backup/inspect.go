@@ -280,6 +280,7 @@ func (s *Service) cleanSettings(in Settings, menuList []Menu, w *warnings) Setti
 		Details:    content.CleanDetails(in.Details),
 		Tracking:   content.CleanTracking(in.Tracking),
 		Layout:     content.CleanLayout(in.Layout),
+		Sidebar:    content.CleanSidebar(in.Sidebar),
 		Tokens:     map[string]map[string]string{},
 	}
 	if out.Title == "" {
@@ -447,7 +448,8 @@ func cleanPages(in []Page, shared []Reusable, w *warnings) []Page {
 		if title == "" {
 			title = p.Slug
 		}
-		np := Page{Slug: p.Slug, Title: title, Status: status(p.Status), SEO: content.CleanSEO(p.SEO), UpdatedAt: sane(p.UpdatedAt), Blocks: []Block{}}
+		np := Page{Slug: p.Slug, Title: title, Status: status(p.Status), SEO: content.CleanSEO(p.SEO), UpdatedAt: sane(p.UpdatedAt), Blocks: []Block{},
+			Parent: p.Parent, Position: min(max(p.Position, 0), content.MaxSectionPosition), NoSidebar: p.NoSidebar}
 		np.PublishAt = cleanSchedule(np.Status, p.PublishAt)
 		skipped, total := 0, 0 // total counts blocks inside layouts too: the page limit is for all of them
 		for _, b := range p.Blocks {
@@ -483,7 +485,28 @@ func cleanPages(in []Page, shared []Reusable, w *warnings) []Page {
 		}
 		out = append(out, np)
 	}
-	return out
+	return cleanSections(out, w)
+}
+
+// cleanSections keeps a page's parent only when it can be one: a page in the file that is not itself under a
+// page, and not the page itself (the home page never goes under another).
+func cleanSections(pages []Page, w *warnings) []Page {
+	parentOf := map[string]string{}
+	for _, p := range pages {
+		parentOf[p.Slug] = p.Parent
+	}
+	for i := range pages {
+		p := &pages[i]
+		if p.Parent == "" {
+			continue
+		}
+		top, exists := parentOf[p.Parent]
+		if !exists || top != "" || p.Parent == p.Slug || p.Slug == "home" {
+			w.add("The page %q was taken out of its section because the page it belonged under can't hold it.", p.Slug)
+			p.Parent = ""
+		}
+	}
+	return pages
 }
 
 // cleanFonts checks the uploaded fonts: each must look like a WOFF2 file, with a safe name and a known weight, one

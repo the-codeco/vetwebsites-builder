@@ -147,6 +147,7 @@ type Page struct {
 	Slug, Title, Status string
 	SEO                 content.SEO
 	Blocks              []blocks.Block
+	Sidebar             bool // shows the site's sidebar
 }
 
 func (s *Service) loadPage(ctx context.Context, slug string) (*Page, error) {
@@ -155,8 +156,8 @@ func (s *Service) loadPage(ctx context.Context, slug string) (*Page, error) {
 	}
 	p := &Page{}
 	var seo map[string]any
-	err := s.pool.QueryRow(ctx, `SELECT id, slug, title, status, seo FROM pages WHERE slug = $1`, slug).
-		Scan(&p.ID, &p.Slug, &p.Title, &p.Status, &seo)
+	err := s.pool.QueryRow(ctx, `SELECT id, slug, title, status, seo, sidebar FROM pages WHERE slug = $1`, slug).
+		Scan(&p.ID, &p.Slug, &p.Title, &p.Status, &seo, &p.Sidebar)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, errNotFound
 	}
@@ -370,8 +371,12 @@ func (s *Service) servePage(w http.ResponseWriter, r *http.Request, slug string)
 		st: st, base: baseURL(r, st), path: path, pageTitle: title, item: page.SEO,
 		hidden: preview || themePreview,
 	})
+	info := s.siteInfo(r, theme, st, themePreview)
+	if !page.Sidebar {
+		info.Sidebar = nil // this page turned the sidebar off
+	}
 	s.write(w, theme, http.StatusOK, preview || themePreview, themes.PageData{
-		Site:        s.siteInfo(r, theme, st, themePreview),
+		Site:        info,
 		PageTitle:   title,
 		Description: seoTags.Description,
 		SEO:         seoTags,

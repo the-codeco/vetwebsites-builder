@@ -12,6 +12,20 @@ import (
 // Footer is what the owner builds for the bottom of every page (see package footer).
 type Footer = footer.Footer
 
+// Sidebar is the column of widgets beside the content of pages that show it (see package footer).
+type Sidebar = footer.Sidebar
+
+// SetSidebar saves the sidebar. It must already have passed footer.ValidateSidebar.
+func (s *Store) SetSidebar(ctx context.Context, sb Sidebar) error {
+	_, err := s.pool.Exec(ctx, `UPDATE site_settings SET sidebar = $1 WHERE id = 1`, sb.AsMap())
+	return err
+}
+
+func sidebarFrom(m map[string]any) Sidebar { return footer.SidebarFromStored(m) }
+
+// CleanSidebar makes any stored or imported sidebar JSON safe.
+func CleanSidebar(m map[string]any) map[string]any { return footer.SidebarFromStored(m).AsMap() }
+
 // footerFrom reads the stored footer. One saved before the footer builder is shown as its
 // upgrade would be; UpgradeFooter normally rewrites it at startup, so this is a fallback.
 func footerFrom(m map[string]any) Footer {

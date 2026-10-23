@@ -30,6 +30,10 @@ type Page struct {
 	UpdatedAt           time.Time
 	BlockCount          int
 	PublishAt           *time.Time // a draft that goes live at this time
+	// ParentID is the top-level page this one belongs under (0: none); Position orders a section's pages.
+	ParentID int64
+	Position int
+	Sidebar  bool // shows the site's sidebar
 }
 
 type Block struct {
@@ -63,7 +67,7 @@ func notFound(err error) error {
 func (s *Store) ListPages(ctx context.Context) ([]Page, error) {
 	rows, err := s.pool.Query(ctx, `
 		SELECT p.id, p.slug, p.title, p.status, p.seo, p.updated_at,
-		       (SELECT count(*) FROM blocks b WHERE b.page_id = p.id), p.publish_at
+		       (SELECT count(*) FROM blocks b WHERE b.page_id = p.id), p.publish_at, COALESCE(p.parent_id, 0), p.position, p.sidebar
 		FROM pages p ORDER BY (p.slug = 'home') DESC, lower(p.title)`)
 	if err != nil {
 		return nil, err
@@ -73,7 +77,7 @@ func (s *Store) ListPages(ctx context.Context) ([]Page, error) {
 	for rows.Next() {
 		var p Page
 		var raw map[string]any
-		if err := rows.Scan(&p.ID, &p.Slug, &p.Title, &p.Status, &raw, &p.UpdatedAt, &p.BlockCount, &p.PublishAt); err != nil {
+		if err := rows.Scan(&p.ID, &p.Slug, &p.Title, &p.Status, &raw, &p.UpdatedAt, &p.BlockCount, &p.PublishAt, &p.ParentID, &p.Position, &p.Sidebar); err != nil {
 			return nil, err
 		}
 		p.SEO = SEOFrom(raw)
@@ -87,9 +91,9 @@ func (s *Store) Page(ctx context.Context, id int64) (Page, error) {
 	var raw map[string]any
 	err := s.pool.QueryRow(ctx, `
 		SELECT id, slug, title, status, seo, updated_at,
-		       (SELECT count(*) FROM blocks WHERE page_id = pages.id), publish_at
+		       (SELECT count(*) FROM blocks WHERE page_id = pages.id), publish_at, COALESCE(parent_id, 0), position, sidebar
 		FROM pages WHERE id = $1`, id).
-		Scan(&p.ID, &p.Slug, &p.Title, &p.Status, &raw, &p.UpdatedAt, &p.BlockCount, &p.PublishAt)
+		Scan(&p.ID, &p.Slug, &p.Title, &p.Status, &raw, &p.UpdatedAt, &p.BlockCount, &p.PublishAt, &p.ParentID, &p.Position, &p.Sidebar)
 	p.SEO = SEOFrom(raw)
 	return p, notFound(err)
 }

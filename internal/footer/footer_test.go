@@ -165,3 +165,53 @@ func TestLogoWidgetChoice(t *testing.T) {
 		t.Errorf("%+v", c)
 	}
 }
+
+func TestSidebarAndNewWidgets(t *testing.T) {
+	out, err := ValidateSidebar(Sidebar{Side: "up", Width: "huge", Widgets: []Widget{
+		{Type: TypeSection},
+		{Type: TypeSearch, Heading: " Search  the site "},
+		{Type: TypeImage, Image: " /media/dog.jpg ", Alt: " A dog ", URL: "https://vetdirectory.example", Text: "Our practice dog"},
+		{Type: TypeText, Heading: "Hours", Text: "Mon–Fri <script>x</script>"},
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out.Side != "left" || out.Width != "narrow" || len(out.Widgets) != 4 {
+		t.Fatalf("%+v", out)
+	}
+	if img := out.Widgets[2]; img.Image != "/media/dog.jpg" || img.Alt != "A dog" || img.URL != "https://vetdirectory.example" || img.Text != "Our practice dog" {
+		t.Errorf("picture: %+v", img)
+	}
+	if out.Widgets[1].Heading != "Search the site" || strings.Contains(out.Widgets[3].Text, "script") {
+		t.Errorf("%+v", out.Widgets)
+	}
+	tooMany := make([]Widget, MaxSidebarWidgets+1)
+	for i := range tooMany {
+		tooMany[i] = Widget{Type: TypeSearch}
+	}
+	for name, sb := range map[string]Sidebar{
+		"no picture":     {Widgets: []Widget{{Type: TypeImage}}},
+		"unsafe picture": {Widgets: []Widget{{Type: TypeImage, Image: "javascript:x"}}},
+		"unsafe link":    {Widgets: []Widget{{Type: TypeImage, Image: "/a.jpg", URL: "javascript:x"}}},
+		"too many":       {Widgets: tooMany},
+		"unknown":        {Widgets: []Widget{{Type: "iframe"}}},
+	} {
+		if _, err := ValidateSidebar(sb); err == nil {
+			t.Errorf("%s accepted", name)
+		}
+	}
+	if _, err := DecodeSidebar([]byte(`{"side":"left","widgets":[],"evil":1}`)); err == nil {
+		t.Error("unknown field accepted")
+	}
+	// stored data is cut down, not refused: bad pictures and unknown widgets are dropped
+	got := SidebarFromStored(map[string]any{"side": "right", "widgets": []any{
+		map[string]any{"type": "image", "image": "javascript:x"}, map[string]any{"type": "iframe"},
+		map[string]any{"type": "image", "image": "/ok.jpg", "url": "javascript:y"}, map[string]any{"type": "search"},
+	}})
+	if got.Side != "right" || len(got.Widgets) != 2 || got.Widgets[0].URL != "" || got.Widgets[1].Type != TypeSearch {
+		t.Errorf("stored: %+v", got)
+	}
+	if e := SidebarFromStored(nil); len(e.Widgets) != 0 || e.Side != "left" {
+		t.Errorf("empty: %+v", e)
+	}
+}

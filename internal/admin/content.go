@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -56,8 +57,47 @@ func pagePath(slug string) string {
 // --- pages list / create ---
 
 type pagesData struct {
-	Pages             []content.Page
+	Pages             []pageRow
 	NewTitle, NewSlug string
+}
+
+// pageRow is one row of the pages list: a section's pages come straight after their top page, indented.
+type pageRow struct {
+	content.Page
+	Child bool
+}
+
+// sectionOrder lists top-level pages in their usual order, each followed by the pages under it (by position,
+// then title).
+func sectionOrder(pages []content.Page) []pageRow {
+	kids := map[int64][]content.Page{}
+	ids := map[int64]bool{}
+	for _, p := range pages {
+		ids[p.ID] = true
+	}
+	for _, p := range pages {
+		if p.ParentID != 0 && ids[p.ParentID] {
+			kids[p.ParentID] = append(kids[p.ParentID], p)
+		}
+	}
+	var out []pageRow
+	for _, p := range pages {
+		if p.ParentID != 0 && ids[p.ParentID] {
+			continue
+		}
+		out = append(out, pageRow{Page: p})
+		ks := kids[p.ID]
+		sort.SliceStable(ks, func(i, j int) bool {
+			if ks[i].Position != ks[j].Position {
+				return ks[i].Position < ks[j].Position
+			}
+			return strings.ToLower(ks[i].Title) < strings.ToLower(ks[j].Title)
+		})
+		for _, k := range ks {
+			out = append(out, pageRow{Page: k, Child: true})
+		}
+	}
+	return out
 }
 
 func (h *Handler) renderPages(w http.ResponseWriter, r *http.Request, status int, errMsg, title, slug string) {
@@ -68,7 +108,7 @@ func (h *Handler) renderPages(w http.ResponseWriter, r *http.Request, status int
 		return
 	}
 	h.render(w, r, status, "pages", pageData{
-		Title: "Pages", User: id, CSRF: id.CSRF, Error: errMsg, Data: pagesData{pages, title, slug},
+		Title: "Pages", User: id, CSRF: id.CSRF, Error: errMsg, Data: pagesData{sectionOrder(pages), title, slug},
 	})
 }
 
@@ -177,6 +217,8 @@ type listView struct {
 type editData struct {
 	History    []content.Revision
 	Page       content.Page
+	Parents    []content.Page // the top-level pages this one can go under
+	HasPages   bool           // other pages belong under this one, so it cannot go under a page itself
 	List       listView
 	PreviewURL string
 	IsHome     bool
@@ -336,6 +378,19 @@ func (h *Handler) renderEdit(w http.ResponseWriter, r *http.Request, status int,
 		return
 	}
 	data := editData{History: history, Page: page, List: list, PreviewURL: pagePath(page.Slug), IsHome: page.Slug == homeSlug}
+	all, err := h.Content.ListPages(r.Context())
+	if err != nil {
+		serverError(w, err)
+		return
+	}
+	for _, p := range all {
+		switch {
+		case p.ParentID == id:
+			data.HasPages = true
+		case p.ParentID == 0 && p.ID != id:
+			data.Parents = append(data.Parents, p)
+		}
+	}
 	if override != nil {
 		data.Page = *override
 	}
@@ -399,6 +454,18 @@ func (h *Handler) pageSave(w http.ResponseWriter, r *http.Request) {
 	if page.Slug == homeSlug {
 		in.Slug = homeSlug // the home page's URL is fixed
 	}
+	// the section fields are only there when the form has them (a form without them leaves the section alone)
+	pos, posErr := page.Position, error(nil)
+	if r.PostFormValue("section") == "1" {
+		in.ParentID, _ = strconv.ParseInt(r.PostFormValue("parent"), 10, 64)
+		if posText := strings.TrimSpace(r.PostFormValue("position")); posText != "" {
+			pos, posErr = strconv.Atoi(posText)
+		} else {
+			pos = 0
+		}
+		in.Position = pos
+		in.Sidebar = r.PostFormValue("sidebar") == "on"
+	}
 
 	fail := func(status int, msg string) { h.renderEdit(w, r, status, id, "", msg, &in) }
 	switch {
@@ -417,10 +484,28 @@ func (h *Handler) pageSave(w http.ResponseWriter, r *http.Request) {
 	case scheduleProblem != "":
 		fail(400, scheduleProblem)
 		return
+	case posErr != nil || pos < 0 || pos > content.MaxSectionPosition:
+		fail(400, fmt.Sprintf("The order must be a whole number from 0 to %d.", content.MaxSectionPosition))
+		return
 	}
 	if msg := site.CheckSlug(in.Slug); msg != "" {
 		fail(400, msg)
 		return
+	}
+	// where the page sits is checked first, so a refused section changes nothing else either
+	if in.ParentID != page.ParentID || in.Position != page.Position || in.Sidebar != page.Sidebar {
+		switch err := h.Content.SetPageSection(r.Context(), id, in.ParentID, in.Position, in.Sidebar); {
+		case errors.Is(err, content.ErrNotFound):
+			fail(400, "That page no longer exists. Choose another to put this page under.")
+			return
+		case errors.Is(err, content.ErrParentNotTop), errors.Is(err, content.ErrParentHasPages), errors.Is(err, content.ErrParentIsItself), errors.Is(err, content.ErrParentIsHome):
+			msg := err.Error()
+			fail(400, strings.ToUpper(msg[:1])+msg[1:]+".")
+			return
+		case err != nil:
+			serverError(w, err)
+			return
+		}
 	}
 	err = h.Content.UpdatePage(r.Context(), id, in.Slug, in.Title, in.Status, in.SEO, in.PublishAt)
 	if errors.Is(err, content.ErrSlugTaken) {

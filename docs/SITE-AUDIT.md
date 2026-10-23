@@ -30,7 +30,11 @@ Done:
 - **Gap 5, page layout:** a boxed page on a background colour, and a background picture that covers, runs along the
   top or repeats.
 
-Not yet: alias domains, the sidebar (6), slideshow block (8), contact form options (9), tables (10), smaller items (11),
+- 6 Sidebar: Admin → Sidebar, a column of the footer's widgets (plus a section menu, a search box and a linked
+  picture, which the footer can use too), left or right, narrow or wide, on every page unless a page turns it off.
+  Pages can belong under a top-level page (with an order), which makes a section for the section menu.
+
+Not yet: alias domains, slideshow block (8), contact form options (9), tables (10), smaller items (11),
 the credit default (12) and the importer (13).
 
 ## Gaps, ranked by how many sites need them
