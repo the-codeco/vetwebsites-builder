@@ -38,7 +38,7 @@ func TestDarkModeSwitchPlacement(t *testing.T) {
 
 		set("toggle", "footer")
 		body = anon.get("/").Body
-		footer := between(body, `<footer class="site-footer">`, `</footer>`)
+		footer := between(body, `<footer class="site-footer`, `</footer>`) // the footer builder adds its own classes
 		if !strings.Contains(footer, `class="color-footer"`) || !strings.Contains(footer, "data-color-toggle") || !strings.Contains(footer, "data-color-label") {
 			t.Errorf("%s footer: the link should be in the footer: %s", theme, footer)
 		}
