@@ -700,7 +700,11 @@ func cleanMenus(in []Menu, w *warnings) []Menu {
 		if items == nil {
 			items = []menus.Item{}
 		}
-		out = append(out, Menu{Location: m.Location, Items: items, Sticky: m.Sticky})
+		style := menus.CleanStyle(m.Style)
+		if !sec.Styled {
+			style = menus.Style{}
+		}
+		out = append(out, Menu{Location: m.Location, Items: items, Sticky: m.Sticky, Style: style})
 	}
 	return out
 }

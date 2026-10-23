@@ -118,3 +118,64 @@ func between(s, from, to string) string {
 	}
 	return s
 }
+
+// The top bar can have colours and a size of its own.
+func TestTopBarColoursAndSize(t *testing.T) {
+	e := newEnv(t)
+	admin := e.newAdmin("admin@example.com")
+	anon := e.client()
+	items := `[{"kind":"link","label":"Call us","url":"tel:+27116464210"}]`
+	post := func(section string, v url.Values) response {
+		v.Set("structure", items)
+		return admin.post("/admin/menus/"+section, v)
+	}
+
+	// before any style: the theme's own look
+	post("topbar", url.Values{})
+	body := anon.get("/").Body
+	if tag := between(body, `<nav class="menu-topbar`, `>`); strings.Contains(tag, "style=") || strings.Contains(tag, "bar-sm") || strings.Contains(tag, "bar-lg") {
+		t.Errorf("unstyled top bar: %s", tag)
+	}
+
+	if r := post("topbar", url.Values{"style_background": {"#112233"}, "style_text": {"#EEEEEE"}, "style_size": {"lg"}}); r.Status != 303 {
+		t.Fatalf("save: %d %s", r.Status, r.Body)
+	}
+	tag := between(anon.get("/").Body, `<nav class="menu-topbar`, `>`)
+	for _, want := range []string{" bar-lg", `style="--bar-bg:#112233;--bar-text:#eeeeee;"`} {
+		if !strings.Contains(tag, want) {
+			t.Errorf("top bar tag lacks %s: %s", want, tag)
+		}
+	}
+	// the editor shows what is saved
+	page := admin.get("/admin/menus").Body
+	for _, want := range []string{`name="style_background" value="#112233"`, `name="style_text" value="#eeeeee"`, `<option value="lg" selected>`} {
+		if !strings.Contains(page, want) {
+			t.Errorf("editor lacks %s", want)
+		}
+	}
+	if sm := post("topbar", url.Values{"style_size": {"sm"}}); sm.Status != 303 || !strings.Contains(between(anon.get("/").Body, `<nav class="menu-topbar`, `>`), " bar-sm") {
+		t.Error("small size")
+	}
+
+	// bad values are refused with the typed text kept, and nothing is saved
+	post("topbar", url.Values{"style_background": {"#112233"}, "style_size": {"lg"}})
+	for _, bad := range []url.Values{{"style_background": {"red"}}, {"style_text": {"#12345"}}, {"style_background": {`#112233" onclick="x`}}, {"style_size": {"huge"}}} {
+		r := post("topbar", bad)
+		if r.Status != 400 {
+			t.Errorf("%v: %d", bad, r.Status)
+		}
+	}
+	r := post("topbar", url.Values{"style_background": {"purple"}})
+	if !strings.Contains(r.Body, `value="purple"`) || !strings.Contains(r.Body, "must look like") {
+		t.Error("the typed value and the reason should come back")
+	}
+	if !strings.Contains(between(anon.get("/").Body, `<nav class="menu-topbar`, `>`), "--bar-bg:#112233") {
+		t.Error("a refused save changed the saved look")
+	}
+
+	// only the top bar has a look: the other sections ignore it
+	post("footer", url.Values{"style_background": {"#112233"}})
+	if got := e.sql(`SELECT style::text FROM menus WHERE location = 'footer'`); got != "{}" {
+		t.Errorf("footer style: %s", got)
+	}
+}

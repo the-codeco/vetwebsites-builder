@@ -129,6 +129,30 @@ type NavItem struct {
 type NavSection struct {
 	Sticky bool
 	Items  []NavItem
+	// the section's own look (the top bar): colours as #rrggbb and a size, "" for the theme's own
+	Background, Text, Size string
+}
+
+var navColor = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
+
+// Vars is the section's own colours as CSS variables, for its style attribute ("" when it has none).
+func (s NavSection) Vars() template.CSS {
+	var b strings.Builder
+	if navColor.MatchString(s.Background) {
+		b.WriteString("--bar-bg:" + s.Background + ";")
+	}
+	if navColor.MatchString(s.Text) {
+		b.WriteString("--bar-text:" + s.Text + ";")
+	}
+	return template.CSS(b.String())
+}
+
+// SizeClass is the class that sets the section's size: " bar-sm" or " bar-lg", and nothing for medium.
+func (s NavSection) SizeClass() string {
+	if s.Size == "sm" || s.Size == "lg" {
+		return " bar-" + s.Size
+	}
+	return ""
 }
 
 type Nav struct{ TopBar, Main, Footer NavSection }

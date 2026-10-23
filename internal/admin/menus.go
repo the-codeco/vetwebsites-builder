@@ -17,6 +17,7 @@ type sectionView struct {
 	menus.Section
 	Items  []menus.Item
 	Sticky bool
+	Style  menus.Style
 }
 
 type menusData struct {
@@ -29,6 +30,7 @@ type menuOverride struct {
 	Key    string
 	Items  []menus.Item
 	Sticky bool
+	Style  menus.Style
 }
 
 // normalise gives every item a kind so the editor can show the right controls.
@@ -51,9 +53,9 @@ func (h *Handler) renderMenus(w http.ResponseWriter, r *http.Request, status int
 	}
 	var views []sectionView
 	for _, sec := range menus.Sections {
-		v := sectionView{Section: sec, Items: normalise(saved[sec.Key].Items), Sticky: saved[sec.Key].Sticky}
+		v := sectionView{Section: sec, Items: normalise(saved[sec.Key].Items), Sticky: saved[sec.Key].Sticky, Style: saved[sec.Key].Style}
 		if over != nil && over.Key == sec.Key {
-			v.Items, v.Sticky = normalise(over.Items), over.Sticky
+			v.Items, v.Sticky, v.Style = normalise(over.Items), over.Sticky, over.Style
 		}
 		views = append(views, v)
 	}
@@ -92,6 +94,10 @@ func (h *Handler) menuSave(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sticky := r.PostFormValue("sticky") == "on"
+	var style menus.Style
+	if sec.Styled {
+		style = menus.Style{Background: r.PostFormValue("style_background"), Text: r.PostFormValue("style_text"), Size: r.PostFormValue("style_size")}
+	}
 
 	items, err := menus.Decode([]byte(r.PostFormValue("structure")))
 	if err != nil {
@@ -100,10 +106,17 @@ func (h *Handler) menuSave(w http.ResponseWriter, r *http.Request) {
 	}
 	clean, err := menus.Validate(sec, items)
 	if err != nil {
-		h.renderMenus(w, r, http.StatusBadRequest, "", err.Error(), &menuOverride{Key: sec.Key, Items: items, Sticky: sticky})
+		h.renderMenus(w, r, http.StatusBadRequest, "", err.Error(), &menuOverride{Key: sec.Key, Items: items, Sticky: sticky, Style: style})
 		return
 	}
-	if err := h.Content.SaveMenu(r.Context(), sec.Key, clean, sticky); err != nil {
+	if sec.Styled {
+		typed := style
+		if style, err = menus.ValidateStyle(style); err != nil {
+			h.renderMenus(w, r, http.StatusBadRequest, "", err.Error(), &menuOverride{Key: sec.Key, Items: items, Sticky: sticky, Style: typed})
+			return
+		}
+	}
+	if err := h.Content.SaveMenu(r.Context(), sec.Key, clean, sticky, style); err != nil {
 		serverError(w, err)
 		return
 	}

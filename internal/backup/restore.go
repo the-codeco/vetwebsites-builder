@@ -323,8 +323,8 @@ func (s *Service) apply(ctx context.Context, a *Archive, thumbs map[string]strin
 		if m.Items == nil {
 			m.Items = []menus.Item{}
 		}
-		if _, err := tx.Exec(ctx, `INSERT INTO menus (location, items, sticky) VALUES ($1, $2, $3)
-			ON CONFLICT (location) DO UPDATE SET items = EXCLUDED.items, sticky = EXCLUDED.sticky`, sec.Key, m.Items, m.Sticky); err != nil {
+		if _, err := tx.Exec(ctx, `INSERT INTO menus (location, items, sticky, style) VALUES ($1, $2, $3, $4)
+			ON CONFLICT (location) DO UPDATE SET items = EXCLUDED.items, sticky = EXCLUDED.sticky, style = EXCLUDED.style`, sec.Key, m.Items, m.Sticky, m.Style); err != nil {
 			return err
 		}
 	}

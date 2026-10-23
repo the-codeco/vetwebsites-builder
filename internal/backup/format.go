@@ -172,6 +172,7 @@ type Menu struct {
 	Location string       `json:"location"`
 	Items    []menus.Item `json:"items"`
 	Sticky   bool         `json:"sticky"`
+	Style    menus.Style  `json:"style,omitempty"`
 }
 
 type Media struct {

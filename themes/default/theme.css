@@ -367,3 +367,18 @@ html:not(.js) .has-panel:hover > .menu-panel, html:not(.js) .has-panel:focus-wit
   .menu-topbar-inner { justify-content: space-between; }
   .menu-item.menu-item-icon > .menu-search-btn { width: 100%; justify-content: flex-start; padding: .5rem .8rem; }
 }
+
+/* the top bar's own colours and size (Menus → Top bar); without them it keeps the theme's look */
+.menu-topbar { background: var(--bar-bg, var(--color-surface)); color: var(--bar-text, var(--color-muted)); }
+.menu-topbar a, .menu-topbar a:hover, .menu-topbar a[aria-current], .menu-topbar a.social-link, .menu-topbar a.menu-search-btn,
+.menu-topbar a.social-link:hover, .menu-topbar a.menu-search-btn:hover { color: var(--bar-text, var(--color-muted)); }
+.menu-topbar a:hover { color: var(--bar-text, var(--color-text)); }
+.menu-topbar a.btn { color: var(--color-primary-text); }
+.menu-topbar.bar-sm { font-size: .75rem; }
+.menu-topbar.bar-sm .menu-topbar-inner { padding-top: .15rem; padding-bottom: .15rem; }
+.menu-topbar.bar-sm .social-link, .menu-topbar.bar-sm .menu-search-btn { width: 1.5rem; height: 1.5rem; }
+.menu-topbar.bar-sm svg { width: 14px; height: 14px; }
+.menu-topbar.bar-lg { font-size: 1.05rem; }
+.menu-topbar.bar-lg .menu-topbar-inner { padding-top: .7rem; padding-bottom: .7rem; }
+.menu-topbar.bar-lg .social-link, .menu-topbar.bar-lg .menu-search-btn { width: 2.4rem; height: 2.4rem; }
+.menu-topbar.bar-lg svg { width: 22px; height: 22px; }

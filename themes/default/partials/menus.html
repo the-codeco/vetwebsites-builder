@@ -14,7 +14,7 @@
 
 {{/* the top bar: items the owner put on the left sit at the left edge, the rest at the right */}}
 {{define "menu-topbar"}}{{if .Nav.TopBar.Items}}{{$left := .Nav.TopBar.ItemsOn "left"}}{{$right := .Nav.TopBar.ItemsOn "right"}}
-<nav class="menu-topbar{{if .Nav.TopBar.Sticky}} is-sticky{{end}}" aria-label="Utility">
+<nav class="menu-topbar{{if .Nav.TopBar.Sticky}} is-sticky{{end}}{{.Nav.TopBar.SizeClass}}"{{with .Nav.TopBar.Vars}} style="{{.}}"{{end}} aria-label="Utility">
   <div class="menu-topbar-inner">
     <ul class="menu-topbar-left">{{range $left}}<li>{{template "bar-item" .}}</li>{{end}}</ul>
     <ul class="menu-topbar-right">{{range $right}}<li>{{template "bar-item" .}}</li>{{end}}</ul>

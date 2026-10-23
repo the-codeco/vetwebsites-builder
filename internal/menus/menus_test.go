@@ -264,3 +264,25 @@ func TestIconItemsAndSides(t *testing.T) {
 		t.Errorf("%+v", vis)
 	}
 }
+
+func TestStyleIsValidatedAndCleaned(t *testing.T) {
+	got, err := ValidateStyle(Style{Background: " #1A2B3C ", Text: "#FFFFFF", Size: "lg"})
+	if err != nil || got != (Style{Background: "#1a2b3c", Text: "#ffffff", Size: "lg"}) {
+		t.Errorf("%+v %v", got, err)
+	}
+	if got, _ := ValidateStyle(Style{Size: "md"}); got.Size != "" {
+		t.Errorf("medium is the default and is not stored: %+v", got)
+	}
+	for _, bad := range []Style{{Background: "red"}, {Text: "#12345"}, {Background: "#1a2b3c;color:red"}, {Size: "huge"}, {Text: "url(javascript:x)"}} {
+		if _, err := ValidateStyle(bad); err == nil {
+			t.Errorf("%+v should be refused", bad)
+		}
+	}
+	// stored or restored data: keep what is valid, drop the rest
+	if got := CleanStyle(Style{Background: "#112233", Text: "nonsense", Size: "xl"}); got != (Style{Background: "#112233"}) {
+		t.Errorf("%+v", got)
+	}
+	if got := CleanStyle(Style{}); got != (Style{}) {
+		t.Errorf("%+v", got)
+	}
+}

@@ -266,6 +266,36 @@
   })();
 
 
+  // ---- menus: show the top bar's colours and size in the preview while they are changed ----
+  (function () {
+    var box = document.querySelector('[data-bar-style]');
+    var frame = document.getElementById('preview');
+    if (!box || !frame) return;
+    var HEX = /^#[0-9a-fA-F]{6}$/;
+
+    function apply() {
+      var doc = frame.contentDocument;
+      var bar = doc && doc.querySelector('.menu-topbar');
+      if (!bar) return;
+      [['style_background', '--bar-bg'], ['style_text', '--bar-text']].forEach(function (p) {
+        var v = box.querySelector('[name="' + p[0] + '"]').value.trim();
+        if (HEX.test(v)) bar.style.setProperty(p[1], v); else bar.style.removeProperty(p[1]);
+      });
+      var size = box.querySelector('[name="style_size"]').value;
+      bar.classList.toggle('bar-sm', size === 'sm');
+      bar.classList.toggle('bar-lg', size === 'lg');
+    }
+
+    box.addEventListener('input', apply);
+    box.addEventListener('change', apply);
+    box.addEventListener('click', function (e) {
+      if (!e.target.closest || !e.target.closest('[data-bar-reset]')) return;
+      Array.prototype.forEach.call(box.querySelectorAll('[data-color-text]'), function (t) { t.value = ''; });
+      apply();
+    });
+  })();
+
+
   // Keep block cards open across list swaps (move/delete/add replace the whole list).
   var open = [];
   document.addEventListener('htmx:beforeRequest', function () {

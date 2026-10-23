@@ -252,13 +252,13 @@ func (s *Service) load(ctx context.Context, personal bool) (Content, error) {
 	}
 
 	// menus
-	rows, err = tx.Query(ctx, `SELECT location, items, sticky FROM menus ORDER BY location`)
+	rows, err = tx.Query(ctx, `SELECT location, items, sticky, style FROM menus ORDER BY location`)
 	if err != nil {
 		return c, err
 	}
 	for rows.Next() {
 		var m Menu
-		if err := rows.Scan(&m.Location, &m.Items, &m.Sticky); err != nil {
+		if err := rows.Scan(&m.Location, &m.Items, &m.Sticky, &m.Style); err != nil {
 			rows.Close()
 			return c, err
 		}
