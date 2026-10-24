@@ -93,12 +93,13 @@ type storedTarget struct {
 	publish.Target
 	hasPassword bool
 	passwordEnc []byte
+	AutoPublish bool
 }
 
 func (p *Platform) loadTarget(ctx context.Context, siteID int64) (storedTarget, bool, error) {
 	var t storedTarget
-	err := p.pool.QueryRow(ctx, `SELECT protocol, host, port, username, password_enc, remote_dir, host_key, tls_name FROM publish_targets WHERE site_id = $1`, siteID).
-		Scan(&t.Protocol, &t.Host, &t.Port, &t.User, &t.passwordEnc, &t.Dir, &t.HostKey, &t.TLSName)
+	err := p.pool.QueryRow(ctx, `SELECT protocol, host, port, username, password_enc, remote_dir, host_key, tls_name, auto_publish FROM publish_targets WHERE site_id = $1`, siteID).
+		Scan(&t.Protocol, &t.Host, &t.Port, &t.User, &t.passwordEnc, &t.Dir, &t.HostKey, &t.TLSName, &t.AutoPublish)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return storedTarget{}, false, nil
 	}
@@ -196,11 +197,11 @@ func (s *sitePublisher) SaveHosting(ctx context.Context, actor string, in admin.
 		hostKey = "" // a different server: its identity is learnt again
 	}
 	if _, err := p.pool.Exec(ctx, `
-		INSERT INTO publish_targets (site_id, protocol, host, port, username, password_enc, remote_dir, host_key, tls_name, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, now())
+		INSERT INTO publish_targets (site_id, protocol, host, port, username, password_enc, remote_dir, host_key, tls_name, auto_publish, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, now())
 		ON CONFLICT (site_id) DO UPDATE SET protocol = EXCLUDED.protocol, host = EXCLUDED.host, port = EXCLUDED.port, username = EXCLUDED.username,
-			password_enc = EXCLUDED.password_enc, remote_dir = EXCLUDED.remote_dir, host_key = EXCLUDED.host_key, tls_name = EXCLUDED.tls_name, updated_at = now()`,
-		s.id, in.Protocol, in.Host, in.Port, in.User, enc, dir, hostKey, in.TLSName); err != nil {
+			password_enc = EXCLUDED.password_enc, remote_dir = EXCLUDED.remote_dir, host_key = EXCLUDED.host_key, tls_name = EXCLUDED.tls_name, auto_publish = EXCLUDED.auto_publish, updated_at = now()`,
+		s.id, in.Protocol, in.Host, in.Port, in.User, enc, dir, hostKey, in.TLSName, in.AutoPublish); err != nil {
 		return err
 	}
 	if _, err := p.pool.Exec(ctx, `UPDATE sites SET public_url = $2 WHERE id = $1`, s.id, public); err != nil {
@@ -228,7 +229,7 @@ func (s *sitePublisher) form(ctx context.Context) (admin.HostingForm, error) {
 		return f, err
 	}
 	if ok {
-		f.Protocol, f.Host, f.Port, f.User, f.Dir, f.TLSName, f.HostKey, f.HasPassword = t.Protocol, t.Host, t.Port, t.User, t.Dir, t.TLSName, t.HostKey, t.hasPassword
+		f.Protocol, f.Host, f.Port, f.User, f.Dir, f.TLSName, f.HostKey, f.HasPassword, f.AutoPublish = t.Protocol, t.Host, t.Port, t.User, t.Dir, t.TLSName, t.HostKey, t.hasPassword, t.AutoPublish
 	}
 	return f, nil
 }

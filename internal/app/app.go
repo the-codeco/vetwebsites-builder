@@ -75,6 +75,9 @@ type Options struct {
 	MediaDir, BackupDir string
 	// Publish adds the publish bar and screens (the platform publishes this website).
 	Publish admin.PublishService
+	// LinkBase is where the links in a visitor's emails start when the website is published as a static copy: the
+	// platform's own address plus /f/<the website's token>. Empty when the website is served itself.
+	LinkBase string
 }
 
 // New builds the application on an already-migrated database.
@@ -142,7 +145,7 @@ func NewWith(ctx context.Context, cfg config.Config, pool *pgxpool.Pool, opt Opt
 
 	drafts := blocks.NewDrafts() // unsaved block edits: the editor writes them, the live preview shows them
 	adminH, err := admin.New(admin.Deps{
-		Drafts: drafts,
+		Drafts: drafts, LinkBase: opt.LinkBase,
 		Auth: authn, Content: contentStore, Media: mediaSvc, Engine: engine,
 		Domain: domainSvc, Checker: domain.NewChecker(), SetupToken: cfg.SetupToken,
 		Analytics: stats, Contact: contactSvc, Newsletter: newsletterSvc, Campaigns: campaignSvc,
@@ -170,6 +173,8 @@ func NewWith(ctx context.Context, cfg config.Config, pool *pgxpool.Pool, opt Opt
 		return nil, err
 	}
 	siteSvc.Drafts = drafts
+	siteSvc.LinkBase = opt.LinkBase
+	siteSvc.Beacon = stats.RecordBeacon
 	siteSvc.Contact = contactSvc
 	siteSvc.Search = search.New(pool, authn.ClientIP)
 	siteSvc.Newsletter = newsletterSvc
@@ -292,4 +297,35 @@ func (a *App) SnapshotPage(ctx context.Context, pageID int64, by string) error {
 // SetSiteTitle sets the website title (the platform names a new website after the customer gives it a name).
 func (a *App) SetSiteTitle(ctx context.Context, title string) error {
 	return a.content.SetTitle(ctx, title)
+}
+
+// SendQueuedMail sends queued newsletter messages, one at a time at the sender's own pace, until none are due or the
+// time is up, and returns how many it sent. A platform calls it for each website that has mail waiting; a lone site
+// has the never-ending loop in SendMail instead.
+func (a *App) SendQueuedMail(ctx context.Context, budget time.Duration) (int, error) {
+	end := time.Now().Add(budget)
+	n := 0
+	for time.Now().Before(end) {
+		worked, err := a.campaigns.Tick(ctx)
+		if err != nil || !worked {
+			return n, err
+		}
+		n++
+		select {
+		case <-ctx.Done():
+			return n, ctx.Err()
+		case <-time.After(a.campaigns.Interval):
+		}
+	}
+	return n, nil
+}
+
+// Housekeep does the hourly chores once: expired sessions and invites, old page views, unconfirmed signups, and the
+// scheduled backup when one is due.
+func (a *App) Housekeep(ctx context.Context) error {
+	a.Housekeeping(ctx)
+	if a.backupKeep > 0 {
+		return a.backups.Housekeep(ctx, a.backupKeep, a.backupPersonal)
+	}
+	return nil
 }

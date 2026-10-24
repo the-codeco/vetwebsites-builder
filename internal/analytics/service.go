@@ -30,6 +30,9 @@ type Service struct {
 	clientIP func(*http.Request) string
 	domain   func(context.Context) string // the saved custom domain, "" if none
 
+	// beaconLimit stops one address from flooding the counts through the beacon endpoint.
+	beaconLimit *auth.Limiter
+
 	enabled atomic.Bool
 	secret  atomic.Value // string
 
@@ -51,7 +54,7 @@ type hit struct {
 // as referrals.
 func New(ctx context.Context, pool *pgxpool.Pool, clientIP func(*http.Request) string, domain func(context.Context) string) (*Service, error) {
 	s := &Service{
-		pool: pool, clientIP: clientIP, domain: domain,
+		pool: pool, clientIP: clientIP, domain: domain, beaconLimit: auth.NewLimiter(120, time.Minute),
 		wake: make(chan struct{}, 1), stop: make(chan struct{}), done: make(chan struct{}),
 	}
 	if err := s.reload(ctx); err != nil {
@@ -200,17 +203,40 @@ func (s *Service) shouldCount(r *http.Request, h http.Header) bool {
 }
 
 func (s *Service) record(r *http.Request) {
-	now := time.Now().UTC()
-	day := now.Format("2006-01-02")
-	secret, _ := s.secret.Load().(string)
-	ua := r.UserAgent()
 	own := []string{r.Host}
 	if s.domain != nil {
 		own = append(own, s.domain(r.Context()))
 	}
+	s.recordHit(r, r.URL.Path, r.Referer(), own)
+}
+
+// RecordBeacon counts a visit reported by a published copy of the website: its own script tells the builder which page
+// was opened and where the visitor came from. The same rules apply as for a page served here: nothing when counting
+// is off, for bots, or for anyone who sent Do Not Track or Global Privacy Control, and only public pages. ownHost is
+// the published site's address, so a click from one of its own pages to another is not a referral.
+func (s *Service) RecordBeacon(r *http.Request, path, referrer, ownHost string) {
+	switch {
+	case !s.enabled.Load(), r.Header.Get("DNT") == "1", r.Header.Get("Sec-GPC") == "1", IsBot(r.UserAgent()):
+		return
+	case !strings.HasPrefix(path, "/"), strings.ContainsAny(path, "?#\r\n"), !Countable(path):
+		return
+	}
+	ip := s.clientIP(r)
+	if s.beaconLimit.Blocked(ip) {
+		return
+	}
+	s.beaconLimit.Fail(ip)
+	s.recordHit(r, path, referrer, []string{ownHost})
+}
+
+func (s *Service) recordHit(r *http.Request, path, referer string, own []string) {
+	now := time.Now().UTC()
+	day := now.Format("2006-01-02")
+	secret, _ := s.secret.Load().(string)
+	ua := r.UserAgent()
 	h := hit{
-		day: day, path: r.URL.Path,
-		referrer: ReferrerHost(r.Referer(), own...),
+		day: day, path: path,
+		referrer: ReferrerHost(referer, own...),
 		visitor:  VisitorHash(secret, day, s.clientIP(r), ua),
 		device:   Device(ua), browser: Browser(ua),
 	}

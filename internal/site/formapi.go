@@ -20,6 +20,8 @@ import (
 //	POST /contact    a contact message (the same fields and checks as the live form)
 //	POST /subscribe  a newsletter signup
 //	GET  /search     the website's search (q and page), as JSON
+//	POST /b          a visit to a page of the published copy (p = its path, r = where the visitor came from)
+//	GET/POST /subscribe/confirm/<token> and /unsubscribe/<token>: the pages the links in newsletter emails open
 //
 // A request that asks for JSON gets {"ok":true} or {"ok":false,"error":"…"}; any other (a form sent without
 // JavaScript) gets a short page. Who may call it (cross-origin rules) is the caller's business.
@@ -27,6 +29,13 @@ func (s *Service) FormAPI() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /token", s.formToken)
 	mux.HandleFunc("GET /search", s.formSearch)
+	mux.HandleFunc("POST /b", s.formBeacon)
+	if s.Newsletter != nil {
+		mux.HandleFunc("GET /subscribe/confirm/{token}", s.formConfirmPage)
+		mux.HandleFunc("POST /subscribe/confirm/{token}", s.formConfirm)
+		mux.HandleFunc("GET /unsubscribe/{token}", s.formUnsubscribePage)
+		mux.HandleFunc("POST /unsubscribe/{token}", s.formUnsubscribe)
+	}
 	mux.HandleFunc("POST /contact", func(w http.ResponseWriter, r *http.Request) {
 		s.formPost(w, r, s.Contact != nil, "Thank you, your message has been sent.", s.acceptContact)
 	})

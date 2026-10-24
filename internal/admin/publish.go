@@ -27,6 +27,7 @@ type HostingForm struct {
 	Port                                          int
 	HasPassword                                   bool
 	HostKey                                       string
+	AutoPublish                                   bool // publish by itself when scheduled pages and posts go live
 }
 
 // HostingInput is what is submitted: the form, and a password when a new one was typed.
@@ -182,6 +183,7 @@ func (h *Handler) hostingSave(w http.ResponseWriter, r *http.Request) {
 			Protocol: r.PostFormValue("protocol"), Host: strings.TrimSpace(r.PostFormValue("host")), Port: port,
 			User: strings.TrimSpace(r.PostFormValue("user")), Dir: strings.TrimSpace(r.PostFormValue("dir")),
 			TLSName: strings.TrimSpace(r.PostFormValue("tls_name")), PublicURL: strings.TrimSpace(r.PostFormValue("public_url")),
+			AutoPublish: r.PostFormValue("auto_publish") == "on",
 		},
 		Password: r.PostFormValue("password"),
 	}

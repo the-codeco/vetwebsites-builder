@@ -47,7 +47,7 @@ func (h *Handler) subscribersPage(w http.ResponseWriter, r *http.Request) {
 	notice := map[string]string{"deleted": "Subscriber removed."}[r.URL.Query().Get("done")]
 	h.render(w, r, 200, "subscribers", pageData{
 		Title: "Subscribers", User: id, CSRF: id.CSRF, Notice: notice,
-		Data: subscribersScreen{list, confirmed, pending, mail && st.Domain != "", mail, st.Domain != ""},
+		Data: subscribersScreen{list, confirmed, pending, mail && (st.Domain != "" || h.LinkBase != ""), mail, st.Domain != "" || h.LinkBase != ""},
 	})
 }
 

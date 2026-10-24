@@ -52,6 +52,9 @@ func (h *Handler) sendBase(r *http.Request) (base, title string, err error) {
 	if err != nil {
 		return "", "", err
 	}
+	if h.LinkBase != "" { // a published copy: its confirm and unsubscribe pages are on the platform
+		return h.LinkBase, st.Title, nil
+	}
 	if st.Domain == "" {
 		return "", st.Title, nil
 	}

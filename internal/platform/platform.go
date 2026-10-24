@@ -57,6 +57,7 @@ func New(ctx context.Context, cfg config.Config, pool *pgxpool.Pool) (*Platform,
 		}
 	}
 	p.mgr.publishFor = p.publisherFor
+	p.mgr.linkBaseFor = p.linkBaseFor
 
 	p.adm, err = admin.New(admin.Deps{Auth: authn, Mail: mail, SetupToken: cfg.SetupToken, BaseURL: cfg.BaseURL, Platform: p})
 	if err != nil {
@@ -94,8 +95,11 @@ func (p *Platform) migrateSites(ctx context.Context) error {
 	return nil
 }
 
-// Run does the platform's housekeeping until ctx ends.
+// Run does the platform's housekeeping until ctx ends, and starts the sweeps that do every website's background work
+// (scheduled publishing, newsletters, backups).
 func (p *Platform) Run(ctx context.Context) {
+	go p.sweepLoop(ctx)
+	go p.housekeepLoop(ctx)
 	t := time.NewTicker(time.Hour)
 	defer t.Stop()
 	for {

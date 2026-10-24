@@ -25,7 +25,7 @@ func (s *Service) registerNewsletter(mux *http.ServeMux) {
 // domain: the confirmation link must point at the real site, never at whatever Host header a
 // stranger's request happened to carry. Without both, signups count immediately.
 func (s *Service) mustConfirm(domain string) bool {
-	return s.Newsletter.Mail.Configured() && domain != ""
+	return s.Newsletter.Mail.Configured() && (domain != "" || s.LinkBase != "")
 }
 
 // newsletterFormData is what a signup block shows: a fresh token, the page to return to,
@@ -102,7 +102,11 @@ func (s *Service) acceptSubscribe(r *http.Request) submitResult {
 		return submitResult{http.StatusInternalServerError, "Sorry, we couldn't save your signup. Please try again in a moment.", false}
 	}
 	if token != "" {
-		go s.emailConfirmation(st.Title, baseURL(r, st), token, email)
+		base := baseURL(r, st)
+		if s.LinkBase != "" { // a published copy: the confirmation page is on the builder
+			base = s.LinkBase
+		}
+		go s.emailConfirmation(st.Title, base, token, email)
 	}
 	return submitResult{}
 }

@@ -50,6 +50,12 @@ type Service struct {
 	Contact *contact.Service
 	// Newsletter receives newsletter signups. Set by the app after New; nil disables them.
 	Newsletter *newsletter.Service
+	// LinkBase is where the links in a visitor's emails start when this website is published as a static copy (a platform
+	// sets it to its own address for the site): the copy has no pages of its own for confirming or leaving the
+	// newsletter, so those live on the builder. Empty for a website that is served itself.
+	LinkBase string
+	// Beacon counts a visit that a published copy reports (see FormAPI). Set by the app after New.
+	Beacon func(r *http.Request, path, referrer, ownHost string)
 	// Drafts are unsaved block edits, shown only to the person who typed them (the editor's live preview).
 	Drafts *blocks.Drafts
 	// Search answers the site's search box. Set by the app after New; nil disables it.

@@ -51,6 +51,8 @@ type Deps struct {
 	// BackupKeep and BackupPersonal describe the scheduled backups, so the Backup screen can say what they are.
 	BackupKeep     int
 	BackupPersonal bool
+	// LinkBase is where the links in emails to visitors start when the website is published as a static copy (see app.Options).
+	LinkBase string
 	// Drafts holds block edits that are typed but not saved, for the live preview (shared with the site, which shows them).
 	Drafts *blocks.Drafts
 	// Mail sends the password reset emails; with no mail settings, resets are made by an admin instead.

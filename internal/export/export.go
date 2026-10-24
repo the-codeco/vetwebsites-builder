@@ -16,6 +16,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -33,6 +34,9 @@ import (
 
 //go:embed assets/forms.js
 var formsJS []byte
+
+//go:embed assets/beacon.js
+var beaconJS []byte
 
 //go:embed assets/search.js
 var searchJS []byte
@@ -109,6 +113,8 @@ type builder struct {
 
 	pageForms bool // the page being finished has a form wired to the builder
 	anyForms  bool // some page does, so forms.js is written
+	noBeacon   bool // the page being finished is not counted (the "page not found" page)
+	anyBeacon  bool // some page reports its visits, so beacon.js is written
 }
 
 // Build exports the website into dir (which must be empty or not exist).
@@ -156,6 +162,11 @@ func Build(ctx context.Context, src Source, opt Options, dir string) (*Result, e
 	}
 	if b.anyForms {
 		if err := b.writeFile("forms.js", formsJS); err != nil {
+			return nil, err
+		}
+	}
+	if b.anyBeacon {
+		if err := b.writeFile("beacon.js", beaconJS); err != nil {
 			return nil, err
 		}
 	}
@@ -430,12 +441,22 @@ func (b *builder) finishHTML(src []byte, searchPage bool) []byte {
 		out = addScript(out, b.base+"/forms.js")
 		b.anyForms = true
 	}
+	if b.opt.BuilderURL != "" && b.opt.SiteToken != "" && !b.noBeacon {
+		out = addScriptWith(out, b.base+"/beacon.js", `data-endpoint="`+html.EscapeString(strings.TrimRight(b.opt.BuilderURL, "/")+"/f/"+b.opt.SiteToken+"/b")+`"`)
+		b.anyBeacon = true
+	}
 	return out
 }
 
 // addScript puts a deferred script at the end of a page.
-func addScript(page []byte, src string) []byte {
-	tag := `<script src="` + src + `" defer></script>`
+func addScript(page []byte, src string) []byte { return addScriptWith(page, src, "") }
+
+// addScriptWith is addScript with extra attributes on the tag.
+func addScriptWith(page []byte, src, attrs string) []byte {
+	if attrs != "" {
+		attrs = " " + attrs
+	}
+	tag := `<script src="` + src + `"` + attrs + ` defer></script>`
 	if i := bytes.LastIndex(page, []byte("</body>")); i >= 0 {
 		return append(page[:i], append([]byte(tag+"\n"), page[i:]...)...)
 	}
@@ -508,6 +529,8 @@ func (b *builder) notFoundPage() error {
 			return err
 		}
 	}
+	b.noBeacon = true // it is shown for any address that is not there, so it is not a visit to a page
+	defer func() { b.noBeacon = false }()
 	return b.writeFile("404.html", b.finishHTML(rec.Body.Bytes(), false))
 }
 

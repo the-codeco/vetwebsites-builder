@@ -20,6 +20,7 @@
       <input name="dir" value="{{if .Data.Form.Dir}}{{.Data.Form.Dir}}{{else}}public_html{{end}}" maxlength="300" required></label>
     <label>Your website's address <span class="muted">(where visitors will find it, for example https://www.yourdomain.com)</span>
       <input name="public_url" type="url" value="{{.Data.Form.PublicURL}}" maxlength="300" placeholder="https://www.yourdomain.com" required></label>
+    <label class="check"><input type="checkbox" name="auto_publish"{{if .Data.Form.AutoPublish}} checked{{end}}> <span><strong>Publish by itself when scheduled pages and posts go live.</strong> Everything you have changed so far goes up with them.</span></label>
     <details>
       <summary>Advanced</summary>
       <label>Certificate name <span class="muted">(FTPS only. Some hosting presents a security certificate in its own server name, such as server123.hostprovider.com. If the test says the certificate is not valid, enter that name.)</span>
