@@ -229,3 +229,12 @@
   <button type="button" class="ghost" data-rt="a" title="Link">Link</button>
   <button type="button" class="ghost" data-rt="img" data-pick data-insert title="Insert an image from the library">Image</button>
 </span>{{end}}
+
+{{/* what the website may hold and how much of it is used: shown when the website has limits */}}
+{{define "quota"}}{{if .Quota}}<div class="card quota">
+  <h2>Your plan</h2>
+  <ul class="quota-list">{{range .Quota}}
+    <li><span class="quota-label">{{.Label}}</span> <progress value="{{.Value}}" max="{{.Max}}"{{if .NearlyFull}} class="warn"{{end}}></progress> <span class="muted">{{.Used}} of {{.Of}}</span>{{if .Full}} <strong>Full</strong>{{end}}</li>{{end}}
+  </ul>
+  {{if .MultiTenant}}<p class="hint">Need more room? Ask us to raise a limit.</p>{{end}}
+</div>{{end}}{{end}}

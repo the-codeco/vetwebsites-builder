@@ -26,6 +26,11 @@ type SiteRow struct {
 	LastPublished *time.Time
 	Unpublished   int // changes made since the last publish
 	PublishState  string
+
+	// what it holds and what it may hold (0 = no limit), and what is typed in the limits form ("" = the server's default)
+	Pages, Posts, StorageMB                int
+	LimitPages, LimitPosts, LimitStorageMB int
+	TypedPages, TypedPosts, TypedStorageMB string
 }
 
 // AuditRow is one line of the audit log.
@@ -49,6 +54,8 @@ type PlatformService interface {
 	DeleteSite(ctx context.Context, actor *auth.Identity, siteID int64, typedName string) error
 	// ResetLink makes a one-time password link for a customer.
 	ResetLink(ctx context.Context, actor *auth.Identity, siteID int64) (email, linkPath string, err error)
+	// SetLimits sets what a website may hold. A blank value means the server's default, 0 means no limit.
+	SetLimits(ctx context.Context, actor *auth.Identity, siteID int64, storageMB, pages, posts string) error
 	Audit(ctx context.Context, limit int) ([]AuditRow, error)
 }
 
@@ -68,6 +75,7 @@ func (h *Handler) RegisterPlatform(mux *http.ServeMux) {
 	mux.Handle("POST /platform/sites/{id}/status", admin(h.platformStatus))
 	mux.Handle("POST /platform/sites/{id}/delete", admin(h.platformDelete))
 	mux.Handle("POST /platform/sites/{id}/reset", admin(h.platformReset))
+	mux.Handle("POST /platform/sites/{id}/limits", admin(h.platformLimits))
 	mux.Handle("GET /platform/audit", admin(h.platformAudit))
 	// leaving a customer's website is allowed whenever one is open
 	mux.Handle("POST /platform/exit", admin(h.platformExit))
@@ -97,7 +105,7 @@ func (h *Handler) renderPlatformSites(w http.ResponseWriter, r *http.Request, st
 func (h *Handler) platformSites(w http.ResponseWriter, r *http.Request) {
 	notice := map[string]string{
 		"created": "The website and its account are ready.", "suspended": "Website suspended: its owner can no longer log in or publish.",
-		"resumed": "Website resumed.", "deleted": "Website deleted.", "exited": "You have left the website.",
+		"resumed": "Website resumed.", "deleted": "Website deleted.", "exited": "You have left the website.", "limits": "Limits saved.",
 	}[r.URL.Query().Get("done")]
 	h.renderPlatformSites(w, r, 200, notice, "", platformSitesData{})
 }
@@ -239,4 +247,23 @@ func (h *Handler) platformAudit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.render(w, r, 200, "platform_audit", pageData{Title: "Audit log", User: id, CSRF: id.CSRF, Data: rows})
+}
+
+// platformLimits saves what a website may hold: blank means the server's default, 0 means no limit.
+func (h *Handler) platformLimits(w http.ResponseWriter, r *http.Request) {
+	id, ok := siteIDFrom(r)
+	if !ok {
+		http.NotFound(w, r)
+		return
+	}
+	var ue UserError
+	switch err := h.Platform.SetLimits(r.Context(), auth.CurrentIdentity(r), id, r.PostFormValue("quota_storage_mb"), r.PostFormValue("quota_pages"), r.PostFormValue("quota_posts")); {
+	case errors.As(err, &ue):
+		h.renderPlatformSites(w, r, 400, "", ue.Error(), platformSitesData{})
+		return
+	case err != nil:
+		serverError(w, err)
+		return
+	}
+	http.Redirect(w, r, "/platform/sites?done=limits", http.StatusSeeOther)
 }

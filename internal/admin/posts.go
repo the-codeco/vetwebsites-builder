@@ -72,6 +72,10 @@ func (h *Handler) postCreate(w http.ResponseWriter, r *http.Request) {
 		h.renderPosts(w, r, 400, "Title is too long.", title, slug)
 		return
 	}
+	if msg := h.limitProblem(r.Context(), "posts", 0); msg != "" {
+		h.renderPosts(w, r, 400, msg, title, slug)
+		return
+	}
 	if msg := site.CheckSlugFormat(slug); msg != "" {
 		h.renderPosts(w, r, 400, msg, title, slug)
 		return

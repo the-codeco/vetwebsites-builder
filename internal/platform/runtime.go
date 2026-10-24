@@ -47,6 +47,8 @@ type Manager struct {
 	publishFor func(siteID int64) admin.PublishService
 	// linkBaseFor says where the links in a website's emails to visitors start ("" when the platform has no public address).
 	linkBaseFor func(siteID int64) string
+	// limitsFor says what one website may hold (set by the platform).
+	limitsFor func(siteID int64) admin.LimitsFunc
 
 	mu  sync.Mutex
 	rts map[int64]*Runtime
@@ -120,7 +122,7 @@ func (m *Manager) buildLocked(ctx context.Context, siteID int64, schema string) 
 	rctx, cancel := context.WithCancel(context.Background())
 	a, err := app.NewWith(rctx, m.cfg, pool, app.Options{
 		MultiTenant: true, PreviewBase: PreviewBase, Engine: m.engine,
-		MediaDir: m.MediaDir(siteID), BackupDir: m.BackupDir(siteID), Publish: m.publish(siteID), LinkBase: m.linkBase(siteID),
+		MediaDir: m.MediaDir(siteID), BackupDir: m.BackupDir(siteID), Publish: m.publish(siteID), LinkBase: m.linkBase(siteID), Limits: m.limits(siteID),
 	})
 	if err != nil {
 		cancel()
@@ -130,6 +132,13 @@ func (m *Manager) buildLocked(ctx context.Context, siteID int64, schema string) 
 	rt := &Runtime{SiteID: siteID, App: a, pool: pool, cancel: cancel, last: time.Now(), users: map[int64]bool{}}
 	m.rts[siteID] = rt
 	return rt, nil
+}
+
+func (m *Manager) limits(siteID int64) admin.LimitsFunc {
+	if m.limitsFor == nil {
+		return nil
+	}
+	return m.limitsFor(siteID)
 }
 
 func (m *Manager) linkBase(siteID int64) string {

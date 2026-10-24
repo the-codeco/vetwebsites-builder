@@ -11,17 +11,28 @@
   <p class="muted">Each customer has one website. “Work on this website” opens that customer's editor as you; everything you do there is recorded in the audit log.</p>
   {{if .Data.Sites}}
   <table>
-    <tr><th>Website</th><th>Owner</th><th>Status</th><th>Created</th><th></th></tr>
+    <tr><th>Website</th><th>Owner</th><th>Status</th><th>Holds</th><th>Created</th><th></th></tr>
     {{range .Data.Sites}}
     <tr>
       <td><strong>{{.Name}}</strong></td>
       <td>{{.Owner}}</td>
       <td>{{if .Active}}<span class="badge published">active</span>{{else}}<span class="badge draft">suspended</span>{{end}}</td>
+      <td class="muted">{{.Pages}}{{if .LimitPages}} of {{.LimitPages}}{{end}} pages<br>{{.Posts}}{{if .LimitPosts}} of {{.LimitPosts}}{{end}} posts<br>{{.StorageMB}}{{if .LimitStorageMB}} of {{.LimitStorageMB}}{{end}} MB of pictures</td>
       <td class="muted">{{.CreatedAt.Format "2 Jan 2006"}}</td>
       <td class="row-actions">
         {{if .Active}}<form method="post" action="/platform/sites/{{.ID}}/act" class="inline"><input type="hidden" name="csrf" value="{{$.CSRF}}"><button>Work on this website</button></form>{{end}}
         <form method="post" action="/platform/sites/{{.ID}}/reset" class="inline" data-confirm="Make a one-time password link for {{.Owner}}? Any earlier link stops working."><input type="hidden" name="csrf" value="{{$.CSRF}}"><button class="ghost">Password link</button></form>
         <form method="post" action="/platform/sites/{{.ID}}/status" class="inline" data-confirm="{{if .Active}}Suspend this website? Its owner will be signed out and cannot log in or publish.{{else}}Let this website's owner log in again?{{end}}"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="active" value="{{if .Active}}0{{else}}1{{end}}"><button class="ghost">{{if .Active}}Suspend{{else}}Resume{{end}}</button></form>
+        <details class="inline-limits"><summary>Limits…</summary>
+          <form method="post" action="/platform/sites/{{.ID}}/limits">
+            <input type="hidden" name="csrf" value="{{$.CSRF}}">
+            <p class="hint">Blank uses the server's default. 0 means no limit.</p>
+            <label>Pages <input name="quota_pages" inputmode="numeric" value="{{.TypedPages}}" placeholder="default ({{.LimitPages}})"></label>
+            <label>Blog posts <input name="quota_posts" inputmode="numeric" value="{{.TypedPosts}}" placeholder="default ({{.LimitPosts}})"></label>
+            <label>Picture storage (MB) <input name="quota_storage_mb" inputmode="numeric" value="{{.TypedStorageMB}}" placeholder="default ({{.LimitStorageMB}})"></label>
+            <button>Save limits</button>
+          </form>
+        </details>
         <details class="inline-danger"><summary>Delete…</summary>
           <form method="post" action="/platform/sites/{{.ID}}/delete">
             <input type="hidden" name="csrf" value="{{$.CSRF}}">

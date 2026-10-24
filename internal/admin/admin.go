@@ -51,6 +51,8 @@ type Deps struct {
 	// BackupKeep and BackupPersonal describe the scheduled backups, so the Backup screen can say what they are.
 	BackupKeep     int
 	BackupPersonal bool
+	// Limits says what the website may hold (pages, posts, uploaded pictures); nil means no limits.
+	Limits LimitsFunc
 	// LinkBase is where the links in emails to visitors start when the website is published as a static copy (see app.Options).
 	LinkBase string
 	// Drafts holds block edits that are typed but not saved, for the live preview (shared with the site, which shows them).
@@ -98,6 +100,7 @@ type pageData struct {
 	ActingFor      string      // a platform admin is working on this website: whose it is ("" otherwise)
 	ActingAs       string      // and who the admin is
 	Bar            *PublishBar // the publish bar (nil when this website is not published by a platform)
+	Quota          []QuotaLine // the website's limits and what it has used (dashboard and picture library only)
 }
 
 // sectionOf says which sidebar entry each screen belongs to. The pre-login
@@ -197,6 +200,9 @@ func (h *Handler) render(w http.ResponseWriter, r *http.Request, status int, nam
 		d.Unread, _ = h.Contact.Unread(r.Context()) // a failed count just hides the badge
 	}
 	d.MultiTenant, d.PreviewBase, d.PlatformScreen = h.MultiTenant, h.PreviewBase, h.Platform != nil
+	if d.User != nil && h.Limits != nil && (name == "dashboard" || name == "media") {
+		d.Quota = h.quotaLines(r.Context())
+	}
 	if d.User != nil && h.Publish != nil {
 		if bar, err := h.Publish.Bar(r.Context()); err == nil {
 			d.Bar = &bar

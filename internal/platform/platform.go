@@ -58,6 +58,7 @@ func New(ctx context.Context, cfg config.Config, pool *pgxpool.Pool) (*Platform,
 	}
 	p.mgr.publishFor = p.publisherFor
 	p.mgr.linkBaseFor = p.linkBaseFor
+	p.mgr.limitsFor = p.limitsFunc
 
 	p.adm, err = admin.New(admin.Deps{Auth: authn, Mail: mail, SetupToken: cfg.SetupToken, BaseURL: cfg.BaseURL, Platform: p})
 	if err != nil {

@@ -180,6 +180,10 @@ func (h *Handler) mediaUpload(w http.ResponseWriter, r *http.Request) {
 			problems = append(problems, uploadProblem(name, err))
 			continue
 		}
+		if msg := h.limitProblem(r.Context(), "storage", int64(len(data))); msg != "" {
+			problems = append(problems, name+": "+msg)
+			continue
+		}
 		it, err := h.Media.Save(r.Context(), user.UserID, fh.Filename, data)
 		if err != nil {
 			problems = append(problems, uploadProblem(name, err))

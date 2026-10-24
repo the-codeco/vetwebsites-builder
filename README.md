@@ -147,6 +147,25 @@ Set these in a `.env` file next to `docker-compose.yml` (copy `.env.example`), o
 | `BACKUP_DIR`, `BACKUP_KEEP`, `BACKUP_PERSONAL` | `./backups`, `7`, `false` | Where saved backups are kept (a different folder from the public media folder; a Docker volume in the compose file), how many scheduled daily backups to keep (`0` = off), and whether scheduled backups include subscribers and messages. |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` | empty (port `587`) | Optional. Lets the site send mail: copies of contact messages to you, replies to visitors, newsletter confirmations and newsletters (STARTTLS is used when the server offers it). Without them, messages only appear in the admin inbox and nothing is sent. |
 | `POSTGRES_PASSWORD` | `webbuilder` | Database password. **Change it on a server.** |
+| `QUOTA_STORAGE_MB`, `QUOTA_PAGES`, `QUOTA_POSTS` | `1000`, `200`, `1000` | Platform only: what a website may hold unless its own limits say otherwise (`0` = no limit). Storage is uploaded pictures and fonts. A platform administrator can give any website limits of its own on the Websites screen (**Limits…**); a website that reaches one is told so and asked to delete something or ask for more room. |
+
+## Moving a single website onto the platform
+
+A database that runs one website (the program without `PLATFORM=true`) can become a platform's, with that website as the
+first customer's. **Make a backup of the database first** (`docker compose exec db pg_dump -U webbuilder webbuilder > before.sql`),
+stop the old program, then run once:
+
+```bash
+docker compose run --rm -e DATA_DIR=/data/platform app -adopt-single-site -owner owner@example.com -media-from /data/media
+```
+
+Without `-yes` it only reports what it would do (who becomes what, how many tables move); add `-yes` to do it. The
+website's tables move into their own schema (`site_1`) and its users become platform accounts **with the same ids and
+passwords**: the `-owner` gets the website and administrators become platform administrators (an editor who is not the
+owner gets no account: the platform gives a website to one customer, who is its editor). The old media folder is copied
+to `DATA_DIR/media/1` (`-backups-from` does the same for backups; `DATA_DIR` must be a writable volume, and the same one the platform runs with). Then start the program with `PLATFORM=true`,
+`SECRET_KEY` and `BASE_URL` set, log in with your old password, and set up publishing under **Publish**. If a step stops
+half way, running it again carries on.
 
 ## How it's organised
 

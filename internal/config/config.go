@@ -42,6 +42,9 @@ type Config struct {
 	// AllowPrivateHosts lets websites be published to servers on private networks. Off in production, because it would let a
 	// customer make the server connect to its own network; it is for development and tests (ALLOW_PRIVATE_HOSTS=true).
 	AllowPrivateHosts bool
+	// QuotaStorageMB, QuotaPages and QuotaPosts are what a website may hold unless its own limits say otherwise (platform only;
+	// 0 means no limit). Storage is the pictures and fonts a website has uploaded.
+	QuotaStorageMB, QuotaPages, QuotaPosts int
 	// SecretKey encrypts the hosting passwords the platform stores (32 bytes as 64 hex characters).
 	SecretKey string
 }
@@ -68,6 +71,9 @@ func Load() (Config, error) {
 		BaseURL:           strings.TrimRight(os.Getenv("BASE_URL"), "/"),
 		MaxRuntimes:       max(envInt("MAX_RUNTIMES", 40), 1),
 		SecretKey:         os.Getenv("SECRET_KEY"),
+		QuotaStorageMB:    envInt("QUOTA_STORAGE_MB", 1000),
+		QuotaPages:        envInt("QUOTA_PAGES", 200),
+		QuotaPosts:        envInt("QUOTA_POSTS", 1000),
 		AllowPrivateHosts: os.Getenv("ALLOW_PRIVATE_HOSTS") == "true",
 	}
 	if c.DatabaseURL == "" {

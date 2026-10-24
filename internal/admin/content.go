@@ -131,6 +131,10 @@ func (h *Handler) pageCreate(w http.ResponseWriter, r *http.Request) {
 		h.renderPages(w, r, 400, "Title is too long.", title, slug)
 		return
 	}
+	if msg := h.limitProblem(r.Context(), "pages", 0); msg != "" {
+		h.renderPages(w, r, 400, msg, title, slug)
+		return
+	}
 	if msg := site.CheckSlug(slug); msg != "" {
 		h.renderPages(w, r, 400, msg, title, slug)
 		return

@@ -38,17 +38,21 @@ type Site struct {
 	PublishedVersion string     // the copy that is on the hosting ("" when never published)
 	PublishedChanges int64      // the change counter when it was published (-1 when never)
 	PublishedAt      *time.Time // and when
+
+	// what this website may hold if not the server's defaults; nil is the default, 0 is no limit
+	QuotaStorageMB, QuotaPages, QuotaPosts *int
 }
 
 // onboardingLink is how long a new customer has to choose a first password.
 const onboardingLink = 7 * 24 * time.Hour
 
 const siteCols = `s.id, COALESCE(s.owner_id, 0), COALESCE(u.email, ''), s.name, s.schema_name, s.status = 'active', s.public_token, s.created_at,
-	s.public_url, s.build_version, s.build_changes, s.built_at, s.published_version, s.published_changes, s.published_at`
+	s.public_url, s.build_version, s.build_changes, s.built_at, s.published_version, s.published_changes, s.published_at,
+	s.quota_storage_mb, s.quota_pages, s.quota_posts`
 
 func scanSite(row pgx.Row) (Site, error) {
 	var s Site
-	err := row.Scan(&s.ID, &s.OwnerID, &s.Owner, &s.Name, &s.Schema, &s.Active, &s.Token, &s.CreatedAt, &s.PublicURL, &s.BuildVersion, &s.BuildChanges, &s.BuiltAt, &s.PublishedVersion, &s.PublishedChanges, &s.PublishedAt)
+	err := row.Scan(&s.ID, &s.OwnerID, &s.Owner, &s.Name, &s.Schema, &s.Active, &s.Token, &s.CreatedAt, &s.PublicURL, &s.BuildVersion, &s.BuildChanges, &s.BuiltAt, &s.PublishedVersion, &s.PublishedChanges, &s.PublishedAt, &s.QuotaStorageMB, &s.QuotaPages, &s.QuotaPosts)
 	return s, err
 }
 
@@ -115,7 +119,9 @@ func (p *Platform) Sites(ctx context.Context) ([]admin.SiteRow, error) {
 	out := make([]admin.SiteRow, len(sites))
 	for i, s := range sites {
 		out[i] = admin.SiteRow{ID: s.ID, Name: s.Name, Owner: s.Owner, Active: s.Active, CreatedAt: s.CreatedAt}
+		p.fillQuota(&out[i], s)
 	}
+	p.fillUsage(ctx, sites, out)
 	return out, nil
 }
 

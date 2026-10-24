@@ -157,6 +157,10 @@ func (h *Handler) mediaEdit(w http.ResponseWriter, r *http.Request) {
 		again(err.Error())
 		return
 	}
+	if msg := h.limitProblem(r.Context(), "storage", 0); msg != "" { // the edit is saved as a new picture
+		again(msg)
+		return
+	}
 	user := auth.CurrentIdentity(r)
 	if _, err := h.Media.Edited(r.Context(), user.UserID, it.ID, e); err != nil {
 		switch {

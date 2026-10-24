@@ -80,6 +80,10 @@ func (h *Handler) fontAdd(w http.ResponseWriter, r *http.Request) {
 		h.renderAppearance(w, r, 400, "", "The file could not be read.", nil)
 		return
 	}
+	if msg := h.limitProblem(r.Context(), "storage", int64(len(data))); msg != "" {
+		h.renderAppearance(w, r, 400, "", msg, nil)
+		return
+	}
 	switch err = h.Content.AddFont(r.Context(), family, weight, data); {
 	case errors.Is(err, content.ErrNotAFont):
 		h.renderAppearance(w, r, 400, "", fmt.Sprintf("That is not a WOFF2 font file (or it is larger than %d KB). Most font sites offer a .woff2 download.", content.MaxFontBytes>>10), nil)

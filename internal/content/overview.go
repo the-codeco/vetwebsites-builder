@@ -64,3 +64,20 @@ func (s *Store) Overview(ctx context.Context, recent int) (Overview, error) {
 	}
 	return o, prow.Err()
 }
+
+// Usage is how much a website holds, for comparing with its limits.
+type Usage struct {
+	Pages, Posts int
+	// StorageBytes is the uploaded pictures and fonts.
+	StorageBytes int64
+}
+
+// Usage counts what the website holds.
+func (s *Store) Usage(ctx context.Context) (Usage, error) {
+	var u Usage
+	err := s.pool.QueryRow(ctx, `
+		SELECT (SELECT count(*) FROM pages), (SELECT count(*) FROM posts),
+		       (SELECT COALESCE(sum(size_bytes), 0) FROM media) + (SELECT COALESCE(sum(length(data)), 0) FROM fonts)`).
+		Scan(&u.Pages, &u.Posts, &u.StorageBytes)
+	return u, err
+}

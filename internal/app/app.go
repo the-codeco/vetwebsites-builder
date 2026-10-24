@@ -78,6 +78,8 @@ type Options struct {
 	// LinkBase is where the links in a visitor's emails start when the website is published as a static copy: the
 	// platform's own address plus /f/<the website's token>. Empty when the website is served itself.
 	LinkBase string
+	// Limits says what the website may hold (a platform sets them per website); nil means no limits.
+	Limits admin.LimitsFunc
 }
 
 // New builds the application on an already-migrated database.
@@ -145,7 +147,7 @@ func NewWith(ctx context.Context, cfg config.Config, pool *pgxpool.Pool, opt Opt
 
 	drafts := blocks.NewDrafts() // unsaved block edits: the editor writes them, the live preview shows them
 	adminH, err := admin.New(admin.Deps{
-		Drafts: drafts, LinkBase: opt.LinkBase,
+		Drafts: drafts, LinkBase: opt.LinkBase, Limits: opt.Limits,
 		Auth: authn, Content: contentStore, Media: mediaSvc, Engine: engine,
 		Domain: domainSvc, Checker: domain.NewChecker(), SetupToken: cfg.SetupToken,
 		Analytics: stats, Contact: contactSvc, Newsletter: newsletterSvc, Campaigns: campaignSvc,

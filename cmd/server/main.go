@@ -36,6 +36,12 @@ func main() {
 	}
 	defer pool.Close()
 
+	if len(os.Args) > 1 && os.Args[1] == "-adopt-single-site" {
+		code := adopt(ctx, cfg, pool, os.Args[2:])
+		pool.Close()
+		os.Exit(code)
+	}
+
 	if cfg.Platform {
 		runPlatform(ctx, cfg, pool) // its own tables and one schema per website; never the single-site tables
 		return

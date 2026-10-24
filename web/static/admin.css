@@ -566,3 +566,17 @@ details.hint-more li { margin-bottom: 6px; }
 .bar-style { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px 14px; align-items: end; margin: 10px 0 14px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; }
 .bar-style legend { padding: 0 6px; font-weight: 600; }
 .bar-style .hint { grid-column: 1 / -1; margin: 0; }
+
+/* what the website may hold (dashboard and picture library) */
+.quota-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.quota-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.quota-label { min-width: 8rem; font-weight: 600; }
+.quota progress { flex: 1 1 8rem; max-width: 22rem; height: 10px; accent-color: var(--accent); }
+.quota progress.warn { accent-color: var(--danger); }
+
+/* what the website may hold (dashboard and picture library) */
+.quota-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.quota-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.quota-label { min-width: 8rem; font-weight: 600; }
+.quota progress { flex: 1 1 8rem; max-width: 22rem; height: 10px; accent-color: var(--accent); }
+.quota progress.warn { accent-color: var(--danger); }
