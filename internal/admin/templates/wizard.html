@@ -1,0 +1,146 @@
+{{define "content"}}
+{{$d := .Data}}
+<div class="editor wizard" data-wizard data-wizard-step="{{$d.Step}}" data-stacks="{{$d.Stacks}}">
+  <div>
+    <div class="card">
+      <ol class="wiz-steps" aria-label="Steps">
+        {{range $d.Steps}}<li{{if .Current}} aria-current="step" class="current"{{else if .Seen}} class="seen"{{end}}><a href="/admin/setup?step={{.N}}"><span class="wiz-n">{{.N}}</span> {{.Title}}</a></li>
+        {{end}}
+      </ol>
+      <h1>{{$d.Title}}</h1>
+      {{if and (eq $d.Step 1) $d.Redo}}<p class="alert-line">You have already run this wizard. Finishing it again replaces the look, menus, footer and the home page sections it made before. Your own pages and blocks are left alone.</p>{{end}}
+
+      {{if eq $d.Step 6}}
+      {{with $d.Plan}}
+      <p>Here is what will change. Nothing is saved to your website until you press <strong>Apply</strong>.</p>
+      <ul class="wiz-review">
+        <li><strong>Name</strong> {{.Title}}</li>
+        <li><strong>Look</strong> {{$.Data.KitName}}{{with $.Data.A.Primary}}, main colour {{.}}{{end}}</li>
+        <li><strong>Header</strong> {{if eq .Layout.Header.Style "centered"}}menu bar on top with a centred logo{{else}}logo with the menu beside it{{end}}</li>
+        <li><strong>Dark mode</strong> {{if eq .ColorMode "light"}}off{{else if eq .ColorMode "auto"}}follows the visitor's device{{else}}visitors can switch{{end}}</li>
+        <li><strong>Top bar</strong> {{if .TopItems}}{{len .TopItems}} item{{if ne (len .TopItems) 1}}s{{end}}{{else}}none{{end}}</li>
+        <li><strong>Footer</strong> {{len .Footer.Rows}} row{{if ne (len .Footer.Rows) 1}}s{{end}}{{if $.Data.A.Newsletter}} with a newsletter sign-up{{end}}</li>
+        <li><strong>Cookie notice</strong> {{if .Consent.Enabled}}on{{else}}off{{end}}</li>
+        <li><strong>Notice bar</strong> {{if .Element}}“{{.Element.Config.Text}}”{{else}}none{{end}}</li>
+        <li><strong>Home page</strong> {{if .Blocks}}{{len .Blocks}} section block{{if ne (len .Blocks) 1}}s{{end}} added{{else}}left as it is{{end}}</li>
+      </ul>
+      {{range .Warnings}}<p class="field-error">{{.}}</p>{{end}}
+      <p class="muted">The text in the sections is a starting point. Edit it in the page editor, and replace placeholders (such as team member names) before you publish.</p>
+      {{end}}
+      <form method="post" action="/admin/setup/apply" class="actions">
+        <input type="hidden" name="csrf" value="{{.CSRF}}">
+        <button{{if not $d.Plan}} disabled{{end}}>Apply to my website</button>
+        <a class="btn ghost" href="/admin/setup?step=5">Back</a>
+      </form>
+
+      {{else}}
+      <form method="post" action="/admin/setup" data-wizard-form>
+        <input type="hidden" name="csrf" value="{{.CSRF}}">
+        <input type="hidden" name="step" value="{{$d.Step}}">
+
+        {{if eq $d.Step 1}}
+        <p class="muted">A few questions to set up the look of your website. You can change everything afterwards, and skip anything you like.</p>
+        <label>Website name <span class="muted">(shown in the header and browser tab)</span>
+          <input name="title" value="{{$d.A.Title}}" maxlength="100" required></label>
+        <fieldset class="plainset"><legend>What kind of website is it?</legend>
+          <label class="check"><input type="radio" name="business" value="vet"{{if $d.Kind.Vet}} checked{{end}}> <span><strong>A veterinary practice</strong> (ready-made sections are written for a vet)</span></label>
+          <label class="check"><input type="radio" name="business" value="other"{{if $d.Kind.Other}} checked{{end}}> <span><strong>Something else</strong> (neutral sections for any small business)</span></label>
+        </fieldset>
+        {{end}}
+
+        {{if eq $d.Step 2}}
+        <p class="muted">Pick a ready-made look. The preview on the right shows it straight away. Then change anything you like below: leave a box empty to keep the look's own.</p>
+        <div class="kit-grid" role="radiogroup" aria-label="Looks">
+          {{range $d.Kits}}
+          <label class="kit{{if .Selected}} is-selected{{end}}">
+            <input type="radio" name="kit" value="{{.ID}}"{{if .Selected}} checked{{end}} data-kit data-theme="{{.Theme}}" data-tokens="{{.TokensJSON}}" data-colormode="{{.ColorMode}}">
+            <span class="swatches">{{range .Swatches}}<i style="background:{{.}}"></i>{{end}}</span>
+            <strong>{{.Name}}</strong>
+            <span class="muted">{{.Blurb}}</span>
+          </label>
+          {{end}}
+        </div>
+        <h2>Make it yours</h2>
+        <div class="two-col">
+          <label>Main colour <span class="muted">(buttons and links)</span>
+            <span class="colorrow"><input type="text" name="primary" value="{{$d.A.Primary}}" placeholder="the look's own" pattern="#[0-9a-fA-F]{6}" maxlength="7" data-color-text data-wiz="color-primary"><input type="color" value="{{if $d.A.Primary}}{{$d.A.Primary}}{{else}}#3b5bdb{{end}}" aria-label="Pick the main colour" data-color-pick></span></label>
+          <label>Page background
+            <span class="colorrow"><input type="text" name="background" value="{{$d.A.Background}}" placeholder="the look's own" pattern="#[0-9a-fA-F]{6}" maxlength="7" data-color-text data-wiz="color-bg"><input type="color" value="{{if $d.A.Background}}{{$d.A.Background}}{{else}}#ffffff{{end}}" aria-label="Pick the background" data-color-pick></span></label>
+          <label>Text colour
+            <span class="colorrow"><input type="text" name="text" value="{{$d.A.Text}}" placeholder="the look's own" pattern="#[0-9a-fA-F]{6}" maxlength="7" data-color-text data-wiz="color-text"><input type="color" value="{{if $d.A.Text}}{{$d.A.Text}}{{else}}#1f2430{{end}}" aria-label="Pick the text colour" data-color-pick></span></label>
+          <label>Corners
+            <select name="corners" data-wiz="radius"><option value="">The look's own</option>{{range $d.Corners}}<option value="{{.Key}}" data-value="{{.Value}}"{{if eq $d.A.Corners .Key}} selected{{end}}>{{.Label}}</option>{{end}}</select></label>
+          <label>Body font
+            <select name="font_body" data-wiz="font-body"><option value="">The look's own</option>{{range $d.Fonts}}<option value="{{.Value}}"{{if eq $d.A.FontBody .Value}} selected{{end}}>{{.Label}}</option>{{end}}</select></label>
+          <label>Heading font
+            <select name="font_heading" data-wiz="font-heading"><option value="">The look's own</option>{{range $d.Fonts}}<option value="{{.Value}}"{{if eq $d.A.FontHeading .Value}} selected{{end}}>{{.Label}}</option>{{end}}</select></label>
+          <label>Dark mode
+            <select name="dark"><option value="">The look's own</option>{{range $d.Dark}}<option value="{{.Key}}"{{if eq $d.A.Dark .Key}} selected{{end}}>{{.Label}}</option>{{end}}</select></label>
+          <label>Header
+            <select name="header"><option value="">The look's own</option>{{range $d.Headers}}<option value="{{.Key}}"{{if eq $d.A.Header .Key}} selected{{end}}>{{.Label}}</option>{{end}}</select></label>
+        </div>
+        <p class="hint">Text on the main colour is chosen for you so it stays readable. The preview shows colours, fonts and corners; the header and dark mode appear after you apply.</p>
+        {{end}}
+
+        {{if eq $d.Step 3}}
+        <p class="muted">These go in the top bar, the footer and the contact buttons. Leave anything blank to skip it. You can change them later under Site details.</p>
+        <label>Logo <span class="muted">(optional)</span>
+          <span class="colorrow"><input type="text" name="logo" value="{{$d.A.Logo}}" maxlength="2000" placeholder="/media/logo.png or https://…"><button type="button" class="ghost" data-pick>Choose…</button></span></label>
+        <label>Logo description <span class="muted">(for screen readers)</span>
+          <input name="logo_alt" value="{{$d.A.LogoAlt}}" maxlength="120"></label>
+        <div class="two-col">
+          <label>Phone <input name="phone" value="{{$d.A.Phone}}" maxlength="40" placeholder="+27 21 555 0123"></label>
+          <label>WhatsApp <span class="muted">(with country code)</span> <input name="whatsapp" value="{{$d.A.WhatsApp}}" maxlength="40" placeholder="+27 82 555 0123"></label>
+          <label>Email <input type="email" name="email" value="{{$d.A.Email}}" maxlength="254"></label>
+        </div>
+        <label>Address <textarea name="address" rows="3" maxlength="500">{{$d.A.Address}}</textarea></label>
+        <label>Opening hours <textarea name="hours" rows="4" maxlength="800" placeholder="Mon to Fri 8:00 to 17:00&#10;Sat 8:00 to 12:00">{{$d.A.Hours}}</textarea></label>
+        <h2>Social links</h2>
+        <div class="two-col">
+          {{range $d.Networks}}<label>{{.Label}} <input type="url" name="social_{{.Key}}" value="{{index $d.A.Social .Key}}" maxlength="300" placeholder="https://"></label>
+          {{end}}
+        </div>
+        {{end}}
+
+        {{if eq $d.Step 4}}
+        <fieldset class="plainset"><legend>Top bar</legend>
+          {{range $d.TopBars}}<label class="check"><input type="radio" name="top_bar" value="{{.Key}}"{{if eq $d.A.TopBar .Key}} checked{{end}}> <span>{{.Label}}</span></label>
+          {{end}}
+        </fieldset>
+        <label class="check"><input type="checkbox" name="cookie"{{if $d.A.Cookie}} checked{{end}}> <span><strong>Show a cookie notice</strong> to visitors</span></label>
+        <label class="check"><input type="checkbox" name="newsletter"{{if $d.A.Newsletter}} checked{{end}}> <span><strong>Newsletter sign-up in the footer</strong></span></label>
+        <label>Notice bar <span class="muted">(optional: a message across the top of every page, such as new opening hours; leave empty for none)</span>
+          <input name="announcement" value="{{$d.A.Announcement}}" maxlength="300"></label>
+        <p class="hint">The main menu starts with Home and About. If you have already built your own, the wizard leaves it as it is.</p>
+        {{end}}
+
+        {{if eq $d.Step 5}}
+        <p class="muted">Tick the sections to put on your home page. They are added in this order. The words are a starting point for you to edit; nothing here is written about your business except what you have told us.</p>
+        <div class="section-list">
+          {{range $d.Sections}}
+          <label class="check section-opt"><input type="checkbox" name="sections" value="{{.ID}}"{{if .Checked}} checked{{end}}> <span><strong>{{.Name}}</strong> <span class="muted">{{.Blurb}}</span></span></label>
+          {{end}}
+        </div>
+        <p class="hint">Untick everything to leave your home page as it is. The two starter blocks that came with the website are replaced only if you have not edited them.</p>
+        {{end}}
+
+        <div class="actions">
+          {{if gt $d.Step 1}}<button name="go" value="back" class="ghost" formnovalidate>Back</button>{{end}}
+          <button name="go" value="next">{{if eq $d.Step 5}}Review{{else}}Next{{end}}</button>
+        </div>
+      </form>
+      {{end}}
+    </div>
+    <form method="post" action="/admin/setup/skip" class="wiz-skip" data-confirm="Skip the wizard? You can run it again later from the dashboard.">
+      <input type="hidden" name="csrf" value="{{.CSRF}}">
+      <button class="ghost">Skip, I'll set things up myself</button>
+    </form>
+  </div>
+
+  <div class="editor-preview">
+    <div class="preview-bar"><span>Live preview</span><a href="{{$d.Preview}}" target="_blank" rel="noopener">Open site ↗</a></div>
+    <iframe id="preview" src="{{$d.Preview}}" title="Site preview"></iframe>
+  </div>
+</div>
+{{template "pickerdialog"}}
+{{end}}

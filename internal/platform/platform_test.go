@@ -109,6 +109,14 @@ func TestCustomerGetsTheirOwnWebsite(t *testing.T) {
 	}
 	ann.refreshToken()
 
+	// a website nobody has set up starts with the set-up wizard; skipping it leaves the dashboard
+	if r := ann.get("/admin/"); r.Status != 303 || r.Location() != "/admin/setup" {
+		t.Fatalf("first visit: %d %s", r.Status, r.Location())
+	}
+	if r := ann.post("/admin/setup/skip", nil); r.Status != 303 {
+		t.Fatalf("skip: %d", r.Status)
+	}
+
 	// their editor: the dashboard of their website, titled with the name the admin gave it
 	dash := ann.get("/admin/")
 	if dash.Status != 200 || !strings.Contains(dash.Body, "Dashboard") || strings.Contains(dash.Body, "acting-banner") {

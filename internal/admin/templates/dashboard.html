@@ -11,6 +11,7 @@
   </div>
 </section>
 {{template "quota" .}}
+{{if .SetupHint}}<div class="card setup-card"><h2>Set up your look</h2><p class="muted">Pick a ready-made look, add your logo and contact details, and build the home page from ready-made sections, in a few minutes.</p><p><a class="btn" href="/admin/setup">Run the set-up wizard</a></p></div>{{end}}
 
 <div class="stats">
   <a class="stat" href="/admin/pages">

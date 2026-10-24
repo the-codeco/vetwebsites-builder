@@ -1,0 +1,15 @@
+{{define "content"}}
+<div class="card">
+  <h1>Your website is set up</h1>
+  <p>The look, menus, footer and home page sections for <strong>{{.Data.Title}}</strong> are in place. Nothing is public until you publish.</p>
+  {{range .Data.Warnings}}<p class="field-error">{{.}}</p>{{end}}
+  <h2>Next</h2>
+  <ul class="checks">
+    <li><strong>Check the home page</strong> and replace the starting text with your own. <a href="/admin/pages">Edit pages</a></li>
+    <li><strong>Add your pictures</strong> to the media library. <a href="/admin/media">Open the library</a></li>
+    <li><strong>See it</strong> before anyone else does. <a href="{{.PreviewBase}}/" target="_blank" rel="noopener">Open the site ↗</a></li>
+    <li><strong>Fine-tune</strong> colours and fonts any time under <a href="/admin/appearance">Appearance</a>, or run the wizard again.</li>
+  </ul>
+  <p class="actions"><a class="btn" href="/admin/">Go to the dashboard</a></p>
+</div>
+{{end}}

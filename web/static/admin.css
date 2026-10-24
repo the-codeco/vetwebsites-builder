@@ -580,3 +580,28 @@ details.hint-more li { margin-bottom: 6px; }
 .quota-label { min-width: 8rem; font-weight: 600; }
 .quota progress { flex: 1 1 8rem; max-width: 22rem; height: 10px; accent-color: var(--accent); }
 .quota progress.warn { accent-color: var(--danger); }
+
+/* set-up wizard */
+.wiz-steps { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 16px; padding: 0; }
+.wiz-steps li a { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; font-size: .85rem; color: var(--muted); text-decoration: none; border: 1px solid var(--line); }
+.wiz-steps li.current a { color: var(--text); border-color: var(--accent); background: var(--accent-soft); font-weight: 600; }
+.wiz-steps li.seen a { color: var(--text); }
+.wiz-n { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--line); font-size: .75rem; }
+.wiz-steps li.current .wiz-n { background: var(--accent); color: #fff; }
+.kit-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin: 12px 0 20px; }
+.kit { position: relative; display: flex; flex-direction: column; gap: 6px; padding: 12px; border: 2px solid var(--line); border-radius: 12px; cursor: pointer; font-weight: 400; }
+.kit:hover { border-color: var(--accent); }
+.kit.is-selected { border-color: var(--accent); background: var(--accent-soft); }
+.kit input { position: absolute; opacity: 0; inset: 0; width: 100%; height: 100%; cursor: pointer; }
+.kit input:focus-visible + .swatches { outline: 2px solid var(--accent); outline-offset: 3px; }
+.kit .swatches { display: flex; border-radius: 8px; overflow: hidden; height: 34px; border: 1px solid var(--line); }
+.kit .swatches i { flex: 1; }
+.kit .muted { font-size: .85rem; }
+.wiz-review { list-style: none; margin: 12px 0; padding: 0; display: grid; gap: 6px; }
+.wiz-review li { padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; }
+.wiz-review strong { display: inline-block; min-width: 8rem; }
+.section-list { display: grid; gap: 8px; margin: 12px 0; }
+.section-opt { align-items: flex-start; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; }
+.section-opt .muted { display: block; font-size: .85rem; }
+.wiz-skip { margin-top: 12px; }
+.setup-card { border-color: var(--accent); }

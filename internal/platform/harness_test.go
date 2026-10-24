@@ -229,7 +229,7 @@ func (c *client) refreshToken() {
 // tryRefreshToken is refreshToken that reports instead of failing (a suspended website has no pages to read it from).
 func (c *client) tryRefreshToken() bool {
 	c.t.Helper()
-	for _, p := range []string{"/platform/sites", "/admin/"} {
+	for _, p := range []string{"/platform/sites", "/admin/", "/admin/setup"} { // a new customer's first page is the set-up wizard
 		if tok := scrape(reCSRFMeta, c.get(p).Body); tok != "" {
 			c.token = tok
 			return true
@@ -283,8 +283,31 @@ func (e *env) customer(admin *client, email, name string) *client {
 	if r.Status != http.StatusSeeOther {
 		e.t.Fatalf("choose password: %d %s", r.Status, firstLine(r.Body))
 	}
+	e.markSetUp()
 	c.refreshToken()
 	return c
+}
+
+// markSetUp marks every website as having been through the set-up wizard, so tests that are not about it open on the dashboard.
+// The wizard's own tests make their customers with createCustomer and walk through it.
+func (e *env) markSetUp() {
+	e.t.Helper()
+	rows, err := e.pool.Query(e.t.Context(), `SELECT schema_name FROM sites`)
+	if err != nil {
+		e.t.Fatal(err)
+	}
+	var schemas []string
+	for rows.Next() {
+		var s string
+		rows.Scan(&s)
+		schemas = append(schemas, s)
+	}
+	rows.Close()
+	for _, s := range schemas {
+		if _, err := e.pool.Exec(e.t.Context(), `UPDATE "`+s+`".site_settings SET wizard = '{"done": true}' WHERE wizard = '{}'`); err != nil {
+			e.t.Fatal(err)
+		}
+	}
 }
 
 func firstLine(s string) string {

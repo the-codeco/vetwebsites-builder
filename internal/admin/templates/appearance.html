@@ -13,6 +13,7 @@
 
     <div class="card">
       <h2>Logo and tab icon</h2>
+      <p class="muted"><a href="/admin/setup">Run the set-up wizard</a> to choose a ready-made look, menus and home page sections in a few steps.</p>
       <p class="muted">Show your logo in the header instead of (or beside) the site title, and set the small picture on browser tabs. Choose pictures from the media library; a PNG or SVG with a clear background works best.</p>
       <form method="post" action="/admin/appearance/brand">
         <input type="hidden" name="csrf" value="{{.CSRF}}">
@@ -180,7 +181,7 @@
           <strong>{{.Label}}</strong>{{if .Active}} <span class="badge published">Active</span>{{end}}
           <p class="muted">{{.Description}}</p>
           <div class="themeactions">
-            <a href="/?theme={{.Name}}" target="_blank" rel="noopener">Preview ↗</a>
+            <a href="{{$.PreviewBase}}/?theme={{.Name}}" target="_blank" rel="noopener">Preview ↗</a>
             {{if not .Active}}
             <form method="post" action="/admin/appearance/theme">
               <input type="hidden" name="csrf" value="{{$.CSRF}}">

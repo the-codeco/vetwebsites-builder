@@ -898,4 +898,83 @@
   }
   Array.prototype.forEach.call(document.querySelectorAll('[data-schedule]'), initSchedule);
 
+  // ---- set-up wizard: the look step shows a kit and the person's changes in the preview before anything is saved ----
+  var wiz = document.querySelector('[data-wizard]');
+  var wizFrame = wiz ? document.getElementById('preview') : null;
+  if (wiz && wizFrame && wiz.getAttribute('data-wizard-step') === '2') {
+    var stacks = {};
+    try { stacks = JSON.parse(wiz.getAttribute('data-stacks') || '{}'); } catch (e) { stacks = {}; }
+    var baseSrc = wizFrame.getAttribute('src');
+    var loadedTheme = null;
+    var hexOf = function (v) { v = (v || '').trim().toLowerCase(); return /^#[0-9a-f]{6}$/.test(v) ? v : ''; };
+    var rgbOf = function (h) { var n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
+    var hexFrom = function (c) { return '#' + c.map(function (v) { v = Math.max(0, Math.min(255, Math.round(v))); return (v < 16 ? '0' : '') + v.toString(16); }).join(''); };
+    var lum = function (h) {
+      var c = rgbOf(h).map(function (v) { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); });
+      return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+    };
+    var contrast = function (a, b) { var x = lum(a), y = lum(b); if (x < y) { var t = x; x = y; y = t; } return (x + 0.05) / (y + 0.05); };
+    var mixHex = function (a, b, t) { var x = rgbOf(a), y = rgbOf(b); return hexFrom([0, 1, 2].map(function (i) { return x[i] + (y[i] - x[i]) * t; })); };
+    var readable = function (bg) { return contrast(bg, '#ffffff') >= contrast(bg, '#111111') ? '#ffffff' : '#111111'; };
+
+    var currentKit = function () {
+      var r = wiz.querySelector('[data-kit]:checked');
+      if (!r) return { theme: 'default', tokens: {} };
+      var tokens = {};
+      try { tokens = JSON.parse(r.getAttribute('data-tokens') || '{}'); } catch (e) { tokens = {}; }
+      return { theme: r.getAttribute('data-theme'), tokens: tokens };
+    };
+    var KEYS = ['color-bg', 'color-text', 'color-muted', 'color-surface', 'color-primary', 'color-primary-text', 'font-body', 'font-heading', 'radius'];
+    var applyPreview = function () {
+      var doc = wizFrame.contentDocument;
+      if (!doc || !doc.documentElement) return;
+      var kit = currentKit(), t = {}, k;
+      for (k in kit.tokens) t[k] = kit.tokens[k];
+      var val = function (name) { var f = wiz.querySelector('[data-wiz="' + name + '"]'); return f ? f.value : ''; };
+      var primary = hexOf(val('color-primary')), bg = hexOf(val('color-bg')), text = hexOf(val('color-text'));
+      if (primary) { t['color-primary'] = primary; t['color-primary-text'] = readable(primary); }
+      if (bg) t['color-bg'] = bg;
+      if (text) t['color-text'] = text;
+      if ((bg || text) && t['color-bg'] && t['color-text']) {
+        t['color-surface'] = mixHex(t['color-bg'], t['color-text'], 0.06);
+        t['color-muted'] = mixHex(t['color-text'], t['color-bg'], 0.4);
+      }
+      ['font-body', 'font-heading'].forEach(function (name) { if (val(name)) t[name] = val(name); });
+      var corners = wiz.querySelector('[data-wiz="radius"]');
+      if (corners && corners.value) t.radius = corners.options[corners.selectedIndex].getAttribute('data-value');
+      KEYS.forEach(function (key) {
+        var v = t[key];
+        if (v && key.indexOf('font-') === 0) v = stacks[v] || '';
+        if (v) doc.documentElement.style.setProperty('--' + key, v);
+        else doc.documentElement.style.removeProperty('--' + key);
+      });
+    };
+    var showKit = function () {
+      var kit = currentKit();
+      if (kit.theme !== loadedTheme) { // another theme has its own stylesheet: load it, then put the colours back on
+        loadedTheme = kit.theme;
+        wizFrame.src = baseSrc + (kit.theme ? '?theme=' + encodeURIComponent(kit.theme) : '');
+      } else {
+        applyPreview();
+      }
+    };
+    wizFrame.addEventListener('load', applyPreview);
+    wiz.addEventListener('input', function (e) {
+      if (e.target.matches('[data-color-pick]')) { // the shared handler copies the picked colour into the box afterwards
+        var text = e.target.closest('.colorrow').querySelector('[data-color-text]');
+        text.value = e.target.value;
+      }
+      if (e.target.matches('[data-kit]')) {
+        wiz.querySelectorAll('.kit').forEach(function (l) { l.classList.toggle('is-selected', !!l.querySelector(':checked')); });
+        showKit();
+      } else {
+        applyPreview();
+      }
+    });
+    wiz.addEventListener('change', function (e) { if (e.target.matches('[data-kit]')) showKit(); });
+    loadedTheme = currentKit().theme;
+    wizFrame.src = baseSrc + '?theme=' + encodeURIComponent(loadedTheme);
+  }
+
+
 })();

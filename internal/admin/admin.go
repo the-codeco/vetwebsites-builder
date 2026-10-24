@@ -91,6 +91,7 @@ type pageData struct {
 	Wide    bool   // full-width layout (editor)
 	Section string // which sidebar entry is current; set by render from the template name
 	Unread  int    // unread contact messages, for the sidebar badge; set by render
+	SetupHint bool // the dashboard offers the set-up wizard (it was skipped or not finished); set by the dashboard
 	Data    any
 
 	// set by render from the handler: what kind of screen this is
@@ -108,14 +109,14 @@ type pageData struct {
 var sectionOf = map[string]string{
 	"dashboard": "dashboard", "pages": "pages", "page_edit": "pages",
 	"posts": "posts", "post_edit": "posts", "categories": "posts",
-	"media": "media", "media_edit": "media", "menus": "menus", "footer": "footer", "sidebar": "sidebar", "elements": "elements", "element_edit": "elements", "appearance": "appearance",
+	"media": "media", "media_edit": "media", "menus": "menus", "footer": "footer", "sidebar": "sidebar", "wizard": "wizard", "wizard_done": "wizard", "elements": "elements", "element_edit": "elements", "appearance": "appearance",
 	"domain": "domain", "users": "users", "account": "account", "seo": "seo", "analytics": "analytics", "messages": "messages", "message": "messages", "subscribers": "subscribers", "campaigns": "campaigns", "campaign": "campaigns", "backup": "backup", "backup_review": "backup", "shared": "shared", "shared_edit": "shared", "redirects": "redirects", "sitedetails": "sitedetails", "platform_sites": "sites", "platform_audit": "audit", "publish": "publish", "hosting": "hosting",
 }
 
 var authScreens = map[string]bool{"setup": true, "login": true, "invite": true, "forgot": true, "reset": true}
 
 // screens lists every admin template.
-var screens = []string{"setup", "login", "invite", "forgot", "reset", "dashboard", "users", "pages", "page_edit", "menus", "footer", "sidebar", "elements", "element_edit", "media", "media_edit",
+var screens = []string{"setup", "login", "invite", "forgot", "reset", "dashboard", "users", "pages", "page_edit", "menus", "footer", "sidebar", "elements", "element_edit", "wizard", "wizard_done", "media", "media_edit",
 	"posts", "post_edit", "categories", "appearance", "seo", "domain", "account", "analytics", "messages", "message", "subscribers", "campaigns", "campaign", "backup", "backup_review", "shared", "shared_edit", "redirects", "sitedetails", "platform_sites", "platform_audit", "publish", "hosting"}
 
 var funcs = template.FuncMap{
@@ -247,6 +248,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	h.registerFooter(mux, admin)
 	h.registerSidebar(mux, admin)
 	h.registerElements(mux, admin)
+	h.registerWizard(mux, admin)
 	h.registerSiteDetails(mux, admin)
 	if !h.MultiTenant { // the domain is the platform's concern (where the site is published), not the customer's
 		h.registerDomain(mux, admin)
@@ -438,13 +440,17 @@ func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) dashboard(w http.ResponseWriter, r *http.Request) {
 	id := auth.CurrentIdentity(r)
+	if h.shouldRunWizard(r) { // a website nobody has set up yet starts with the wizard
+		http.Redirect(w, r, "/admin/setup", http.StatusSeeOther)
+		return
+	}
 	overview, err := h.Content.Overview(r.Context(), 5)
 	if err != nil {
 		serverError(w, err)
 		return
 	}
 	h.render(w, r, 200, "dashboard", pageData{
-		Title: "Dashboard", User: id, CSRF: id.CSRF, Data: overview,
+		Title: "Dashboard", User: id, CSRF: id.CSRF, Data: overview, SetupHint: h.setupHint(r),
 	})
 }
 
