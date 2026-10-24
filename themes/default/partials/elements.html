@@ -1,0 +1,35 @@
+{{/* Site-wide elements (Admin → Site-wide elements): notice bars, emergency alerts, popups and a contact button. Everything
+     is hidden in the page; elements.js shows each one only inside its start and end time, by the visitor's own clock, so
+     the same markup works on a published copy that has no server. */}}
+
+{{define "el-attrs"}}data-el="{{.ID}}" data-el-kind="{{.Kind}}" data-el-version="{{.Version}}" data-el-days="{{.DismissDays}}"{{with .Start}} data-el-start="{{.}}"{{end}}{{with .End}} data-el-end="{{.}}"{{end}}{{if .Preview}} data-el-preview{{end}}{{end}}
+
+{{/* Bars and alerts: above the header. */}}
+{{define "elements-top"}}{{with .Site.Elements}}{{range .Top}}{{$e := .}}<div class="el el-{{.Kind}}{{with .Style}} el-{{.}}{{end}}" {{template "el-attrs" .}}{{if eq .Kind "alert"}} role="alert"{{else}} role="region" aria-label="Notice"{{end}} hidden>
+  <p class="el-text">{{.Text}}{{with .Link}} <a href="{{safeurl .}}">{{$e.Label}}</a>{{end}}</p>
+  {{if .Dismissible}}<button type="button" class="el-close" data-el-close aria-label="Close this notice">&times;</button>{{end}}
+</div>
+{{end}}{{end}}{{end}}
+
+{{/* Popups and the contact button: after the page, with the script that runs them all. */}}
+{{define "elements-bottom"}}{{with .Site.Elements}}{{range .Bottom}}{{$e := .}}{{if eq .Kind "popup"}}<div class="el-popup" {{template "el-attrs" .}} data-el-trigger="{{.Trigger}}" data-el-delay="{{.Delay}}" data-el-scroll="{{.Scroll}}" hidden>
+  <div class="el-backdrop" data-el-close></div>
+  <div class="el-dialog" role="dialog" aria-modal="true" tabindex="-1"{{if .Heading}} aria-labelledby="el-h-{{.ID}}"{{else}} aria-label="Notice"{{end}}>
+    <button type="button" class="el-close" data-el-close aria-label="Close">&times;</button>
+    {{with .Heading}}<h2 id="el-h-{{$e.ID}}">{{.}}</h2>{{end}}
+    {{with .Text}}<div class="el-body">{{richtext .}}</div>{{end}}
+    {{- if .Subscribe}}{{with .Form}}{{if .Sent}}<p class="form-notice" role="status">{{or $e.Thanks "Thanks for subscribing!"}}{{if .Confirm}} Please check your inbox and confirm your address.{{end}}</p>
+    {{- else if .Token}}<form class="newsletter-form" method="post" action="/subscribe" data-success="{{or $e.Thanks "Thanks for subscribing!"}}">
+      <input type="hidden" name="t" value="{{.Token}}">
+      <input type="hidden" name="from" value="{{.Path}}">
+      <input type="hidden" name="block" value="0">
+      <p class="hp" aria-hidden="true"><label>Leave this field empty <input name="website" tabindex="-1" autocomplete="off"></label></p>
+      <label class="sr-only" for="el-email-{{$e.ID}}">Email address</label>
+      <input id="el-email-{{$e.ID}}" type="email" name="email" required maxlength="254" autocomplete="email" placeholder="you@example.com">
+      <button class="btn btn-primary" type="submit">{{or $e.Button "Subscribe"}}</button>
+    </form>{{end}}{{end}}
+    {{- else}}{{with .Link}}<p><a class="btn btn-primary" href="{{safeurl .}}">{{$e.Label}}</a></p>{{end}}{{end}}
+  </div>
+</div>
+{{else}}<a class="el-contact el-side-{{.Side}}" href="{{safeurl .Link}}" {{template "el-attrs" .}}{{if eq .Action "link"}}{{else}} data-el-action="{{.Action}}"{{end}} hidden>{{.Label}}</a>
+{{end}}{{end}}<script src="{{$.Site.ElementsJS}}" defer></script>{{end}}{{end}}

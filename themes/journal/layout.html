@@ -13,6 +13,7 @@
 </head>
 <body>
 {{if .Preview}}<div class="preview-banner">Draft preview — not visible to the public</div>{{end}}
+{{template "elements-top" .}}
 {{template "menu-topbar" .}}
 {{if .Site.Header.Custom}}{{template "site-header" .}}{{else}}
 <header class="site-header masthead{{if .Nav.Main.Sticky}} is-sticky{{end}}">
@@ -36,6 +37,7 @@
 {{template "color-float" .}}
 {{template "search-dialog" .}}
 <script src="{{.Site.MenuJS}}" defer></script>
+{{template "elements-bottom" .}}
 {{template "consent-banner" .}}
 </body>
 </html>

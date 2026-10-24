@@ -16,6 +16,7 @@ import (
 	"webbuilder/internal/blocks"
 	"webbuilder/internal/content"
 	"webbuilder/internal/media"
+	"webbuilder/internal/elements"
 	"webbuilder/internal/menus"
 )
 
@@ -218,6 +219,14 @@ func (s *Service) apply(ctx context.Context, a *Archive, thumbs map[string]strin
 		rl[i] = content.Redirect{From: r.From, To: r.To, Permanent: r.Permanent, Auto: r.Auto}
 	}
 	if err := content.ReplaceRedirects(ctx, tx, rl); err != nil {
+		return err
+	}
+
+	el := make([]elements.Element, len(c.Elements))
+	for i, e := range c.Elements {
+		el[i] = elements.Element{Kind: e.Kind, Name: e.Name, Enabled: e.Enabled, Config: e.Config, Pages: e.Pages, Start: e.Start, End: e.End}
+	}
+	if err := content.ReplaceElements(ctx, tx, el); err != nil {
 		return err
 	}
 

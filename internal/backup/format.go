@@ -17,13 +17,14 @@ import (
 	"regexp"
 	"time"
 
+	"webbuilder/internal/elements"
 	"webbuilder/internal/menus"
 )
 
 const (
 	// Format and Version identify a backup file. A file with another format, or a newer version, is refused.
 	Format  = "webbuilder-backup"
-	Version = 6 // 2: blocks can hold child blocks (layouts); 3: the shared block library; 4: the footer builder; 5: page and header layout; 6: page sections and the sidebar
+	Version = 7 // 2: blocks can hold child blocks (layouts); 3: the shared block library; 4: the footer builder; 5: page and header layout; 6: page sections and the sidebar; 7: site-wide elements
 
 	ManifestName = "manifest.json"
 	SiteName     = "site.json"
@@ -81,6 +82,7 @@ type Content struct {
 	Reusables   []Reusable   `json:"reusables,omitempty"`
 	Redirects   []Redirect   `json:"redirects,omitempty"`
 	Fonts       []Font       `json:"fonts,omitempty"`
+	Elements    []Element    `json:"elements,omitempty"`
 	Posts       []Post       `json:"posts"`
 	Categories  []Category   `json:"categories"`
 	Menus       []Menu       `json:"menus"`
@@ -127,6 +129,17 @@ type Font struct {
 	Family string `json:"family"`
 	Weight int    `json:"weight"`
 	Data   []byte `json:"data"`
+}
+
+// Element is a site-wide element: a notice bar, alert, popup or contact button.
+type Element struct {
+	Kind    string          `json:"kind"`
+	Name    string          `json:"name,omitempty"`
+	Enabled bool            `json:"enabled"`
+	Config  elements.Config `json:"config"`
+	Pages   []string        `json:"pages,omitempty"`
+	Start   *time.Time      `json:"start,omitempty"`
+	End     *time.Time      `json:"end,omitempty"`
 }
 
 // Redirect sends an old address to a new one.

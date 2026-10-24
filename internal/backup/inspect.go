@@ -17,6 +17,7 @@ import (
 	"webbuilder/internal/contact"
 	"webbuilder/internal/content"
 	"webbuilder/internal/media"
+	"webbuilder/internal/elements"
 	"webbuilder/internal/menus"
 	"webbuilder/internal/newsletter"
 	"webbuilder/internal/site"
@@ -237,6 +238,7 @@ func (s *Service) inspect(ctx context.Context, ra io.ReaderAt, size int64) (*Arc
 
 	a.Content.Reusables = cleanReusables(c.Reusables, w)
 	a.Content.Redirects = cleanRedirects(c.Redirects, w)
+	a.Content.Elements = cleanElements(c.Elements, w)
 	a.Content.Fonts = cleanFonts(c.Fonts, w)
 	a.Content.Pages = cleanPages(c.Pages, a.Content.Reusables, w)
 	a.Content.Categories = cleanCategories(c.Categories, w)
@@ -535,6 +537,26 @@ func cleanFonts(in []Font, w *warnings) []Font {
 		}
 		seen[key] = true
 		out = append(out, Font{Family: family, Weight: f.Weight, Data: f.Data})
+	}
+	return out
+}
+
+// cleanElements checks the site-wide elements the way the editor checks them when they are saved; one that is not
+// acceptable is left out, and so are those beyond the most a site may hold.
+func cleanElements(in []Element, w *warnings) []Element {
+	var out []Element
+	now := time.Now()
+	for _, e := range in {
+		if len(out) >= elements.MaxElements {
+			w.add("Site-wide elements beyond the first %d were left out.", elements.MaxElements)
+			break
+		}
+		c, err := elements.Clean(elements.Element{Kind: e.Kind, Name: e.Name, Enabled: e.Enabled, Config: e.Config, Pages: e.Pages, Start: e.Start, End: e.End}, now)
+		if err != nil {
+			w.add("A site-wide element (%q) was left out: %s", trunc(e.Name+" "+e.Config.Text+e.Config.Heading, 40), err.Error())
+			continue
+		}
+		out = append(out, Element{Kind: c.Kind, Name: c.Name, Enabled: c.Enabled, Config: c.Config, Pages: c.Pages, Start: c.Start, End: c.End})
 	}
 	return out
 }

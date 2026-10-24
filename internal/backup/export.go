@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -93,6 +94,26 @@ func (s *Service) load(ctx context.Context, personal bool) (Content, error) {
 			return c, err
 		}
 		c.Reusables = append(c.Reusables, r)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return c, err
+	}
+
+	rows, err = tx.Query(ctx, `SELECT kind, name, enabled, config, pages, start_at, end_at FROM site_elements ORDER BY position, id`)
+	if err != nil {
+		return c, err
+	}
+	for rows.Next() {
+		var e Element
+		var cfg, pages []byte
+		if err := rows.Scan(&e.Kind, &e.Name, &e.Enabled, &cfg, &pages, &e.Start, &e.End); err != nil {
+			rows.Close()
+			return c, err
+		}
+		_ = json.Unmarshal(cfg, &e.Config)
+		_ = json.Unmarshal(pages, &e.Pages)
+		c.Elements = append(c.Elements, e)
 	}
 	rows.Close()
 	if err := rows.Err(); err != nil {

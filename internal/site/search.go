@@ -39,6 +39,7 @@ func (s *Service) siteInfo(r *http.Request, theme *themes.Theme, st content.Sett
 		info.Brand.Alt = st.Title
 	}
 	info.Details = detailsInfo(st.Details)
+	info.Elements = s.elementsInfo(r, info.Details)
 	if h := st.Layout.Header; h.Style != content.HeaderInline {
 		info.Header = themes.HeaderInfo{Custom: true, Style: h.Style, Tagline: h.Tagline, Banners: h.Banners, Place: h.BannerPlace, Height: h.BannerPixels()}
 	}

@@ -1,0 +1,134 @@
+{{define "content"}}
+{{$e := .Data.E}}{{$c := $e.Config}}
+<div class="card">
+  <h1>{{if $e.ID}}Edit{{else}}New{{end}} {{lower .Data.KindLabel}}</h1>
+  <p class="muted">{{.Data.KindHelp}}</p>
+  <form method="post" action="{{if $e.ID}}/admin/elements/{{$e.ID}}{{else}}/admin/elements{{end}}">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <input type="hidden" name="kind" value="{{$e.Kind}}">
+
+    <label>Name <span class="muted">(only for you, to tell elements apart; optional)</span>
+      <input name="name" value="{{$e.Name}}" maxlength="80"></label>
+
+    {{if or (eq $e.Kind "bar") (eq $e.Kind "alert")}}
+    <label>Message <span class="muted">(at most 300 characters)</span>
+      <textarea name="text" rows="3" maxlength="300" required>{{$c.Text}}</textarea></label>
+    <div class="two-col">
+      <label>Link <span class="muted">(optional: a page such as /contact, or an https:// address)</span>
+        <input name="link" value="{{$c.Link}}" maxlength="2000"></label>
+      <label>Link words
+        <input name="link_label" value="{{$c.LinkLabel}}" maxlength="40" placeholder="Read more"></label>
+    </div>
+    {{if eq $e.Kind "bar"}}
+    <label>Colours
+      <select name="style">
+        <option value="info"{{if or (eq $c.Style "info") (eq $c.Style "")}} selected{{end}}>The site's main colour</option>
+        <option value="accent"{{if eq $c.Style "accent"}} selected{{end}}>Dark</option>
+        <option value="light"{{if eq $c.Style "light"}} selected{{end}}>Light</option>
+      </select></label>
+    {{else}}<p class="muted">Alerts are always red and stay at the top of the screen while visitors scroll. An alert takes the place of any notice bar that is showing at the same time.</p>{{end}}
+    <label class="check"><input type="checkbox" name="dismissible"{{if $c.Dismissible}} checked{{end}}> <span><strong>Let visitors close it</strong></span></label>
+    <label>Keep it closed for <span class="muted">(days; 0 means until the visitor closes their browser)</span>
+      <input type="number" name="dismiss_days" value="{{$c.DismissDays}}" min="0" max="365"></label>
+    {{end}}
+
+    {{if eq $e.Kind "popup"}}
+    <label>What is it?
+      <select name="mode">
+        <option value="info"{{if ne $c.Mode "subscribe"}} selected{{end}}>A notice with an optional button</option>
+        <option value="subscribe"{{if eq $c.Mode "subscribe"}} selected{{end}}>A newsletter sign-up</option>
+      </select></label>
+    <label>Heading
+      <input name="heading" value="{{$c.Heading}}" maxlength="100"></label>
+    <label>Text
+      <textarea name="text" rows="5" data-richtext>{{$c.Text}}</textarea></label>
+    <fieldset class="plainset"><legend>For a notice</legend>
+      <div class="two-col">
+        <label>Button leads to <span class="muted">(optional)</span>
+          <input name="link" value="{{$c.Link}}" maxlength="2000"></label>
+        <label>Button words
+          <input name="link_label" value="{{$c.LinkLabel}}" maxlength="40" placeholder="Find out more"></label>
+      </div>
+    </fieldset>
+    <fieldset class="plainset"><legend>For a sign-up</legend>
+      <div class="two-col">
+        <label>Button words
+          <input name="button" value="{{$c.Button}}" maxlength="40" placeholder="Subscribe"></label>
+        <label>Thank-you after signing up
+          <input name="success" value="{{$c.Success}}" maxlength="300" placeholder="Thanks for subscribing!"></label>
+      </div>
+      <p class="muted">A sign-up needs the newsletter to be working on this site. Without it the popup is not shown.</p>
+    </fieldset>
+    <fieldset class="plainset"><legend>When it opens</legend>
+      <label class="check"><input type="radio" name="trigger" value="delay"{{if or (eq $c.Trigger "delay") (eq $c.Trigger "")}} checked{{end}}> <span>After a few seconds</span></label>
+      <label class="check"><input type="radio" name="trigger" value="scroll"{{if eq $c.Trigger "scroll"}} checked{{end}}> <span>When the visitor has scrolled down the page</span></label>
+      <label class="check"><input type="radio" name="trigger" value="exit"{{if eq $c.Trigger "exit"}} checked{{end}}> <span>When the visitor is about to leave (on a phone, after a while)</span></label>
+      <div class="two-col">
+        <label>Seconds to wait <span class="muted">(for the first and third choice)</span>
+          <input type="number" name="delay" value="{{$c.Delay}}" min="0" max="300"></label>
+        <label>Scrolled <span class="muted">(percent of the page, for the second)</span>
+          <input type="number" name="scroll" value="{{if $c.Scroll}}{{$c.Scroll}}{{else}}50{{end}}" min="5" max="95"></label>
+      </div>
+    </fieldset>
+    <label>Keep it closed for <span class="muted">(days after the visitor closes it; 0 means until they close their browser)</span>
+      <input type="number" name="dismiss_days" value="{{$c.DismissDays}}" min="0" max="365"></label>
+    {{end}}
+
+    {{if eq $e.Kind "contact_button"}}
+    <label>What does it do?
+      <select name="action">
+        <option value="call"{{if eq $c.Action "call"}} selected{{end}}>Call the phone number in Site details</option>
+        <option value="whatsapp"{{if eq $c.Action "whatsapp"}} selected{{end}}>Open WhatsApp with the number in Site details</option>
+        <option value="link"{{if eq $c.Action "link"}} selected{{end}}>Go to a page or address</option>
+      </select></label>
+    <label>Link <span class="muted">(only for “Go to a page or address”, such as /book)</span>
+      <input name="link" value="{{$c.Link}}" maxlength="2000"></label>
+    <div class="two-col">
+      <label>Button words
+        <input name="label" value="{{$c.Label}}" maxlength="40" placeholder="Call us"></label>
+      <label>Corner
+        <select name="side">
+          <option value="right"{{if ne $c.Side "left"}} selected{{end}}>Bottom right</option>
+          <option value="left"{{if eq $c.Side "left"}} selected{{end}}>Bottom left</option>
+        </select></label>
+    </div>
+    <p class="muted">A call or WhatsApp button only shows when its number is filled in under Site details.</p>
+    {{end}}
+
+    <h2>When</h2>
+    <p class="muted">Leave both empty to show it all the time. Times are in your own time zone. The visitor's browser keeps to them while the page is open, so a notice ends at its minute without anyone publishing again.</p>
+    <div class="two-col">
+      <div class="schedule" data-schedule>
+        <label>Starts <span class="muted">(optional)</span>
+          <input type="datetime-local" name="start_local"{{with .Data.Start}} value="{{.Format "2006-01-02T15:04"}}" data-utc="{{.UTC.Format "2006-01-02T15:04:05Z"}}"{{end}}></label>
+        <input type="hidden" name="start_at" value="{{with .Data.Start}}{{.UTC.Format "2006-01-02T15:04:05Z"}}{{end}}">
+      </div>
+      <div class="schedule" data-schedule>
+        <label>Ends <span class="muted">(optional)</span>
+          <input type="datetime-local" name="end_local"{{with .Data.End}} value="{{.Format "2006-01-02T15:04"}}" data-utc="{{.UTC.Format "2006-01-02T15:04:05Z"}}"{{end}}></label>
+        <input type="hidden" name="end_at" value="{{with .Data.End}}{{.UTC.Format "2006-01-02T15:04:05Z"}}{{end}}">
+      </div>
+    </div>
+
+    <h2>Where</h2>
+    <fieldset class="plainset">
+      <label class="check"><input type="radio" name="pages_mode" value="all"{{if not .Data.Some}} checked{{end}}> <span><strong>Every page</strong></span></label>
+      <label class="check"><input type="radio" name="pages_mode" value="some"{{if .Data.Some}} checked{{end}}> <span><strong>Only these pages</strong></span></label>
+      <div class="checklist">
+        {{range .Data.Options}}<label class="check"><input type="checkbox" name="pages" value="{{.Path}}"{{if .Chosen}} checked{{end}}> <span>{{.Title}} <code>{{.Path}}</code></span></label>
+        {{end}}
+      </div>
+      <label>Other addresses <span class="muted">(one per line; end with /* to include everything under it)</span>
+        <textarea name="pages_extra" rows="2">{{.Data.Extra}}</textarea></label>
+    </fieldset>
+
+    <label class="check"><input type="checkbox" name="enabled"{{if $e.Enabled}} checked{{end}}> <span><strong>Switched on</strong> (switch it off to keep it but not show it)</span></label>
+
+    <div class="actions">
+      <button>Save</button>
+      <a class="btn ghost" href="/admin/elements">Cancel</a>
+      {{with .Data.Preview}}<a class="btn ghost" href="{{.}}" target="_blank" rel="noopener">See it on the site <span class="muted">(shows it now, whatever its times; save first)</span></a>{{end}}
+    </div>
+  </form>
+</div>
+{{end}}

@@ -351,7 +351,7 @@ func foreignScripts(body string) []string {
 	var out []string
 	for _, tag := range reScriptTag.FindAllString(withoutStructuredData(body), -1) {
 		// the site's own two scripts: the menu, and the dark-mode switch that runs in <head>
-		if !strings.Contains(tag, `src="/theme/default/assets/menu.js?v=`) && !strings.Contains(tag, `src="/theme/default/assets/colormode.js?v=`) && !strings.Contains(tag, `src="/theme/default/assets/consent.js?v=`) {
+		if !strings.Contains(tag, `src="/theme/default/assets/menu.js?v=`) && !strings.Contains(tag, `src="/theme/default/assets/colormode.js?v=`) && !strings.Contains(tag, `src="/theme/default/assets/consent.js?v=`) && !strings.Contains(tag, `src="/theme/default/assets/elements.js?v=`) {
 			out = append(out, tag)
 		}
 	}

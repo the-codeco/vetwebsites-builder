@@ -599,7 +599,7 @@ func TestBackupUploadsAreChecked(t *testing.T) {
 		}),
 		"an extra file": editBackupRaw(t, raw, func(files map[string][]byte) { files["evil.php"] = []byte("<?php") }),
 		"a new format": editBackup(t, raw, func(files map[string][]byte) {
-			files["manifest.json"] = bytes.Replace(files["manifest.json"], []byte(fmt.Sprintf(`"version": %d`, backup.Version)), []byte(`"version": 7`), 1)
+			files["manifest.json"] = bytes.Replace(files["manifest.json"], []byte(fmt.Sprintf(`"version": %d`, backup.Version)), []byte(fmt.Sprintf(`"version": %d`, backup.Version+1)), 1)
 		}),
 	} {
 		r := admin.uploadBackup(data)

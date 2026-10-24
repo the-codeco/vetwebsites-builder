@@ -1,0 +1,37 @@
+{{define "content"}}
+<div class="card">
+  <h1>Site-wide elements</h1>
+  <p class="muted">Notices, alerts, popups and buttons that show on every page (or the pages you choose) and can start and end by themselves. Visitors see them from the published site's own files, so the start and end are kept by each visitor's own clock.</p>
+  {{if .Data.Rows}}
+  <table>
+    <tr><th>Element</th><th>Shows</th><th>When</th><th>Status</th><th></th></tr>
+    {{range $i, $r := .Data.Rows}}
+    <tr>
+      <td><a href="/admin/elements/{{.ID}}"><strong>{{.Title}}</strong></a><br><span class="muted">{{.Label}}</span></td>
+      <td>{{.Where}}</td>
+      <td class="muted">{{with .Start}}From {{.Format "2 Jan 2006 15:04"}} UTC{{end}}{{with .End}}{{if $r.Start}}<br>{{end}}Until {{.Format "2 Jan 2006 15:04"}} UTC{{end}}{{if and (not .Start) (not .End)}}Always{{end}}</td>
+      <td>{{if eq .Status "live"}}<span class="badge published">live</span>{{else if eq .Status "scheduled"}}<span class="badge">scheduled</span>{{else if eq .Status "ended"}}<span class="badge draft">ended</span>{{else}}<span class="badge draft">off</span>{{end}}</td>
+      <td class="row-actions">
+        <form method="post" action="/admin/elements/{{.ID}}/move" class="inline"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="dir" value="up"><button class="ghost" aria-label="Move up"{{if eq $i 0}} disabled{{end}}>&uarr;</button></form>
+        <form method="post" action="/admin/elements/{{.ID}}/move" class="inline"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="dir" value="down"><button class="ghost" aria-label="Move down">&darr;</button></form>
+        <form method="post" action="/admin/elements/{{.ID}}/toggle" class="inline"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="on" value="{{if .Enabled}}0{{else}}1{{end}}"><button class="ghost">{{if .Enabled}}Switch off{{else}}Switch on{{end}}</button></form>
+        <form method="post" action="/admin/elements/{{.ID}}/delete" class="inline" data-confirm="Remove this element?"><input type="hidden" name="csrf" value="{{$.CSRF}}"><button class="ghost danger">Remove</button></form>
+      </td>
+    </tr>
+    {{end}}
+  </table>
+  {{else}}<p class="muted">Nothing here yet. Add a notice bar for news, an alert for a closure, a popup for a sign-up, or a call button.</p>{{end}}
+</div>
+{{if .Data.Room}}
+<div class="card" id="new">
+  <h2>Add an element</h2>
+  <div class="shortcuts">
+    {{range .Data.Kinds}}
+    <a href="/admin/elements/new?kind={{.ID}}"><span><strong>{{.Label}}</strong><small>{{.Help}}</small></span></a>
+    {{end}}
+  </div>
+</div>
+{{else}}<p class="muted">The list is full. Remove an element you no longer use to add another.</p>{{end}}
+{{end}}
+
+{{define "actions"}}<a class="btn sm" href="#new"><svg class="ic" aria-hidden="true"><use href="#i-plus"></use></svg>Add an element</a>{{end}}

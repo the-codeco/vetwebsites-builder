@@ -157,6 +157,10 @@ func buildTheme(name string, metas map[string]rawMeta) (*Theme, error) {
 	if js, err := fs.ReadFile(themefiles.FS, DefaultTheme+"/assets/consent.js"); err == nil {
 		t.consentJS += "?v=" + fingerprint(js)
 	}
+	t.elementsJS = "/theme/" + DefaultTheme + "/assets/elements.js"
+	if js, err := fs.ReadFile(themefiles.FS, DefaultTheme+"/assets/elements.js"); err == nil {
+		t.elementsJS += "?v=" + fingerprint(js)
+	}
 	t.trackJS = "/theme/" + DefaultTheme + "/assets/track.js"
 	if js, err := fs.ReadFile(themefiles.FS, DefaultTheme+"/assets/track.js"); err == nil {
 		t.trackJS += "?v=" + fingerprint(js)

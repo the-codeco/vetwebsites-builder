@@ -47,6 +47,7 @@ type Theme struct {
 	Styles      []string // stylesheet URLs to load, parent first
 	FS          fs.FS    // theme directory, for static assets
 	consentJS   string   // address of the cookie-notice script, with its fingerprint
+	elementsJS  string   // address of the site-wide elements script, with its fingerprint
 	trackJS     string   // address of the analytics loader, with its fingerprint
 	colorJS     string   // address of the colour-mode script, with its fingerprint
 	menuJS      string   // address of the menu script, with its fingerprint
@@ -65,6 +66,7 @@ type SiteInfo struct {
 	ColorJS      string        // the script that applies the visitor's choice (loaded in <head>, before the page paints)
 	Consent      *ConsentInfo  // the cookie notice, nil when it is off
 	ConsentJS    string        // the script that shows it and remembers the answer
+	ElementsJS   string        // the script that opens and closes them and keeps to their schedule
 	TrackJS      string        // the analytics loader (used only when Tracking is set)
 	Footer       FooterInfo    // the footer the owner built
 	Brand        BrandInfo     // the logo and browser-tab icon
@@ -72,6 +74,7 @@ type SiteInfo struct {
 	Sidebar      *SidebarInfo  // the sidebar beside the content; nil when there is none on this page
 	Details      DetailsInfo   // the contact details
 	Tracking     *TrackingInfo // analytics services to load, nil when there are none (or the visitor is logged in)
+	Elements     *ElementsInfo // site-wide notices, popups and buttons for this page; nil when there are none
 	Search       bool          // show the search box (the site owner can turn it off)
 	MenuJS       string        // the menu script's address; layouts load it with <script src="{{.Site.MenuJS}}" defer>
 }
@@ -83,7 +86,7 @@ func (t *Theme) Info(title string, previewTheme bool) SiteInfo {
 	if previewTheme {
 		css += "?theme=" + t.Name
 	}
-	return SiteInfo{Title: title, Theme: t.Name, Styles: t.Styles, CSSURL: css, MenuJS: t.menuJS, ColorJS: t.colorJS, ConsentJS: t.consentJS, TrackJS: t.trackJS}
+	return SiteInfo{Title: title, Theme: t.Name, Styles: t.Styles, CSSURL: css, MenuJS: t.menuJS, ColorJS: t.colorJS, ConsentJS: t.consentJS, ElementsJS: t.elementsJS, TrackJS: t.trackJS}
 }
 
 // TrackJS is the address of the analytics loader script.
@@ -739,4 +742,32 @@ func (t *Theme) CSS(tokens map[string]string, custom, colorMode string, faces []
 	}
 	b.WriteString(custom)
 	return b.String()
+}
+
+// ElementsInfo is the site-wide elements that apply to one page. Top is drawn above the header (notice bars and alerts),
+// Bottom after the page (popups and contact buttons). Nothing here is shown until the elements script has checked each
+// one's window against the visitor's own clock.
+type ElementsInfo struct {
+	Top, Bottom []ElementView
+}
+
+// ElementView is one element as a template draws it.
+type ElementView struct {
+	ID             int64
+	Kind           string // "bar", "alert", "popup" or "contact_button"
+	Style          string // bars: info, accent or light
+	Heading, Text  string // Text is HTML for a popup and plain for a bar
+	Link, Label    string // a bar's or popup's link and its words; a contact button's address and words
+	Action         string // contact button: call, whatsapp or link
+	Side           string // contact button: left or right
+	Version        string // changes when the element is edited, so a visitor who closed it sees it again
+	Start, End     string // UTC, RFC 3339; empty when open
+	Trigger        string // popup: delay, scroll or exit
+	Delay, Scroll  int
+	DismissDays    int
+	Dismissible    bool
+	Subscribe      bool // popup: a newsletter sign-up
+	Form           NewsletterForm
+	Button, Thanks string
+	Preview        bool // shown now to the owner, whatever its window or the visitor's earlier answer
 }

@@ -509,3 +509,31 @@ html:not(.js) .has-panel:hover > .menu-panel, html:not(.js) .has-panel:focus-wit
 .color-link:hover { color: var(--color-text); }
 .color-link:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 @media print { .color-float { display: none; } }
+
+/* site-wide elements: notice bars, alerts, popups, contact button (shown by elements.js inside their time window) */
+.el[hidden], .el-popup[hidden], .el-contact[hidden] { display: none; }
+.el { position: relative; display: flex; align-items: center; justify-content: center; gap: .75rem; padding: .6rem 3rem .6rem 1rem; text-align: center; font-size: .95rem; }
+.el-text { margin: 0; max-width: 60rem; }
+.el a { color: inherit; font-weight: 700; text-decoration: underline; }
+.el-bar.el-info { background: var(--color-primary); color: var(--color-primary-text); }
+.el-bar.el-accent { background: var(--color-text); color: var(--color-bg); }
+.el-bar.el-light { background: var(--color-surface); color: var(--color-text); border-bottom: 1px solid color-mix(in srgb, var(--color-text) 15%, transparent); }
+.el-alert { position: sticky; top: 0; z-index: 150; background: #b3261e; color: #fff; font-weight: 600; }
+.el-close { position: absolute; top: 50%; right: .5rem; transform: translateY(-50%); width: 2.25rem; height: 2.25rem; padding: 0; font: inherit; font-size: 1.5rem; line-height: 1; color: inherit; background: none; border: 0; border-radius: var(--radius); cursor: pointer; opacity: .85; }
+.el-close:hover { opacity: 1; background: rgba(127, 127, 127, .25); }
+.el-popup { position: fixed; inset: 0; z-index: 300; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+.el-backdrop { position: absolute; inset: 0; background: rgba(0, 0, 0, .55); }
+.el-dialog { position: relative; width: min(32rem, 100%); max-height: 90vh; overflow: auto; padding: 2rem 1.75rem 1.5rem; color: var(--color-text); background: var(--color-bg); border-radius: var(--radius); box-shadow: 0 20px 60px rgba(0, 0, 0, .35); }
+.el-dialog:focus { outline: none; }
+.el-dialog h2 { margin-top: 0; }
+.el-dialog .el-close { top: .75rem; right: .75rem; transform: none; }
+.el-dialog .newsletter-form { display: flex; flex-wrap: wrap; gap: .5rem; }
+.el-dialog .newsletter-form input[type="email"] { flex: 1 1 14rem; padding: .65rem .8rem; font: inherit; border: 1px solid color-mix(in srgb, var(--color-text) 30%, transparent); border-radius: var(--radius); background: var(--color-bg); color: var(--color-text); }
+.el-dialog .newsletter-form button { cursor: pointer; font: inherit; font-weight: 600; }
+.el-contact { position: fixed; bottom: 1rem; z-index: 140; padding: .8rem 1.25rem; font-weight: 700; color: var(--color-primary-text); background: var(--color-primary); border-radius: 999px; box-shadow: 0 6px 20px rgba(0, 0, 0, .25); text-decoration: none; }
+.el-contact.el-side-right { right: 1rem; }
+.el-contact.el-side-left { left: 1rem; }
+.el-contact:hover { filter: brightness(1.08); }
+html.el-popup-open { overflow: hidden; }
+@media (prefers-reduced-motion: no-preference) { .el-dialog { animation: el-pop .18s ease-out; } @keyframes el-pop { from { opacity: 0; transform: translateY(8px) scale(.98); } } }
+@media print { .el, .el-popup, .el-contact { display: none; } }
