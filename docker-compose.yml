@@ -42,9 +42,25 @@ services:
       BACKUP_DIR: /data/backups
       BACKUP_KEEP: ${BACKUP_KEEP:-7}
       BACKUP_PERSONAL: ${BACKUP_PERSONAL:-false}
+      # The platform (many customers, each editing a website here and publishing it to their own hosting). Off by
+      # default: without PLATFORM=true this runs one website. See docs/DEPLOY.md, "Running the platform".
+      PLATFORM: ${PLATFORM:-false}
+      # Everything the platform keeps on disk (each website's pictures, backups and builds). Has its own volume.
+      DATA_DIR: /data/platform
+      # The builder's public address, such as https://builder.example.com. Emailed links and the forms on published
+      # websites point here. Required for the platform.
+      BASE_URL: ${BASE_URL:-}
+      # Encrypts the hosting passwords the platform stores: 64 hex characters (openssl rand -hex 32). Keep a copy
+      # with the database backups: without it the stored passwords cannot be read.
+      SECRET_KEY: ${SECRET_KEY:-}
+      MAX_RUNTIMES: ${MAX_RUNTIMES:-40}
+      QUOTA_STORAGE_MB: ${QUOTA_STORAGE_MB:-1000}
+      QUOTA_PAGES: ${QUOTA_PAGES:-200}
+      QUOTA_POSTS: ${QUOTA_POSTS:-1000}
     volumes:
       - media:/data/media
       - backups:/data/backups
+      - platform:/data/platform
     ports:
       # localhost only: in production, visitors must come through Caddy, not straight to the app
       - "127.0.0.1:8080:8080"
@@ -69,9 +85,12 @@ services:
       app:
         condition: service_healthy
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # One website on its own domain uses Caddyfile; the platform uses Caddyfile.platform (set CADDYFILE in .env).
+      - ${CADDYFILE:-./Caddyfile}:/etc/caddy/Caddyfile:ro
       - caddy_data:/data # certificates live here: keep this volume
       - caddy_config:/config
+    environment:
+      BUILDER_DOMAIN: ${BUILDER_DOMAIN:-}
     ports:
       - "80:80"
       - "443:443"
@@ -81,5 +100,6 @@ volumes:
   pgdata:
   media:
   backups:
+  platform:
   caddy_data:
   caddy_config:

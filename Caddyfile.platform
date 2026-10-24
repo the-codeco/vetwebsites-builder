@@ -1,0 +1,10 @@
+# For the platform (PLATFORM=true): one address, the builder's, with an ordinary certificate. Customers' own domains
+# are not served from here: they publish static files to their own hosting. Set CADDYFILE=./Caddyfile.platform and
+# BUILDER_DOMAIN=builder.example.com in .env.
+
+{$BUILDER_DOMAIN} {
+	encode zstd gzip
+	# Published websites post their contact, newsletter and search requests here from other origins. The app answers
+	# those itself (it checks the origin against the website's saved address), so nothing is added at this layer.
+	reverse_proxy app:8080
+}

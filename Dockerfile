@@ -7,7 +7,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/server ./cmd/server
-RUN mkdir -p /data/media /data/backups && chmod 700 /data/backups
+RUN mkdir -p /data/media /data/backups /data/platform && chmod 700 /data/backups
 
 FROM gcr.io/distroless/static-debian12
 COPY --from=build /out/server /server

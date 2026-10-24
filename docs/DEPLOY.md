@@ -121,3 +121,95 @@ the README explains how to check whether it needs bumping.
   your domain, so you can still log in and fix the domain setting.
 - **Containers keep restarting** – `docker compose logs app`. The app container's filesystem is read-only on purpose;
   it writes only to the media volume and a temporary folder.
+
+---
+
+# Running the platform
+
+Everything above runs **one website** on its own domain. The platform is the other mode (`PLATFORM=true`): you run one
+server, the **builder**, at an address such as `https://builder.example.com`. Each customer logs in there, edits their
+website, previews it, and publishes it as static files to their own cPanel hosting. The builder itself handles the three
+things a static site can't: search, the contact form and newsletter sign-ups (the published pages send those to it).
+
+Customers' domains are **not** pointed at the builder, so there is nothing to do per customer on this server.
+
+## 1. Configure
+
+Same server, Docker and ports as above, plus one domain for the builder with a DNS `A` record pointing at the server. In `.env`:
+
+```bash
+PLATFORM=true
+BASE_URL=https://builder.example.com
+BUILDER_DOMAIN=builder.example.com
+CADDYFILE=./Caddyfile.platform
+TRUST_PROXY=true
+SECRET_KEY=<openssl rand -hex 32>
+SETUP_TOKEN=<openssl rand -hex 24>
+POSTGRES_PASSWORD=<long random string>
+```
+
+- `SECRET_KEY` encrypts the hosting passwords customers save. **Keep a copy with your database backups and never change
+  it**: without it every saved hosting password is unreadable and customers must enter theirs again.
+- `BASE_URL` is baked into emailed links (newsletter confirm/unsubscribe, invitations) and into every published page's
+  forms, so settle it before customers publish. Changing it later means every customer must publish again.
+- Set the `SMTP_*` variables so the builder can send invitations, password resets and newsletters.
+- `QUOTA_*` set what each website may hold by default; a platform administrator can change any website's limits.
+
+## 2. Start it
+
+```bash
+docker compose --profile prod up -d --build --pull always
+```
+
+Open `https://builder.example.com/setup`, enter the `SETUP_TOKEN` and create the first account: it is the **platform
+administrator**. From **Websites** they add a customer (an email address and a website name); the customer gets an
+invitation by email, chooses a password and lands in their own website's admin.
+
+All platform data lives in the `platform` volume (every website's pictures, backups and builds) next to the database.
+The container's filesystem stays read-only.
+
+## 3. Backups
+
+Back up three things, and copy them off the server:
+
+```bash
+# the database (every website lives in it, in its own schema)
+docker compose exec -T db pg_dump -U webbuilder webbuilder > backup-$(date +%F).sql
+
+# pictures, backups and builds
+docker run --rm -v webbuilder_platform:/data -v "$PWD":/backup alpine \
+  tar czf /backup/platform-$(date +%F).tgz -C /data .
+```
+
+…and your `SECRET_KEY`. The builder also keeps a rolling backup of each website in `platform/backups/<id>` that a
+customer can download from **Backup**.
+
+## 4. Moving an existing single website onto the platform
+
+See "Moving a single website onto the platform" in the README. Stop the old program, take the `pg_dump` above, set the
+variables in this section, then run the `-adopt-single-site` command once.
+
+## 5. What the builder needs to reach
+
+- **Customers' hosting**: outbound FTPS (port 21) or SFTP (port 22). If your firewall filters outbound traffic, allow
+  those. The builder refuses private-network addresses unless `ALLOW_PRIVATE_HOSTS=true`, which you should leave off.
+- **The other direction**: published sites call `https://builder.example.com/f/<token>/…` from visitors' browsers.
+  If the builder is down, those pages still load; only search, the contact form and sign-ups fail until it is back.
+
+## Telling a customer how to publish (cPanel)
+
+Give each customer these steps. They only need their hosting details.
+
+1. In cPanel, open **FTP Accounts** and create an account whose directory is the website's folder (usually
+   `public_html` for the main domain). Note the FTP server name, username and password. Choose **SFTP** if the host
+   offers SSH; otherwise **FTP with encryption (FTPS)**, which works on almost every cPanel host. Plain FTP is not offered.
+2. In the builder, open **Your hosting** and fill in the server address, port (21 for FTPS, 22 for SFTP), username,
+   password and the folder on the hosting (`public_html`, or `public_html/shop` to put the site in a folder).
+3. Enter **Your website's address**, where visitors will find it (for example `https://www.example.com`). The forms and
+   search on the published site accept requests only from that address.
+4. Press **Save**, then **Test the connection**. If the test complains about the security certificate, enter the name
+   the hosting presents in **Certificate name** (FTPS only).
+5. Open **Publish** and press **Preview before publishing** to look at the built site, then **Publish all changes**.
+   Only changed files are sent, and only files the builder put there earlier are ever removed, so other things in that
+   folder are left alone.
+6. Optionally tick **Publish by itself when scheduled pages and posts go live** on the hosting screen.

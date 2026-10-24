@@ -131,6 +131,17 @@ and the admin at <http://localhost:8080/admin/>.
 
 To run on a real server with a domain name, see **[docs/DEPLOY.md](docs/DEPLOY.md)**.
 
+## Two ways to run it
+
+- **One website** (the default): this program is the website, served on its own domain with automatic HTTPS.
+- **The platform** (`PLATFORM=true`): one server, the *builder*, where each customer logs in, edits their own website,
+  previews it, and **publishes it as static files by FTPS or SFTP to their own cPanel hosting**. The pieces a static site
+  can't do (search, the contact form, newsletter sign-ups and their confirm and unsubscribe links, visit counting) stay
+  on the builder, and the published pages call it. A platform administrator adds customers (who are invited by email),
+  sets per-website limits and sees what each website holds. Scheduled pages and posts go live and can be published
+  automatically. Set it up with **[Running the platform](docs/DEPLOY.md#running-the-platform)**, which also has the
+  steps to give a customer for connecting their cPanel hosting.
+
 ## Configuration
 
 Set these in a `.env` file next to `docker-compose.yml` (copy `.env.example`), or as environment variables.
@@ -147,6 +158,13 @@ Set these in a `.env` file next to `docker-compose.yml` (copy `.env.example`), o
 | `BACKUP_DIR`, `BACKUP_KEEP`, `BACKUP_PERSONAL` | `./backups`, `7`, `false` | Where saved backups are kept (a different folder from the public media folder; a Docker volume in the compose file), how many scheduled daily backups to keep (`0` = off), and whether scheduled backups include subscribers and messages. |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` | empty (port `587`) | Optional. Lets the site send mail: copies of contact messages to you, replies to visitors, newsletter confirmations and newsletters (STARTTLS is used when the server offers it). Without them, messages only appear in the admin inbox and nothing is sent. |
 | `POSTGRES_PASSWORD` | `webbuilder` | Database password. **Change it on a server.** |
+| `PLATFORM` | `false` | `true` runs the multi-website platform instead of one website. |
+| `BASE_URL` | empty | Platform: the builder's public address (`https://builder.example.com`). Emailed links and published forms point here. Required. |
+| `SECRET_KEY` | empty | Platform: 64 hex characters (`openssl rand -hex 32`) that encrypt saved hosting passwords. Without it passwords cannot be saved. Keep a copy; never change it. |
+| `DATA_DIR` | `./data` (compose: `/data/platform` volume) | Platform: every website's pictures, backups and builds. |
+| `MAX_RUNTIMES` | `40` | Platform: how many websites are kept loaded in memory at once. |
+| `ALLOW_PRIVATE_HOSTS` | `false` | Development and tests only: lets sites publish to private-network servers. |
+| `BUILDER_DOMAIN`, `CADDYFILE` | empty, `./Caddyfile` | Compose only: the builder's domain and the Caddyfile that serves it (`./Caddyfile.platform` for the platform). |
 | `QUOTA_STORAGE_MB`, `QUOTA_PAGES`, `QUOTA_POSTS` | `1000`, `200`, `1000` | Platform only: what a website may hold unless its own limits say otherwise (`0` = no limit). Storage is uploaded pictures and fonts. A platform administrator can give any website limits of its own on the Websites screen (**Limits…**); a website that reaches one is told so and asked to delete something or ask for more room. |
 
 ## Moving a single website onto the platform
