@@ -213,3 +213,8 @@ Give each customer these steps. They only need their hosting details.
    Only changed files are sent, and only files the builder put there earlier are ever removed, so other things in that
    folder are left alone.
 6. Optionally tick **Publish by itself when scheduled pages and posts go live** on the hosting screen.
+7. If a publish goes wrong, open **Publish**, find the earlier publish in the history and press **Go back to this
+   version**. The builder keeps the copies of the last five publishes and sends that one again in full. Nothing written
+   in the editor is lost: it shows as not published, ready to fix and publish again. If **Publish by itself** is on,
+   it pauses after a rollback until the next manual publish, so scheduled posts don't quietly replace the version
+   that was put back.

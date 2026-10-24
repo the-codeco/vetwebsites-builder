@@ -57,6 +57,12 @@ type JobRow struct {
 	Uploaded, Deleted, Unchanged int
 	Bytes                        int64
 	Force                        bool
+	RestoreVersion               string     // not empty: this publish put an earlier copy back
+	RestoreOf                    int64      // the publish that copy came from
+	RestoreOfDate                *time.Time // when that one finished, if it is still in the history
+	Rollback                     bool
+	Current                      bool // this is the copy on the hosting now
+	CanRestore                   bool // its copy is kept and can be put back
 }
 
 // Active says whether the publish is still going.
@@ -89,12 +95,14 @@ type PublishService interface {
 	TestHosting(ctx context.Context, actor string) (TestResult, error)
 	TrustHostKey(ctx context.Context, actor string) error
 	Start(ctx context.Context, actor string, force bool) (int64, error)
+	Rollback(ctx context.Context, actor string, jobID int64) (int64, error)
 	Job(ctx context.Context, id int64) (JobRow, error)
 }
 
 func (h *Handler) registerPublish(mux *http.ServeMux, authed func(http.HandlerFunc) http.Handler) {
 	mux.Handle("GET /admin/publish", authed(h.publishPage))
 	mux.Handle("POST /admin/publish/start", authed(h.publishStart))
+	mux.Handle("POST /admin/publish/rollback", authed(h.publishRollback))
 	mux.Handle("GET /admin/publish/status", authed(h.publishStatus))
 	mux.Handle("GET /admin/hosting", authed(h.hostingPage))
 	mux.Handle("POST /admin/hosting", authed(h.hostingSave))
@@ -115,7 +123,7 @@ func (h *Handler) publishPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	d := publishScreen{PublishState: st}
-	notice := map[string]string{"started": "Publishing has started. You can keep working; this page shows how it is going."}[r.URL.Query().Get("done")]
+	notice := map[string]string{"started": "Publishing has started. You can keep working; this page shows how it is going.", "rollback": "Putting that version back has started. Your hosting shows it when this page says it is done."}[r.URL.Query().Get("done")]
 	h.render(w, r, 200, "publish", pageData{Title: "Publish", User: id, CSRF: id.CSRF, Notice: notice, Data: d})
 }
 
@@ -137,6 +145,27 @@ func (h *Handler) publishStart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.Redirect(w, r, "/admin/publish?done=started", http.StatusSeeOther)
+}
+
+func (h *Handler) publishRollback(w http.ResponseWriter, r *http.Request) {
+	id := auth.CurrentIdentity(r)
+	job, _ := strconv.ParseInt(r.PostFormValue("job"), 10, 64)
+	var ue UserError
+	_, err := h.Publish.Rollback(r.Context(), id.Email, job)
+	switch {
+	case errors.As(err, &ue):
+		st, e2 := h.Publish.State(r.Context())
+		if e2 != nil {
+			serverError(w, e2)
+			return
+		}
+		h.render(w, r, 400, "publish", pageData{Title: "Publish", User: id, CSRF: id.CSRF, Error: ue.Error(), Data: publishScreen{PublishState: st}})
+		return
+	case err != nil:
+		serverError(w, err)
+		return
+	}
+	http.Redirect(w, r, "/admin/publish?done=rollback", http.StatusSeeOther)
 }
 
 // publishStatus is the part of the publish screen that updates itself while a publish runs.

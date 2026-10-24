@@ -139,7 +139,8 @@ To run on a real server with a domain name, see **[docs/DEPLOY.md](docs/DEPLOY.m
   can't do (search, the contact form, newsletter sign-ups and their confirm and unsubscribe links, visit counting) stay
   on the builder, and the published pages call it. A platform administrator adds customers (who are invited by email),
   sets per-website limits and sees what each website holds. Scheduled pages and posts go live and can be published
-  automatically. Set it up with **[Running the platform](docs/DEPLOY.md#running-the-platform)**, which also has the
+  automatically. A bad publish can be undone: the last few published copies are kept, and **Go back to this version**
+  (on the Publish screen) puts one back on the hosting while everything written since stays in the editor. Set it up with **[Running the platform](docs/DEPLOY.md#running-the-platform)**, which also has the
   steps to give a customer for connecting their cPanel hosting.
 
 ## Configuration

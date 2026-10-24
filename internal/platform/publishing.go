@@ -336,13 +336,13 @@ func (p *Platform) activeJob(ctx context.Context, siteID int64) (*admin.JobRow, 
 	return &j, err
 }
 
-const jobCols = `id, status, started_by, force, version, message, error, warnings, created_at, started_at, finished_at, files_total, files_done, uploaded, deleted, unchanged, bytes`
+const jobCols = `id, status, started_by, force, version, message, error, warnings, created_at, started_at, finished_at, files_total, files_done, uploaded, deleted, unchanged, bytes, restore_version, COALESCE(restore_of, 0)`
 
 func scanJob(row pgx.Row) (admin.JobRow, error) {
 	var j admin.JobRow
 	var warnings string
 	err := row.Scan(&j.ID, &j.Status, &j.By, &j.Force, &j.Version, &j.Message, &j.Error, &warnings, &j.Created, &j.Started, &j.Finished,
-		&j.FilesTotal, &j.FilesDone, &j.Uploaded, &j.Deleted, &j.Unchanged, &j.Bytes)
+		&j.FilesTotal, &j.FilesDone, &j.Uploaded, &j.Deleted, &j.Unchanged, &j.Bytes, &j.RestoreVersion, &j.RestoreOf)
 	if warnings != "" {
 		j.Warnings = strings.Split(warnings, "\n")
 	}
@@ -412,7 +412,39 @@ func (s *sitePublisher) State(ctx context.Context) (admin.PublishState, error) {
 		}
 		st.Jobs = append(st.Jobs, j)
 	}
-	return st, rows.Err()
+	if err := rows.Err(); err != nil {
+		return st, err
+	}
+	p.markRestorable(site, st.Jobs, st.Active != nil)
+	return st, nil
+}
+
+// markRestorable says, for each publish in the history, whether its copy can be put back, and what a rollback came from.
+func (p *Platform) markRestorable(s Site, jobs []admin.JobRow, busy bool) {
+	done := map[int64]time.Time{}
+	for _, j := range jobs {
+		if j.Finished != nil {
+			done[j.ID] = *j.Finished
+		}
+	}
+	for i := range jobs {
+		j := &jobs[i]
+		j.Rollback = j.RestoreVersion != ""
+		if j.Rollback {
+			if t, ok := done[j.RestoreOf]; ok {
+				j.RestoreOfDate = &t
+			}
+		}
+		if j.Status != "done" || !validVersion(j.Version) {
+			continue
+		}
+		j.Current = j.Version == s.PublishedVersion
+		if j.Current || busy {
+			continue
+		}
+		_, _, _, err := p.copyOf(s, j.Version)
+		j.CanRestore = err == nil
+	}
 }
 
 // --- starting a publish ---
@@ -456,6 +488,56 @@ func (s *sitePublisher) Start(ctx context.Context, actor string, force bool) (in
 	return id, nil
 }
 
+// Rollback puts an earlier publish's copy of the website back on the hosting. Every file is sent again (not just
+// those that differ from the hosting's list), because a publish that failed half way leaves the hosting in a state its
+// list does not describe.
+func (s *sitePublisher) Rollback(ctx context.Context, actor string, jobID int64) (int64, error) {
+	p := s.p
+	site, err := p.siteByID(ctx, s.id)
+	if err != nil {
+		return 0, err
+	}
+	j, err := s.Job(ctx, jobID)
+	if err != nil {
+		return 0, err
+	}
+	switch {
+	case !site.Active:
+		return 0, admin.UserError("This website is suspended.")
+	case p.cipher == nil:
+		return 0, admin.UserError("Publishing is not switched on for this server yet. Ask the administrator to set the server's secret key.")
+	case j.Status != "done" || !validVersion(j.Version):
+		return 0, admin.UserError("Only a publish that finished can be put back.")
+	case j.Version == site.PublishedVersion:
+		return 0, admin.UserError("That is the version already on your hosting.")
+	}
+	if _, ok, err := p.loadTarget(ctx, s.id); err != nil {
+		return 0, err
+	} else if !ok || site.PublicURL == "" {
+		return 0, admin.UserError("Set up your hosting first (the connection details and your website's address).")
+	}
+	if _, _, _, err := p.copyOf(site, j.Version); err != nil {
+		return 0, admin.UserError(capitalise(err.Error()) + ".")
+	}
+	var id int64
+	err = p.pool.QueryRow(ctx, `INSERT INTO publish_jobs (site_id, status, started_by, force, restore_version, restore_of) VALUES ($1, 'queued', $2, true, $3, $4) RETURNING id`, s.id, actor, j.Version, j.ID).Scan(&id)
+	var pe *pgconn.PgError
+	if errors.As(err, &pe) && pe.Code == "23505" {
+		return 0, admin.UserError("A publish is running. Wait for it to finish, then go back.")
+	}
+	if err != nil {
+		return 0, err
+	}
+	select {
+	case p.pub.queue <- id:
+	default:
+		p.pool.Exec(ctx, `UPDATE publish_jobs SET status = 'failed', error = 'The server is busy. Try again in a few minutes.', finished_at = now() WHERE id = $1`, id)
+		return 0, admin.UserError("The server is busy publishing other websites. Try again in a few minutes.")
+	}
+	p.audit(ctx, actor, &site, "started putting an earlier version back", j.Version)
+	return id, nil
+}
+
 // --- doing it ---
 
 func (p *Platform) setJob(ctx context.Context, id int64, set string, args ...any) {
@@ -475,9 +557,9 @@ func (p *Platform) failJob(ctx context.Context, id int64, site *Site, secret str
 func (p *Platform) runJob(ctx context.Context, id int64) {
 	var siteID int64
 	var force bool
-	var status, by string
-	if err := p.pool.QueryRow(ctx, `UPDATE publish_jobs SET status = 'running', started_at = now(), message = 'Starting' WHERE id = $1 AND status = 'queued' RETURNING site_id, force, status, started_by`, id).
-		Scan(&siteID, &force, &status, &by); err != nil {
+	var status, by, restore string
+	if err := p.pool.QueryRow(ctx, `UPDATE publish_jobs SET status = 'running', started_at = now(), message = 'Starting' WHERE id = $1 AND status = 'queued' RETURNING site_id, force, status, started_by, restore_version`, id).
+		Scan(&siteID, &force, &status, &by, &restore); err != nil {
 		return // not queued any more (cancelled, or taken by another worker)
 	}
 	site, err := p.siteByID(ctx, siteID)
@@ -502,7 +584,14 @@ func (p *Platform) runJob(ctx context.Context, id int64) {
 
 	// the files to publish: the latest copy if it is up to date, otherwise a new one
 	p.setJob(jobCtx, id, `message = 'Preparing the site'`)
-	info, dir, files, err := p.copyForPublish(jobCtx, site)
+	var info BuildInfo
+	var dir string
+	var files []publish.File
+	if restore != "" {
+		info, dir, files, err = p.copyOf(site, restore)
+	} else {
+		info, dir, files, err = p.copyForPublish(jobCtx, site)
+	}
 	if err != nil {
 		p.failJob(ctx, id, &site, tg.Password, err)
 		return
@@ -545,7 +634,11 @@ func (p *Platform) runJob(ctx context.Context, id int64) {
 	p.setJob(ctx, id, `status = 'done', finished_at = now(), uploaded = $2, deleted = $3, unchanged = $4, bytes = $5, message = 'Done', warnings = $6, files_done = files_total`,
 		rep.Uploaded, rep.Deleted, rep.Unchanged, rep.Bytes, strings.Join(warnings, "\n"))
 	p.pool.Exec(ctx, `UPDATE sites SET published_version = $2, published_changes = $3, published_at = now() WHERE id = $1`, siteID, info.Version, info.Changes)
-	p.audit(ctx, by, &site, "published the website", fmt.Sprintf("%d uploaded, %d removed", rep.Uploaded, rep.Deleted))
+	verb := "published the website"
+	if restore != "" {
+		verb = "put an earlier version of the website back"
+	}
+	p.audit(ctx, by, &site, verb, fmt.Sprintf("%d uploaded, %d removed", rep.Uploaded, rep.Deleted))
 }
 
 // copyForPublish returns the static copy to publish and its files. The latest copy is used when nothing has changed since
@@ -569,7 +662,12 @@ func (p *Platform) copyForPublish(ctx context.Context, s Site) (BuildInfo, strin
 			return BuildInfo{}, "", nil, err
 		}
 	}
-	dir := p.BuildDir(s.ID, info.Version)
+	return p.filesOf(s.ID, info)
+}
+
+// filesOf lists the files of a static copy.
+func (p *Platform) filesOf(siteID int64, info BuildInfo) (BuildInfo, string, []publish.File, error) {
+	dir := p.BuildDir(siteID, info.Version)
 	list, err := export.Manifest(dir)
 	if err != nil {
 		return BuildInfo{}, "", nil, err
@@ -582,6 +680,23 @@ func (p *Platform) copyForPublish(ctx context.Context, s Site) (BuildInfo, strin
 		files = append(files, publish.File{Path: f.Path, Size: f.Size, SHA256: f.SHA256})
 	}
 	return info, dir, files, nil
+}
+
+// copyOf is an earlier static copy, to put back. It must still exist and have been made for the address the website is
+// published at now: a copy made for another address has that address in its links.
+func (p *Platform) copyOf(s Site, version string) (BuildInfo, string, []publish.File, error) {
+	var info BuildInfo
+	if !validVersion(version) {
+		return info, "", nil, errors.New("that version is not available")
+	}
+	b, err := os.ReadFile(filepath.Join(p.BuildDir(s.ID, version), ".wb-build.json"))
+	if err != nil || jsonInto(b, &info) != nil {
+		return info, "", nil, errors.New("that version is no longer kept")
+	}
+	if info.URL != s.PublicURL {
+		return info, "", nil, errors.New("that version was made for another website address (" + info.URL + ") and cannot be put back")
+	}
+	return p.filesOf(s.ID, info)
 }
 
 func (p *Platform) currentChanges(ctx context.Context, s Site) (int64, error) {

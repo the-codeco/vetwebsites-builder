@@ -118,6 +118,12 @@ func (p *Platform) autoPublish(ctx context.Context, s Site) {
 	if err != nil || !ok || !t.AutoPublish || s.PublicURL == "" {
 		return
 	}
+	// after a rollback the owner chose the version that is up: scheduled content must not quietly replace it
+	var back bool
+	p.pool.QueryRow(ctx, `SELECT restore_version <> '' FROM publish_jobs WHERE site_id = $1 AND status = 'done' ORDER BY id DESC LIMIT 1`, s.ID).Scan(&back)
+	if back {
+		return
+	}
 	if _, err := (&sitePublisher{p, s.ID}).Start(ctx, "system (scheduled content)", false); err != nil {
 		log.Printf("sweep: site %d: automatic publish: %v", s.ID, err)
 	}

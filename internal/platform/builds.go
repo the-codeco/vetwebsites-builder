@@ -23,6 +23,9 @@ const PreviewBuildBase = "/preview/build"
 // KeepBuilds is how many static copies of a website are kept (the latest, and a few older ones to go back to).
 const KeepBuilds = 5
 
+// KeepPublished is how many of the latest publishes keep their copy, so they can be put back.
+const KeepPublished = 5
+
 // placeholderURL is the address used for a copy made before the owner has said where the site will be published. Its links
 // point at example.com, so it is good for looking at, and the publisher refuses to upload a copy made for it.
 const placeholderURL = "https://example.com"
@@ -100,12 +103,26 @@ func (p *Platform) Build(ctx context.Context, s Site) (BuildInfo, error) {
 	if _, err := p.pool.Exec(ctx, `UPDATE sites SET build_version = $2, build_changes = $3, built_at = $4 WHERE id = $1`, s.ID, version, res.Changes, made); err != nil {
 		return BuildInfo{}, err
 	}
-	p.pruneBuilds(s.ID, version)
+	p.pruneBuilds(ctx, s.ID, version)
 	return info, nil
 }
 
-// pruneBuilds deletes all but the newest KeepBuilds copies (never the one just made).
-func (p *Platform) pruneBuilds(siteID int64, keep string) {
+// pruneBuilds deletes all but the newest KeepBuilds copies (never the one just made), except the copies of the last few
+// publishes: those are what a rollback goes back to.
+func (p *Platform) pruneBuilds(ctx context.Context, siteID int64, keep string) {
+	kept := map[string]bool{keep: true}
+	if rows, err := p.pool.Query(ctx, `SELECT version FROM publish_jobs WHERE site_id = $1 AND status = 'done' AND version <> '' ORDER BY id DESC LIMIT $2`, siteID, KeepPublished); err == nil {
+		for rows.Next() {
+			var v string
+			if rows.Scan(&v) == nil {
+				kept[v] = true
+			}
+		}
+		rows.Close()
+	}
+	var published string
+	p.pool.QueryRow(ctx, `SELECT published_version FROM sites WHERE id = $1`, siteID).Scan(&published)
+	kept[published] = true
 	entries, err := os.ReadDir(p.buildsDir(siteID))
 	if err != nil {
 		return
@@ -118,7 +135,7 @@ func (p *Platform) pruneBuilds(siteID int64, keep string) {
 	}
 	sort.Strings(names)
 	for len(names) > KeepBuilds {
-		if names[0] != keep {
+		if !kept[names[0]] {
 			os.RemoveAll(filepath.Join(p.buildsDir(siteID), names[0]))
 		}
 		names = names[1:]

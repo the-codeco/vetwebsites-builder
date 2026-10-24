@@ -24,15 +24,17 @@
 </div>
 <div class="card">
   <h2>History</h2>
+  <p class="muted">Published something that looks wrong? Put an earlier version back with “Go back to this version”. The editor keeps everything you have written; only what visitors see changes. The last few versions are kept.</p>
   {{if .Data.Jobs}}
   <table>
-    <tr><th>When</th><th>Who</th><th>Result</th></tr>
+    <tr><th>When</th><th>Who</th><th>Result</th><th></th></tr>
     {{range .Data.Jobs}}
     <tr>
       <td class="muted">{{.Created.Format "2 Jan 2006 15:04"}} UTC</td>
       <td>{{.By}}</td>
-      <td>{{if eq .Status "done"}}<span class="badge published">published</span> {{.Uploaded}} uploaded, {{.Deleted}} removed, {{.Unchanged}} unchanged{{else if eq .Status "failed"}}<span class="badge draft">failed</span> {{.Error}}{{else}}<span class="badge">{{.Status}}</span>{{end}}
+      <td>{{if eq .Status "done"}}<span class="badge published">{{if .Rollback}}went back{{else}}published{{end}}</span>{{if .Rollback}} {{if .RestoreOfDate}}to the version published on {{.RestoreOfDate.Format "2 Jan 2006 15:04"}} UTC{{else}}to an earlier version{{end}}:{{end}} {{.Uploaded}} uploaded, {{.Deleted}} removed, {{.Unchanged}} unchanged{{if .Current}} <span class="badge">on your hosting now</span>{{end}}{{else if eq .Status "failed"}}<span class="badge draft">failed</span> {{.Error}}{{else}}<span class="badge">{{.Status}}</span>{{end}}
         {{range .Warnings}}<br><span class="muted">{{.}}</span>{{end}}</td>
+      <td>{{if .CanRestore}}<form method="post" action="/admin/publish/rollback" data-confirm="Put this version back on your hosting? Every file is sent again, and changes made since are not lost: they stay in the editor, unpublished."><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="job" value="{{.ID}}"><button class="ghost">Go back to this version</button></form>{{end}}</td>
     </tr>
     {{end}}
   </table>
